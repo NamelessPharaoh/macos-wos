@@ -17,9 +17,10 @@ from core.coord_utils import box_percent_to_pixel
 
 
 
-ocr_url = "http://127.0.0.1:8000/ocr"
-template_matching_url = "http://127.0.0.1:8000/template"
-cache_clearing_url = "http://127.0.0.1:8000/clear_cache"
+_OCR_PORT = os.getenv("OCR_PORT", "8000")
+ocr_url = f"http://127.0.0.1:{_OCR_PORT}/ocr"
+template_matching_url = f"http://127.0.0.1:{_OCR_PORT}/template"
+cache_clearing_url = f"http://127.0.0.1:{_OCR_PORT}/clear_cache"
 
 OCR_HTTP_TIMEOUT_SEC = float(os.getenv("OCR_HTTP_TIMEOUT_SEC", "8"))
 OCR_REPLAY_WAIT_SEC = float(os.getenv("OCR_REPLAY_WAIT_SEC", "35"))
@@ -130,16 +131,23 @@ def _post_json_with_replay(url, payload, request_name, wait_sec=OCR_REPLAY_WAIT_
 
 
 
-def req_ocr(img_path=None, save_result=None, rois=None, name=None, expected_text = None):
+def req_ocr(img_path=None, save_result=None, rois=None, name=None, expected_text = None,
+            read_kind=None, decision_id=None):
+    # read_kind="value": this read feeds numeric state (power, levels, timers) —
+    # the server gives it zero-item fallback + burn-in shadow-compare. Tag at
+    # the CALLING site, never here. decision_id groups retried reads into one
+    # decision for burn-in rate math; callers that retry pass a shared one.
     # Convert percentage-based ROIs to pixels
     rois = _convert_rois_percent_to_pixel(rois)
-    
+
     payload = {
         "img_path": img_path,
         "save_result" : save_result,
         "rois": rois,
         "name" : name,
-        "expected_text": expected_text
+        "expected_text": expected_text,
+        "read_kind": read_kind,
+        "decision_id": decision_id or uuid.uuid4().hex
     }
 
     data = _post_json_with_replay(ocr_url, payload, "OCR request")
@@ -343,7 +351,8 @@ def tap_on_text(
                 return True
 
             box = normalize_rois(box)
-            res = req_ocr(img_path, save_result, rois=box, name=name, expected_text=target_text)
+            res = req_ocr(img_path, save_result, rois=box, name=name, expected_text=target_text,
+                          decision_id=decision_id)
 
             if res is None:
                 print("OCR failed")
@@ -409,7 +418,8 @@ def tap_on_text(
                         x1, y1, x2, y2 = pixel_box
                         ex = int(expand_px)
                         expanded = [max(0, x1 - ex), max(0, y1 - ex), x2 + ex, y2 + ex]
-                        res2 = req_ocr(img_path, save_result, rois=[expanded], name=name, expected_text=target_text)
+                        res2 = req_ocr(img_path, save_result, rois=[expanded], name=name, expected_text=target_text,
+                                       decision_id=decision_id)
                         if res2:
                             # exact match
                             for item in res2:
@@ -459,6 +469,9 @@ def tap_on_text(
 
 
     # ✅ FIXED POSITION (outside try_match)
+    # One decision id for the whole tap_on_text invocation: every retried read
+    # below shares it, so burn-in rates count decisions, not attempts.
+    decision_id = uuid.uuid4().hex
     texts = load_config(text, rois=rois)
 
     if not texts:
@@ -492,11 +505,15 @@ def tap_on_text(
 
 
 
-def req_text(names=None, img_path=None, rois=None, save_result=False, coord=None):
+def req_text(names=None, img_path=None, rois=None, save_result=False, coord=None,
+             read_kind=None):
+    # read_kind is passed through by callers whose result feeds numeric state.
+    decision_id = uuid.uuid4().hex
 
     # If no name is provided, send full page OCR
     if not names:
-        res = req_ocr(img_path, save_result, rois=None, name="full_page")
+        res = req_ocr(img_path, save_result, rois=None, name="full_page",
+                      read_kind=read_kind, decision_id=decision_id)
         if res is None:
             print("OCR failed")
             return None
@@ -532,7 +549,8 @@ def req_text(names=None, img_path=None, rois=None, save_result=False, coord=None
         print("No location found")
         return None
     
-    res = req_ocr(img_path, save_result, rois=boxes, name=title)
+    res = req_ocr(img_path, save_result, rois=boxes, name=title,
+                  read_kind=read_kind, decision_id=decision_id)
 
     if res is None:
         print("OCR failed")
@@ -676,9 +694,11 @@ def tap_on_closest_text(
             return point
         return (point[0] + align[0], point[1] + align[1])
     
+    decision_id = uuid.uuid4().hex
+
     def try_match():
         try:
-            res = req_ocr(rois=rois, save_result=save_result)
+            res = req_ocr(rois=rois, save_result=save_result, decision_id=decision_id)
             if not res:
                 return None
 

@@ -104,7 +104,7 @@ def beast_intel():
             if not found:
                 continue
             try:
-                data = req_text('World.MarchQueue')[0][0].split('/')
+                data = req_text('World.MarchQueue', read_kind="value")[0][0].split('/')
                 remaining_march = int(data[1]) - int(data[0])
             except Exception as e:
                 print(f"Reading Error - {e}")

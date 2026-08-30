@@ -77,6 +77,7 @@ from core.recalibrate import recalibrate
 from core.change_player import change_account, change_character
 
 from Main.task_menu import prompt_task_selection, run_selected_tasks
+from core.player_profile import load_profile, save_profile
 
 
 
@@ -97,15 +98,21 @@ console = Console()
 
 
 def start_game(game_name="com.gof.global/com.unity3d.player.MyMainPlayerActivity"):
-    wos_adb_command = [
-        "adb", 
-        "shell", 
-        "am", 
-        "start", 
-        "-n", 
+    # Pin the device when WOS_ADB_SERIAL is set (run.sh always sets it) —
+    # bare adb fails with "more than one device" when MuMu also registers
+    # its emulator-5554 alias.
+    serial = os.getenv("WOS_ADB_SERIAL")
+    wos_adb_command = (
+        ["adb"] + (["-s", serial] if serial else []) + [
+        "shell",
+        "am",
+        "start",
+        "-n",
         game_name
-    ]
-    subprocess.run(wos_adb_command)
+    ])
+    # adb inherits and drains stdin; DEVNULL keeps it away from the task
+    # selector's input(), which is the only stdin reader in this program.
+    subprocess.run(wos_adb_command, stdin=subprocess.DEVNULL)
 
 
 
@@ -243,7 +250,8 @@ def player_initialization():
             "ChiefProfile.PlayerID", 
             "ChiefProfile.FurnaceLevel", 
             "ChiefProfile.State"
-        ]
+        ],
+        read_kind="value"
     )
 
     # safer extraction/helpers
@@ -298,6 +306,18 @@ def player_initialization():
         raise RuntimeError("Player Initialization Failed, Stopping the Bot...")
 
     current_player = Player(name, id_val, state, current_email)
+
+    # Seed/refresh the on-disk profile (db/players/<id>.json, example.json
+    # schema) with what this session observed; tasks read evolving fields
+    # (e.g. gather node level) from it.
+    profile = load_profile(id_val)
+    profile["name"] = name
+    if state:
+        profile["state"] = state
+    if furnace:
+        profile["furnace_level"] = int(furnace)
+    save_profile(profile)
+
     console.print(Panel.fit(
         f"Email: {current_email}\nName:{name}\nID: {id_val}\nFurnace Level: {furnace}\nState: {state}",
         title="[bold magenta]🎮 Player Summary[/bold magenta]",
@@ -305,10 +325,6 @@ def player_initialization():
     ))
     
     
-
-
-start_game()
-init_database()
 
 
 def get_next_email(current_email):
@@ -384,6 +400,10 @@ def run_bot(selected_tasks):
                     f"Unexpected email after character switch. Expected {current_email}, got {current_player.email}"
                 )
 
+        if len(email_list) == 1:
+            print(f"Single account configured ({current_email}) - pass complete, exiting.")
+            return
+
         print(f"Progressing to the next email: {next_email}")
         status = change_account(next_email)
         if not status:
@@ -392,5 +412,9 @@ def run_bot(selected_tasks):
 
 
 if __name__=="__main__":
+    # Side effects live here, not at module scope, so tests can import Main.main.
+    # Runtime order for `python -m Main.main` is unchanged.
+    start_game()
+    init_database()
     selected_tasks = prompt_task_selection()
     run_bot(selected_tasks)

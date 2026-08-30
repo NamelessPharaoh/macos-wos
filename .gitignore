@@ -10,3 +10,18 @@ test/debug/
 .python-version
 uv.lock
 account.json
+# Mac port: keep personal player data out of git.
+# Upstream committed a real player ID (db/players/578380047.json); do not repeat
+# that on a repo tied to an activity that gets accounts banned.
+db/account.json
+db/players/*.json
+!db/players/example.json
+
+# Ralph loop scratch state (session tooling, not project code)
+.claude/
+db/completion_log.txt
+.DS_Store
+.pytest_cache/
+tests/fixtures/local/
+logs/
+.gstack/

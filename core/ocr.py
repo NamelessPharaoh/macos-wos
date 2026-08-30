@@ -3,32 +3,28 @@ import sys
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-# Disable remote model source probing during PaddleOCR init to avoid startup delays.
-os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
-
-
-# --- AGGRESSIVE GARBAGE COLLECTION FLAGS ---
-# These MUST be set before importing paddle or paddleocr to affect the C++ backend
-os.environ["FLAGS_eager_delete_tensor_gb"] = "0.0"
-os.environ["FLAGS_fast_eager_deletion_mode"] = "True"
-os.environ["FLAGS_allocator_strategy"] = "naive_best_fit"
-# -------------------------------------------
+# Paddle env flags (model-source probing, GC/allocator) moved into
+# _build_paddle_engine(): they must be set before paddle is imported, and
+# paddle is now imported lazily so vision-default boots never pay for it.
 
 
 import cv2
 import json
+import re
+import sys
 import time
 import gc
+import json
 import ctypes
-import paddle           #Important for paddleocr 2.10.0
+import psutil
 import uvicorn
+import platform
 import threading
 import numpy as np
 from pathlib import Path
 from typing import Optional
 from fastapi import FastAPI
 from pydantic import BaseModel
-from paddleocr import PaddleOCR
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.console import Console
@@ -36,17 +32,13 @@ from concurrent.futures import ThreadPoolExecutor
 from cmd_program.screen_action import take_screenshot
 from cmd_program.screen_stream import screen_capture as stream_screen_capture
 from cmd_program.screen_stream import start_screen_stream, setup_v4l2loopback
-import paddleocr
+from core.coord_utils import BASE_WIDTH, BASE_HEIGHT
 
+# paddle / paddleocr are imported lazily inside _build_paddle_engine();
+# core.vision_engine is imported lazily inside _build_vision_engine().
+# Neither engine's import cost is paid unless that engine is actually used.
 
-
-#Printing the version of paddleocr
-print(f"PaddleOCR Version: {paddleocr.__version__}")
-print(f"PaddlePaddle Version: {paddle.__version__}")
-
-#Disabling logging from the paddleocr
 import logging
-logging.getLogger("ppocr").setLevel(logging.ERROR)
 logging.getLogger("uvicorn").setLevel(logging.WARNING)
 logging.getLogger("uvicorn.access").setLevel(logging.ERROR)
 
@@ -61,6 +53,14 @@ class OCRRequest(BaseModel):
     rois: Optional[list[list[int]]] = None
     name: Optional[str] = None
     expected_text: Optional[str] = None
+    # read_kind="value" marks reads whose text feeds numeric state (power,
+    # levels, timers): they qualify for zero-item fallback and burn-in
+    # shadow-compare. Set by CALLERS at value-read sites, never in shared
+    # plumbing.
+    read_kind: Optional[str] = None
+    # One UUID per caller decision (tap_on_text / req_text invocation);
+    # retries share it, so burn-in rates count decisions, not read attempts.
+    decision_id: Optional[str] = None
 
 
 class TemplateMatchRequest(BaseModel):
@@ -79,9 +79,28 @@ class ClearCacheRequest(BaseModel):
 #------------------- Configuration ------------------------------#
 SCREENSHOT_TTL = 0.1
 CPU_THREADS = min(os.cpu_count() or 1, 4)
+# Engine selection: unset -> vision on macOS >= 13, paddle everywhere else.
+# Explicit OCR_ENGINE=vision on an unsupported platform fails loudly at boot.
+# OCR_ENGINE=paddle is the one-variable rollback for the Vision swap.
+OCR_ENGINE_ENV = "OCR_ENGINE"
+# Server port. run.sh defaults this to 8210 on macOS: port 8000 is a common
+# dev-server default and a foreign FastAPI there answers /docs, fooling the
+# readiness gate while every /ocr call 404s (observed live 2026-08-30).
+OCR_PORT = int(os.getenv("OCR_PORT", "8000"))
+OCR_SCORE_FLOOR = 0.8  # per-line confidence filter, shared by both engines
+# Burn-in instrumentation (Vision swap): per-read JSONL + Paddle shadow reads
+# on value reads. Default ON until the burn-in exit criteria are met
+# (see docs/designs/vision-ocr-swap.md), then flip to "0".
+BURNIN_ENABLED = os.getenv("OCR_BURNIN", "1") == "1"
+BURNIN_LOG_PATH = Path("logs/ocr_burnin.jsonl")
+VISION_EXC_BREAKER_LIMIT = 3  # consecutive exceptions -> paddle for the session
 TEMPLATE_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "references", "icon"))
-RAM_CAP_GB = float(os.getenv("OCR_RAM_CAP_GB", "3.0"))
+RAM_CAP_GB = float(os.getenv("OCR_RAM_CAP_GB", "16.0"))
 RAM_CAP_BYTES = int(RAM_CAP_GB * 1024 * 1024 * 1024)
+# STREAM_WIDTH / STREAM_HEIGHT feed start_screen_stream() (the Linux-only scrcpy path,
+# see below) and are deliberately NOT unified with BASE_WIDTH/BASE_HEIGHT below: on
+# Linux, 2456 may genuinely be scrcpy's real output height, and this codebase cannot
+# verify scrcpy behaviour from a Mac. Do not repurpose these for frame normalization.
 STREAM_WIDTH = 1080
 STREAM_HEIGHT = 2456
 STREAM_TIMEOUT_S = 2.0
@@ -108,6 +127,11 @@ _stream_ready = False
 _stream_retry_after = 0.0
 _stream_sudo_retry_after = 0.0
 _preferred_screen_capture_tool = None
+_resolved_engine = None          # "vision" | "paddle", set by init_services()
+_vision_engine = None
+_paddle_engine = None            # lazy: built on first paddle use
+_vision_exc_streak = 0           # consecutive VisionEngineError count
+_vision_disabled_session = False # breaker tripped: paddle until restart
 
 
 
@@ -149,15 +173,36 @@ def _save_frame_to_cache(frame):
         print(f"Saved frame to {save_path}")
 
 
+# Coordinate space. The capture leg and the tap leg must agree on ONE base.
+#
+#   MuMu @ 1080x2460
+#     | adb exec-out screencap -p
+#     v
+#   take_screenshot()              screen_action.py   -> 1080x2460
+#     v
+#   _normalize_frame_resolution()  <- YOU ARE HERE
+#     |  dims == base -> early return, no resize
+#     v
+#   ROI percentages                references/TextArea/*.json
+#     v
+#   OCR engine (vision|paddle)  -> text + coords   core/vision_engine.py | paddle
+#     v
+#   tap_screen(x%, y%)             _convert_if_percentage(y, BASE_HEIGHT)
+#     v
+#   adb shell input tap -> MuMu @ 1080x2460
+#
+# Historical bug: this function normalised to STREAM_HEIGHT=2456 while taps used
+# 2460, so the vision leg ran 0.16% short and ocr.py:678 carried a `y1 -= 5` fudge
+# to compensate. Both are gone. BASE_* in core/coord_utils is the single authority.
 def _normalize_frame_resolution(frame):
     if frame is None:
         return None
 
     h, w = frame.shape[:2]
-    if w == STREAM_WIDTH and h == STREAM_HEIGHT:
+    if w == BASE_WIDTH and h == BASE_HEIGHT:
         return frame
 
-    return cv2.resize(frame, (STREAM_WIDTH, STREAM_HEIGHT), interpolation=cv2.INTER_LINEAR)
+    return cv2.resize(frame, (BASE_WIDTH, BASE_HEIGHT), interpolation=cv2.INTER_LINEAR)
 
 
 def _try_start_stream():
@@ -220,18 +265,18 @@ def _try_start_stream():
             return False
 
 
+# The sensor is repaired but the actuator is held dormant during the Mac port:
+# the in-code RAM_CAP_GB default above (16.0) IS the dormancy mechanism -- it
+# keeps _enforce_ram_cap() reporting honest RSS without arming
+# _reinitialize_ocr_engine(), a teardown/rebuild path that has never executed
+# on macOS. OCR_RAM_CAP_GB still overrides it if a caller sets it explicitly.
+# Lower the in-code default to 3 once the daily loop is stable.
 def _get_process_rss_bytes():
-    """Read current process RSS in bytes from /proc for low overhead."""
+    """Current process RSS in bytes. Cross-platform (macOS has no /proc)."""
     try:
-        with open("/proc/self/status", "r", encoding="utf-8") as f:
-            for line in f:
-                if line.startswith("VmRSS:"):
-                    parts = line.split()
-                    # VmRSS is reported as kB.
-                    return int(parts[1]) * 1024
+        return psutil.Process().memory_info().rss
     except Exception:
-        pass
-    return 0
+        return 0
 
 
 def _trim_allocator():
@@ -244,7 +289,14 @@ def _trim_allocator():
 
 
 def _enforce_ram_cap(context="runtime"):
-    """Try to keep process RSS under configured cap by recycling OCR engine."""
+    """Try to keep process RSS under configured cap by recycling OCR engine.
+
+    Paddle-only machinery: it exists to babysit Paddle's memory behavior.
+    While no Paddle engine is instantiated (vision path), it is a no-op —
+    Vision leak safety is per-call autorelease pools + RSS in burn-in logs."""
+    global _paddle_engine
+    if _paddle_engine is None:
+        return
     rss_before = _get_process_rss_bytes()
     if rss_before <= RAM_CAP_BYTES:
         return
@@ -260,7 +312,8 @@ def _enforce_ram_cap(context="runtime"):
             f"rss={rss_before / (1024**3):.2f}GB cap={RAM_CAP_GB:.2f}GB. Recycling OCR engine..."
         )
 
-        _reinitialize_ocr_engine()
+        with _ocr_init_lock:
+            _paddle_engine = _build_paddle_engine()
         gc.collect()
         _trim_allocator()
 
@@ -272,7 +325,80 @@ def _enforce_ram_cap(context="runtime"):
             )
 
 
-def _build_ocr_engine():
+#------------------- Engine management ---------------------------#
+# Engine dispatch state machine (see docs/designs/vision-ocr-swap.md):
+#
+#           boot: resolve_engine()
+#            | unset -> vision on macOS>=13, else paddle
+#            v
+#       +- VISION ---------------------------------------------+
+#       |  read ok -----------------------> stay (streak = 0)  |
+#       |  zero items + (expected|value) -> paddle one-shot    |
+#       |  VisionEngineError -> streak++                       |
+#       |     streak < 3 -> stay (treated as zero items)       |
+#       |     streak = 3 -> PADDLE for the session (loud log)  |
+#       +------------------------------------------------------+
+#       PADDLE_SESSION never flips back mid-run (no flapping);
+#       restart re-resolves. Models absent -> NEVER flip, NEVER
+#       download mid-session: stay on vision and log loudly.
+
+
+def _macos_major():
+    try:
+        return int(platform.mac_ver()[0].split(".")[0])
+    except (ValueError, IndexError):
+        return 0
+
+
+def _vision_supported():
+    return sys.platform == "darwin" and _macos_major() >= 13
+
+
+def resolve_engine():
+    explicit = os.getenv(OCR_ENGINE_ENV, "").strip().lower()
+    if explicit == "paddle":
+        return "paddle"
+    if explicit == "vision":
+        if not _vision_supported():
+            raise RuntimeError(
+                f"OCR_ENGINE=vision requires macOS >= 13 (this host: "
+                f"{sys.platform} {platform.mac_ver()[0] or 'n/a'})"
+            )
+        return "vision"
+    if explicit:
+        raise RuntimeError(f"OCR_ENGINE must be 'vision' or 'paddle', got {explicit!r}")
+    return "vision" if _vision_supported() else "paddle"
+
+
+def _paddle_models_present():
+    """True only when det AND rec inference models are fully on disk.
+
+    any(iterdir()) would accept a .DS_Store or a partial prefetch, and the
+    first fallback would then download models mid-session while holding
+    _ocr_lock — the exact invariant the breaker path promises never happens."""
+    whl = Path.home() / ".paddleocr" / "whl"
+    if not whl.is_dir():
+        return False
+    return all(
+        any((whl / sub).rglob("inference.pdmodel")) or any((whl / sub).rglob("inference.pdiparams"))
+        for sub in ("det", "rec")
+    )
+
+
+def _build_paddle_engine():
+    # Env flags MUST be set before paddle is imported to affect the C++ backend.
+    os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+    os.environ["FLAGS_eager_delete_tensor_gb"] = "0.0"
+    os.environ["FLAGS_fast_eager_deletion_mode"] = "True"
+    os.environ["FLAGS_allocator_strategy"] = "naive_best_fit"
+
+    import paddle
+    import paddleocr
+    from paddleocr import PaddleOCR
+    logging.getLogger("ppocr").setLevel(logging.ERROR)
+    print(f"PaddleOCR Version: {paddleocr.__version__}")
+    print(f"PaddlePaddle Version: {paddle.__version__}")
+
     paddle.set_device("cpu")
     return PaddleOCR(
         use_angle_cls=False,
@@ -285,6 +411,195 @@ def _build_ocr_engine():
         table=False,
         formula=False,
     )
+
+
+def _get_paddle_engine():
+    global _paddle_engine
+    with _ocr_init_lock:
+        if _paddle_engine is None:
+            _paddle_engine = _build_paddle_engine()
+    return _paddle_engine
+
+
+def _build_vision_engine():
+    from core.vision_engine import VisionEngine
+    engine = VisionEngine(console=console)
+    engine.warmup()
+    return engine
+
+
+def _active_engine():
+    if _resolved_engine == "paddle" or _vision_disabled_session:
+        return "paddle"
+    return "vision"
+
+
+def _paddle_lines_to_items(output):
+    """Paddle raw output -> canonical [{text, score, box}] with the shared
+    score floor. Single conversion point for both ROI and full-frame paths."""
+    items = []
+    if not output or not output[0]:
+        return items
+    for line in output[0]:
+        if not line or not isinstance(line, list) or len(line) < 2:
+            continue
+        pts = np.array(line[0])
+        text = line[1][0]
+        score = float(line[1][1])
+        if score > OCR_SCORE_FLOOR:
+            items.append({
+                "text": text,
+                "score": score,
+                "box": [int(pts[:, 0].min()), int(pts[:, 1].min()),
+                        int(pts[:, 0].max()), int(pts[:, 1].max())],
+            })
+    return items
+
+
+def _paddle_recognize_unlocked(image):
+    """Paddle read with the primitive-failure recovery retry. Caller holds _ocr_lock."""
+    global _paddle_engine
+    engine = _get_paddle_engine()
+    try:
+        output = engine.ocr(image, cls=False)
+    except RuntimeError as e:
+        # Paddle sometimes throws this when predictor state gets unstable.
+        if "could not execute a primitive" not in str(e):
+            raise
+        print("OCR primitive execution failed. Reinitializing OCR engine and retrying once...")
+        with _ocr_init_lock:
+            _paddle_engine = _build_paddle_engine()
+        output = _paddle_engine.ocr(image, cls=False)
+    return _paddle_lines_to_items(output)
+
+
+def _vision_recognize_unlocked(image):
+    """Vision read behind the exception circuit breaker. Caller holds _ocr_lock.
+
+    Returns (items, error_flag): framework errors are logged, counted, and
+    surfaced as (zero items, True) so the caller's fallback rule applies.
+    """
+    global _vision_exc_streak, _vision_disabled_session
+    from core.vision_engine import VisionEngineError
+    try:
+        items = _vision_engine.recognize(image)
+        _vision_exc_streak = 0
+        return [i for i in items if i["score"] > OCR_SCORE_FLOOR], False
+    except VisionEngineError as e:
+        _vision_exc_streak += 1
+        console.print(
+            f"[bold red]Vision engine error ({_vision_exc_streak}/"
+            f"{VISION_EXC_BREAKER_LIMIT}): {e}[/bold red]"
+        )
+        if _vision_exc_streak >= VISION_EXC_BREAKER_LIMIT:
+            if _paddle_models_present():
+                _vision_disabled_session = True
+                console.print(Panel.fit(
+                    "[bold red]Vision breaker tripped: "
+                    f"{VISION_EXC_BREAKER_LIMIT} consecutive errors — using PADDLE "
+                    "for the rest of this session. Restart to re-resolve.[/bold red]",
+                    border_style="red",
+                ))
+            else:
+                console.print(
+                    "[bold red]Vision breaker limit reached but Paddle models are "
+                    "absent (~/.paddleocr/whl) — staying on Vision; models are NEVER "
+                    "downloaded mid-session. Run the setup prefetch.[/bold red]"
+                )
+        return [], True
+
+
+def _recognize_crop_unlocked(image, expected_text=None, read_kind=None):
+    """One crop through the active engine, with the per-crop fallback rule.
+
+    Fallback: Vision yielded zero items AND read_kind=='value' -> one-shot
+    Paddle read of the SAME crop. Value reads target always-rendered numerics
+    (the isolated-badge-digit case Vision refuses), so zero items there means
+    "Vision missed it". expected_text alone does NOT trigger fallback: label
+    taps POLL for text that legitimately isn't on screen yet (first live run:
+    23/38 reads were absent-text polls where Paddle also found nothing — a
+    fallback there just doubles every poll tick and drags Paddle into RSS).
+    A genuinely present label Vision can't read costs one poll tick and is
+    absorbed by the client's retry/ROI-expansion machinery, same as a Paddle
+    miss today. Wrong-nonzero reads never fall back (caller fuzzy nets own
+    those). Returns (items, engine_used, fallback_hit).
+    """
+    if _active_engine() == "paddle":
+        return _paddle_recognize_unlocked(image), "paddle", False
+
+    items, errored = _vision_recognize_unlocked(image)
+    if items:
+        return items, "vision", False
+    if not errored and read_kind != "value":
+        # Clean zero-item read on a label poll: the text is absent, which is
+        # that read's normal state. No fallback.
+        return items, "vision", False
+    # Zero items on a value read, OR the engine itself ERRORED on any read:
+    # an engine failure is not "text absent" — without this, a broken Vision
+    # session leaves the bot blind on its first profile read, aborting the run
+    # before the 3-strike breaker can trip (codex P1).
+    if _vision_disabled_session:
+        # Breaker flipped mid-call: the paddle read below is the session engine now.
+        return _paddle_recognize_unlocked(image), "paddle", False
+    if not _paddle_models_present():
+        return items, "vision", False
+    fallback_items = _paddle_recognize_unlocked(image)
+    if not fallback_items:
+        # Both engines saw nothing: the value genuinely isn't on screen (an
+        # empty march slot, a bare panel). NOT a fallback hit — counting it
+        # would structurally inflate the burn-in fallback rate (red-team).
+        return [], "vision", False
+    console.print(f"[yellow]Vision zero-item fallback hit -> paddle read succeeded[/yellow]")
+    return fallback_items, "vision+fallback", True
+
+
+def _digits(text):
+    return re.sub(r"\D", "", text)
+
+
+def _shadow_compare_unlocked(image, vision_items):
+    """Burn-in only: Paddle shadow read of the SAME crop, digit comparison.
+    Returns a mismatch dict or None. Caller holds _ocr_lock.
+
+    Instrumentation must never kill a real read: any Paddle failure here is
+    logged and swallowed — the caller keeps the successful vision items."""
+    if not _paddle_models_present():
+        return None
+    try:
+        paddle_items = _paddle_recognize_unlocked(image)
+    except Exception as e:
+        console.print(f"[yellow]burn-in shadow read failed (vision result kept): {e}[/yellow]")
+        return None
+    v_digits = _digits("".join(i["text"] for i in vision_items))
+    p_digits = _digits("".join(i["text"] for i in paddle_items))
+    if v_digits == p_digits:
+        return None
+    return {
+        "vision_texts": [i["text"] for i in vision_items],
+        "paddle_texts": [i["text"] for i in paddle_items],
+        "vision_digits": v_digits,
+        "paddle_digits": p_digits,
+    }
+
+
+BURNIN_LOG_MAX_BYTES = 50 * 1024 * 1024  # rotate at 50MB, one backup deep
+
+
+def _burnin_log(record):
+    if not BURNIN_ENABLED:
+        return
+    try:
+        BURNIN_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        if BURNIN_LOG_PATH.exists() and BURNIN_LOG_PATH.stat().st_size > BURNIN_LOG_MAX_BYTES:
+            rotated = BURNIN_LOG_PATH.with_name(f"ocr_burnin.{int(time.time())}.jsonl")
+            BURNIN_LOG_PATH.rename(rotated)
+            print(f"burn-in log rotated to {rotated.name} at {BURNIN_LOG_MAX_BYTES // (1024*1024)}MB")
+        record["ts"] = time.time()
+        record["rss_mb"] = round(_get_process_rss_bytes() / (1024 * 1024), 1)
+        with open(BURNIN_LOG_PATH, "a") as f:
+            f.write(json.dumps(record) + "\n")
+    except OSError as e:
+        print(f"burn-in log write failed: {e}")
 
 
 def _capture_frame(img_path=None, save_frame=False):
@@ -332,26 +647,6 @@ def _capture_frame(img_path=None, save_frame=False):
     return img
 
 
-def _reinitialize_ocr_engine():
-    global ocr
-    with _ocr_init_lock:
-        ocr = _build_ocr_engine()
-
-
-def _call_ocr_with_recovery(image):
-    global ocr
-    with _ocr_lock:
-        try:
-            return ocr.ocr(image, cls=False)
-        except RuntimeError as e:
-            # Paddle sometimes throws this when predictor state gets unstable.
-            if "could not execute a primitive" not in str(e):
-                raise
-            print("OCR primitive execution failed. Reinitializing OCR engine and retrying once...")
-            _reinitialize_ocr_engine()
-            return ocr.ocr(image, cls=False)
-
-
 def _get_cached_image(session_id):
     with _cache_lock:
         if session_id in _cache:
@@ -364,16 +659,19 @@ def _get_cached_image(session_id):
 
 #----------------------- Functions -------------------------------#
 def init_services():
-    global ocr, _template_cache
+    global _resolved_engine, _vision_engine, _template_cache
 
-    #initializeng the ocr once for all
-    # ocr = PaddleOCR(
-    #         use_doc_orientation_classify=False,
-    #         use_doc_unwarping=False,
-    #         use_textline_orientation=False
-    #     )
-    
-    ocr = _build_ocr_engine()
+    _resolved_engine = resolve_engine()
+    if _resolved_engine == "vision":
+        _vision_engine = _build_vision_engine()
+        console.print(
+            "[bold green]OCR engine: VISION[/bold green] "
+            "[dim](rollback: OCR_ENGINE=paddle + restart)[/dim]"
+        )
+    else:
+        # Paddle mode keeps today's behavior: engine built eagerly at boot.
+        _get_paddle_engine()
+        console.print("[bold green]OCR engine: PADDLE[/bold green]")
 
     root_dir = Path(TEMPLATE_PATH)
     print(root_dir)
@@ -591,12 +889,14 @@ def match_template(
 
 
 def run_ocr(
-        img_path=None, 
-        save_result=False, 
-        rois=None, 
+        img_path=None,
+        save_result=False,
+        rois=None,
         save_frame=False,
         name = None,
-        expected_text = None
+        expected_text = None,
+        read_kind = None,
+        decision_id = None
     ):
     #Printing the OCR result a bit beautifully
     def print_ocr_results(results, capture_time_s=0, ocr_time_s=0, post_time_s=0):
@@ -650,17 +950,22 @@ def run_ocr(
     ocr_time_s = 0.0
     post_time_s = 0.0
 
+    img = None
     try:
         capture_start = time.perf_counter()
         img = _capture_frame(img_path, save_frame=save_frame)
         capture_time_s = time.perf_counter() - capture_start
     except Exception as e:
         print(f"Error - {e}")
+        raise RuntimeError(f"OCR capture failed: {e}") from e
 
     if img is None:
         return []
 
     all_results = []
+    engines_used = []
+    fallback_hits = 0
+    mismatches = []
     h, w = img.shape[:2]
     print(f"Height: {h}, Width: {w}")
     
@@ -675,9 +980,6 @@ def run_ocr(
                 continue
 
             x1, y1, x2, y2 = roi
-            #a slight adjustment so that it could take scrcpy image to with a res of 1080x2456
-            y1 = y1 - 5
-            y2 = y2
             # Only pad if the crop actually has dimensions
             raw_crop = img[y1:y2, x1:x2]
             if raw_crop.size == 0:
@@ -685,46 +987,49 @@ def run_ocr(
                 
             cropped, pad_val = add_padding(raw_crop, pad=50)
 
+            # Lock held ONCE around the engine call + optional shadow pair —
+            # the engines themselves are lock-free (no self-nesting).
             ocr_start = time.perf_counter()
-            output = _call_ocr_with_recovery(cropped)
+            with _ocr_lock:
+                items, engine_used, fallback_hit = _recognize_crop_unlocked(
+                    cropped, expected_text=expected_text, read_kind=read_kind
+                )
+                mismatch = None
+                if (BURNIN_ENABLED and read_kind == "value"
+                        and engine_used == "vision" and items):
+                    mismatch = _shadow_compare_unlocked(cropped, items)
             ocr_time_s += time.perf_counter() - ocr_start
-            
-            if not output or not output[0]:
+
+            engines_used.append(engine_used)
+            fallback_hits += 1 if fallback_hit else 0
+            if mismatch:
+                mismatch["roi_index"] = i
+                mismatches.append(mismatch)
+                console.print(f"[bold red]DIGIT_MISMATCH[/bold red] roi={i} {mismatch}")
+
+            if not items:
                 # If save_result is true, save the empty crop to see what OCR saw
                 if save_result:
                     cv2.imwrite(f"test/debug/roi_empty_{int(time.time())}_{i}.png", cropped)
                 continue
-                
+
             post_start = time.perf_counter()
-            lines = output[0]
             offset_x = x1 - pad_val
             offset_y = y1 - pad_val
 
-            for line in lines:
-                if not line or not isinstance(line, list) or len(line) < 2:
-                    continue
+            for item in items:
+                b = item["box"]
+                all_results.append({
+                    "text": item["text"],
+                    "score": item["score"],
+                    "box": [
+                        b[0] + offset_x,
+                        b[1] + offset_y,
+                        b[2] + offset_x,
+                        b[3] + offset_y
+                    ]
+                })
 
-                pts = np.array(line[0])
-                text = line[1][0]
-                score = float(line[1][1])
-
-                if score > 0.8:
-                    xmin = int(pts[:, 0].min())
-                    ymin = int(pts[:, 1].min())
-                    xmax = int(pts[:, 0].max())
-                    ymax = int(pts[:, 1].max())
-
-                    all_results.append({
-                        "text": text,
-                        "score": score,
-                        "box": [
-                            xmin + offset_x, 
-                            ymin + offset_y, 
-                            xmax + offset_x, 
-                            ymax + offset_y
-                        ]
-                    })
-            
             if save_result:
                 # Save the specific crop being processed
                 cv2.imwrite(f"test/debug/roi_crop_{int(time.time())}_{i}.png", cropped)
@@ -733,29 +1038,25 @@ def run_ocr(
 
     else:
         ocr_start = time.perf_counter()
-        output = _call_ocr_with_recovery(img)
+        with _ocr_lock:
+            items, engine_used, fallback_hit = _recognize_crop_unlocked(
+                img, expected_text=expected_text, read_kind=read_kind
+            )
+            mismatch = None
+            if (BURNIN_ENABLED and read_kind == "value"
+                    and engine_used == "vision" and items):
+                mismatch = _shadow_compare_unlocked(img, items)
         ocr_time_s += time.perf_counter() - ocr_start
 
-        if output and output[0]:
+        engines_used.append(engine_used)
+        fallback_hits += 1 if fallback_hit else 0
+        if mismatch:
+            mismatches.append(mismatch)
+            console.print(f"[bold red]DIGIT_MISMATCH[/bold red] full-frame {mismatch}")
+
+        if items:
             post_start = time.perf_counter()
-            for line in output[0]:
-                if not line: continue
-                
-                pts = np.array(line[0])
-                text = line[1][0]
-                score = float(line[1][1])
-
-                if score > 0.8:
-                    xmin = int(pts[:, 0].min())
-                    ymin = int(pts[:, 1].min())
-                    xmax = int(pts[:, 0].max())
-                    ymax = int(pts[:, 1].max())
-
-                    all_results.append({
-                        "text": text,
-                        "score": score,
-                        "box": [xmin, ymin, xmax, ymax]
-                    })
+            all_results.extend(items)
             post_time_s += time.perf_counter() - post_start
 
     # 👉 SAVE FULL RESULT IMAGE
@@ -774,7 +1075,21 @@ def run_ocr(
 
     print_ocr_results(all_results, capture_time_s, ocr_time_s, post_time_s)
     _enforce_ram_cap("run_ocr:end")
-        
+
+    _burnin_log({
+        "decision_id": decision_id,
+        "name": name,
+        "read_kind": read_kind,
+        "expected": bool(expected_text),
+        "engines": engines_used,
+        "fallback_hits": fallback_hits,
+        "digit_mismatch": bool(mismatches),
+        "mismatches": mismatches,
+        "capture_ms": round(capture_time_s * 1000, 1),
+        "ocr_ms": round(ocr_time_s * 1000, 1),
+        "results": len(all_results),
+    })
+
     return all_results
 
 
@@ -782,7 +1097,8 @@ def run_ocr(
 def ocr_endpoint(req:OCRRequest):
     try:
         start_time = time.perf_counter()
-        results = run_ocr(req.img_path, req.save_result, req.rois, req.save_frame, req.name, req.expected_text)
+        results = run_ocr(req.img_path, req.save_result, req.rois, req.save_frame,
+                          req.name, req.expected_text, req.read_kind, req.decision_id)
         finish_time = time.perf_counter()
         print(f"({finish_time-start_time}s)")
     except MemoryError as e:
@@ -852,5 +1168,5 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="127.0.0.1",
-        port=8000
+        port=OCR_PORT
     )

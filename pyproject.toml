@@ -1,6 +1,6 @@
 [project]
 name = "wos"
-version = "0.1.0"
+version = "0.9.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -14,5 +14,12 @@ dependencies = [
     "setuptools>=80.4.0",
     "uvicorn>=0.44.0",
     "rapidfuzz>=3.14.5",
-    "rich>=15.0.0"
+    "rich>=15.0.0",
+    "psutil>=7.2.2",
+    "pyobjc-framework-vision>=10.0 ; sys_platform == 'darwin'",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
 ]

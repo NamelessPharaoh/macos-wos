@@ -1,5 +1,6 @@
 import time
 from core.recalibrate import recalibrate
+from core.player_profile import get_gather_node_level, set_gather_node_level
 
 from core.core import (
     req_ocr,
@@ -16,6 +17,30 @@ from cmd_program.screen_action import(
 )
 
 
+
+
+def _on_world_map():
+    title = req_text("World.City")
+    try:
+        return title[0][0].lower() == "city"
+    except Exception:
+        return False
+
+
+def enter_world_map(max_attempts=4):
+    """Verified world-map entry. The World/City toggle drops taps that land
+    during the zoom animation, so tap-then-assume races and the rest of the
+    task then runs against the city view. Read, tap, settle, re-read — and
+    verify once more after the last tap, so the final attempt is never an
+    unchecked tap-and-give-up."""
+    for _ in range(max_attempts):
+        time.sleep(0.5)
+        if _on_world_map():
+            return True
+        recalibrate()
+        tap_on_text("Home.World", wait=2)
+        time.sleep(3)
+    return _on_world_map()
 
 
 def wait_till_return(lowest_time=14400):
@@ -56,26 +81,53 @@ def wait_till_return(lowest_time=14400):
 
 
 
-def gather(remove_hero=False, equalize=True, lowest_time=14400):
+# World-map coordinate bar ("#4653 X:1019 Y:308"), measured live at 1080x2460.
+MAP_COORDS_ROI = [[25, 85.2, 70, 89.0]]
+
+
+def _read_map_coords():
+    """Read the world-map coordinate bar. A successful search jumps the camera
+    (coords change); 'No suitable resources' leaves it in place — that camera
+    jump is the reliable found/not-found signal, not the transient toast."""
+    results = req_ocr(rois=MAP_COORDS_ROI, name="gather.map_coords", read_kind="value")
+    for item in results or []:
+        text = item.get("text", "")
+        if "X:" in text or "Y:" in text:
+            return text.strip()
+    return None
+
+
+def _set_search_level(level):
+    tap_screen(84.26, 86.22)
+    time.sleep(1)
+    input_text(str(level))
+
+
+def gather(remove_hero=False, equalize=True, lowest_time=14400, node_level=None,
+           profile=None):
     print("Started Gathering...")
     search_box = [[0, 78.86, 100, 80.49]]
     gathering_nodes = ["meat", "wood", "coal", "iron", "coal", "iron"]
+    if node_level is None:
+        if profile:
+            # Probe one level above the remembered one: the stored level only
+            # ever steps down during a run, so without this the profile could
+            # never recover upward as the account grows. Costs at most one
+            # failed search per run when the stored level is already right.
+            node_level = min(get_gather_node_level(profile) + 1, 8)
+        else:
+            node_level = 8
+    node_level = int(node_level)
 
-    time.sleep(0.5)
-    title = req_text("World.City")
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Reading Error - {e}")
-    if title != "city":
-        recalibrate()
-        tap_on_text("Home.World", wait=2)
+    if not enter_world_map():
+        print("Couldn't reach the world map, Exiting the task...")
+        return
 
     wait_till_return(lowest_time=lowest_time)
 
     try:
         time.sleep(0.5)
-        data = req_text('World.MarchQueue')[0][0].split('/')
+        data = req_text('World.MarchQueue', read_kind="value")[0][0].split('/')
         remaining_march = int(data[1]) - int(data[0])
         occupied_march = int(data[0])
     except Exception as e:
@@ -84,6 +136,7 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
         occupied_march = 0
     i = 0
     
+    indeterminate = 0
     while remaining_march>0 and occupied_march < 5:
         title = tap_on_text("World.City", tap=False)
         if not title:
@@ -92,6 +145,7 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
         print(f"Remaining march queue: {remaining_march} ----- Occupied March: {occupied_march}")
         if occupied_march == 5:
             break
+        coords_before = _read_map_coords()
         status = tap_on_template("World.Search", wait=2, threshold=0.6)
         if not status:
             print("Seach Icon not found, Exiting the task...")
@@ -103,13 +157,19 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
         # time.sleep(0.5)             #rapid tap between node and search cause friction
         
         time.sleep(0.5)
-        level = req_text("World.Search.ItemLevel")
+        # level_confirmed gates profile persistence on deploy: the +1 upward
+        # probe must never be recorded unless the UI verifiably shows it —
+        # otherwise OCR failures ratchet the stored level upward.
+        level_confirmed = False
         try:
-            level = level[0][0]
-            if level != "8":
-                tap_screen(84.26, 86.22)
-                time.sleep(1)
-                input_text("8")
+            level = req_text("World.Search.ItemLevel", read_kind="value")[0][0]
+            if level != str(node_level):
+                _set_search_level(node_level)
+                time.sleep(0.5)
+                recheck = req_text("World.Search.ItemLevel", read_kind="value")
+                level_confirmed = recheck[0][0] == str(node_level)
+            else:
+                level_confirmed = True
         except Exception as e:
             print(f"Level reading Error, Continuing without reading the level...")
 
@@ -118,6 +178,40 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
         if status:
             status = tap_on_text("World.Search.Gather", wait=5)
             if not status:
+                # No Gather button. If the camera provably never jumped, the
+                # search found nothing at this level ('No suitable resources')
+                # — step the level down and retry. Lowering needs POSITIVE
+                # evidence (both coordinate reads valid and equal): a None
+                # read is an OCR flake, not proof the camera stayed, and a
+                # flake-driven decrement would persist to the profile and
+                # ratchet every account toward level 1 over long runs.
+                coords_after = _read_map_coords()
+                stayed = (coords_before is not None
+                          and coords_after is not None
+                          and coords_after == coords_before)
+                if stayed and node_level > 1:
+                    node_level -= 1
+                    indeterminate = 0
+                    print(f"Search didn't move the camera, lowering node level to {node_level}")
+                    # Persist only when the UI verifiably showed the level that
+                    # was searched (level_confirmed) — an unconfirmed search may
+                    # have run at a stale field value, so attributing the miss
+                    # to node_level would persist a bogus decrement (red-team).
+                    if profile and level_confirmed:
+                        set_gather_node_level(profile, node_level)
+                    continue
+                if coords_before is None or coords_after is None:
+                    # No evidence either way. Without a bound this loops
+                    # forever at an unusable level when the coordinate bar
+                    # keeps failing to OCR: after 3 indeterminate misses,
+                    # fall back one level for THIS RUN ONLY (not persisted —
+                    # persistence needs positive evidence or a deploy).
+                    indeterminate += 1
+                    if indeterminate >= 3 and node_level > 1:
+                        node_level -= 1
+                        indeterminate = 0
+                        print(f"No camera evidence 3x, trying level {node_level} this run (not persisted)")
+                        continue
                 i += 1
                 if i>=5:
                     i = 0
@@ -130,6 +224,11 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
         if equalize:
             tap_on_text("World.Deploy.Equalize", wait=2)
         tap_on_text("World.Deploy.Deploy", wait=2, sleep=0.5)
+        # A deploy worked — remember the level so the next run starts here,
+        # but only when the UI verifiably showed this level (level_confirmed);
+        # otherwise the deploy may have used the field's previous value.
+        if profile and level_confirmed:
+            set_gather_node_level(profile, node_level)
 
         i = i+1
         if i>=5:
@@ -137,7 +236,7 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
 
         try:
             time.sleep(0.5)
-            data = req_text('World.MarchQueue')[0][0].split('/')
+            data = req_text('World.MarchQueue', read_kind="value")[0][0].split('/')
             remaining_march = int(data[1]) - int(data[0])
             occupied_march = int(data[0])
         except Exception as e:
@@ -159,17 +258,11 @@ def gather(remove_hero=False, equalize=True, lowest_time=14400):
 
 
 def recall_current_gathering(lowest_time=14400):
-    time.sleep(0.5)
-    title = req_text("World.City")
     recalling = False
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Reading Error - {e}")
-    if title != "city":
-        recalibrate()
-        tap_on_text("Home.World", sleep=2)
-    
+    if not enter_world_map():
+        print("Couldn't reach the world map, Skipping the recall check...")
+        return False
+
     time.sleep(0.5)
     march_time = req_text("World.FirstMarchTime")
     try:

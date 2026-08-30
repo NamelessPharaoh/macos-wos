@@ -53,6 +53,31 @@ class TestRedDots:
         assert find_red_dots(np.zeros((0, 0, 3), dtype=np.uint8)) == []
 
 
+class TestNumberedBadges:
+    """Counts (Alliance 33, Mail 2) are pending work too, tagged kind='badge'."""
+
+    def test_home_screen_finds_dots_and_badges(self):
+        cues = find_red_dots(load("home_badges.png"))
+        dots = [c for c in cues if c["kind"] == "dot"]
+        badges = [c for c in cues if c["kind"] == "badge"]
+        assert len(dots) == 8, [d["box"] for d in dots]
+        assert len(badges) == 3, [b["box"] for b in badges]
+
+    def test_alliance_two_digit_badge_is_found(self):
+        # 51x28 -> aspect 1.8; a plain-dot aspect cap would drop it.
+        cues = find_red_dots(load("home_badges.png"))
+        assert any(c["kind"] == "badge" and c["box"][2] - c["box"][0] > 45 for c in cues)
+
+    def test_every_cue_carries_a_kind(self):
+        for c in find_red_dots(load("home_badges.png")):
+            assert c["kind"] in ("dot", "badge")
+
+    def test_solid_dots_are_kind_dot(self):
+        # The VIP Claim dot is solid: it marks an action, not a count.
+        cues = find_red_dots(load("vip_active_claim.png"))
+        assert [c["kind"] for c in cues] == ["dot"]
+
+
 class TestGreenButtons:
     def test_finds_the_free_use_button(self):
         greens = find_green_buttons(load("vip_obtain_more.png"))

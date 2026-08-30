@@ -30,8 +30,19 @@ def activate_chief_order():
         currency = currency[0][0].replace(",", "").replace(".", "")
         if currency.lower().endswith("m") and currency[:-1].isdigit():
             currency = int(currency[:-1])*1000000
+        elif currency.lower().endswith("k") and currency[:-1].isdigit():
+            currency = int(currency[:-1])*1000
+        elif currency.isdigit():
+            currency = int(currency)
+        else:
+            print(f"Unrecognized currency format {currency!r}, treating as 0")
+            currency = 0
     except Exception as e:
         print(f"Currency Reading Error - {e}")
+        currency = 0
+    # A plain non-M value used to stay a str here and crash the run at the
+    # comparison below (TypeError on first live chief_order exercise).
+    if not isinstance(currency, int):
         currency = 0
 
     order_list = {"UrgentMobilization": 50000, "ProductiveDay": 50000, "RushJob":150000}

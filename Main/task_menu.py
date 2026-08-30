@@ -186,4 +186,15 @@ def run_selected_tasks(current_player_id, selected_tasks):
                 border_style="bright_blue",
             )
         )
-        task.runner(current_player_id)
+        try:
+            task.runner(current_player_id)
+        except Exception:
+            # One broken task must not kill the whole run (observed live:
+            # chief_order TypeError ended the session mid-list). Log loudly,
+            # move on; the traceback stays in the run log for diagnosis.
+            import traceback
+            traceback.print_exc()
+            console.print(
+                f"[bold red]Task '{task.title}' crashed — continuing with the "
+                f"remaining tasks.[/bold red]"
+            )

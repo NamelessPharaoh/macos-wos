@@ -21,6 +21,7 @@ _OCR_PORT = os.getenv("OCR_PORT", "8000")
 ocr_url = f"http://127.0.0.1:{_OCR_PORT}/ocr"
 template_matching_url = f"http://127.0.0.1:{_OCR_PORT}/template"
 cache_clearing_url = f"http://127.0.0.1:{_OCR_PORT}/clear_cache"
+detect_url = f"http://127.0.0.1:{_OCR_PORT}/detect"
 
 OCR_HTTP_TIMEOUT_SEC = float(os.getenv("OCR_HTTP_TIMEOUT_SEC", "8"))
 OCR_REPLAY_WAIT_SEC = float(os.getenv("OCR_REPLAY_WAIT_SEC", "35"))
@@ -181,6 +182,62 @@ def req_temp_match(name, threshold=0.8, save_result=None, rois=None, parallel=No
     results = data["results"]
     return results
 
+
+
+def req_detect(feature, rois=None, save_result=None):
+    """Color-cue detection. feature: "red_dot" | "green_button".
+
+    Returns [{"box": [x1,y1,x2,y2], "area": int}] in pixel space, or None.
+    """
+    payload = {
+        "feature": feature,
+        "rois": _convert_rois_percent_to_pixel(rois),
+        "save_result": save_result,
+    }
+    data = _post_json_with_replay(detect_url, payload, f"Detect({feature}) request")
+    return data["results"] if data else None
+
+
+def tap_on_green_button(text=None, rois=None, wait=None, sleep=0.5, require_red_dot=False):
+    """Tap a FREE action button (green), optionally the one whose label matches
+    `text` and/or the one carrying a red dot.
+
+    Green is the game's free-action color (Claim, Use). Paid actions are orange
+    ("Buy & Use", price buttons) and navigation is blue ("Go") — restricting
+    taps to green is the money guard for red-dot-driven automation. Never
+    relaxes to "closest button": no green button means no free action here.
+    """
+    from core.visual_cues import dot_near
+
+    deadline = time.time() + (wait or 0)
+    while True:
+        buttons = req_detect("green_button", rois=rois) or []
+        if require_red_dot and buttons:
+            dots = req_detect("red_dot", rois=rois) or []
+            buttons = [b for b in buttons if dot_near(dots, b["box"])]
+
+        if buttons and text:
+            # Confirm the label before tapping: OCR each candidate in place.
+            confirmed = []
+            for b in buttons:
+                found = req_ocr(rois=[b["box"]], name=f"green:{text}", expected_text=text) or []
+                if any(fuzz.ratio(i["text"].lower(), text.lower()) >= 80 for i in found):
+                    confirmed.append(b)
+            buttons = confirmed
+
+        if buttons:
+            box = max(buttons, key=lambda b: b["area"])["box"]
+            coord = ((box[0] + box[2]) // 2, (box[1] + box[3]) // 2)
+            tap_screen(coord)
+            print(f"Pressed green button{f' ({text})' if text else ''} at {coord}")
+            if sleep:
+                time.sleep(sleep)
+            return True
+
+        if time.time() >= deadline:
+            print(f"No free (green) button found{f' for {text}' if text else ''}")
+            return False
+        time.sleep(0.4)
 
 
 def req_cache_clear(session_id):

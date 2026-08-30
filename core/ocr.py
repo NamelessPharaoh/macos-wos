@@ -72,6 +72,13 @@ class TemplateMatchRequest(BaseModel):
     session_id: Optional[str] = None
 
 
+class DetectRequest(BaseModel):
+    # feature: "red_dot" (pending-work badges) | "green_button" (free actions)
+    feature: str
+    rois: Optional[list[list[int]]] = None
+    save_result: Optional[bool] = False
+
+
 class ClearCacheRequest(BaseModel):
     session_id: str
 
@@ -1153,6 +1160,54 @@ def template_matching(req:TemplateMatchRequest):
         "success" : True,
         "results" : results
     }
+
+
+@app.post("/detect")
+def detect_endpoint(req: DetectRequest):
+    """Color-cue detection (red-dot badges / green free-action buttons).
+
+    Runs on the same captured frame as OCR and template matching, and returns
+    the same box contract: [x1, y1, x2, y2] in 1080x2460 pixel space.
+    """
+    from core.visual_cues import find_green_buttons, find_red_dots
+
+    finders = {"red_dot": find_red_dots, "green_button": find_green_buttons}
+    finder = finders.get(req.feature)
+    if finder is None:
+        return {"success": False, "results": None,
+                "error": f"unknown feature {req.feature!r}; expected one of {sorted(finders)}"}
+    try:
+        img = _capture_frame()
+    except Exception as e:
+        return {"success": False, "results": None, "error": f"capture failed: {e}"}
+    if img is None:
+        return {"success": False, "results": None, "error": "no frame"}
+
+    h, w = img.shape[:2]
+    results = []
+    # No ROI -> whole frame. With ROIs, detect per crop and map boxes back.
+    for roi in (req.rois or [[0, 0, w, h]]):
+        roi = clamp_roi(roi, w, h)
+        if roi is None:
+            continue
+        x1, y1, x2, y2 = roi
+        crop = img[y1:y2, x1:x2]
+        if crop.size == 0:
+            continue
+        for hit in finder(crop):
+            b = hit["box"]
+            results.append({**hit, "box": [b[0] + x1, b[1] + y1, b[2] + x1, b[3] + y1]})
+
+    if req.save_result:
+        dbg = img.copy()
+        for r in results:
+            b = r["box"]
+            cv2.rectangle(dbg, (b[0], b[1]), (b[2], b[3]), (0, 255, 0), 3)
+        os.makedirs("test/debug", exist_ok=True)
+        cv2.imwrite(f"test/debug/detect_{req.feature}_{int(time.time())}.png", dbg)
+
+    console.print(f"[cyan]detect[/cyan] {req.feature}: {len(results)} hit(s)")
+    return {"success": True, "count": len(results), "results": results}
 
 
 @app.post("/clear_cache")

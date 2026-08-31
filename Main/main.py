@@ -23,7 +23,8 @@ from core.core import (
     req_ocr,
     req_temp_match,
     tap_on_template,
-    req_text
+    req_text,
+    ensure_screen
 )
 
 from usecases.exploration import(
@@ -192,11 +193,28 @@ def init_database():
 
 
 
+def _open_chief_profile(attempts=3):
+    """Open Chief Profile, confirming arrival rather than trusting the tap.
+
+    The avatar coordinate is not always the avatar: with a City Shield active
+    the City Bonus indicator overlays that spot, so the blind tap opens
+    Wars/Growth instead. Observed live 2026-08-31, and reproducible on demand.
+    """
+    for attempt in range(1, attempts + 1):
+        recalibrate()
+        tap_screen(4.63, 6.1)
+        time.sleep(2)
+        if ensure_screen("ChiefProfile.Title", "Chief Profile", threshold=60):
+            return True
+        print(f"Avatar tap did not open Chief Profile (attempt {attempt}/{attempts})")
+    return False
+
+
 def player_initialization():
-    recalibrate()
-    tap_screen(4.63, 6.1)
-    time.sleep(2)
     global current_player
+    if not _open_chief_profile():
+        print("Could not reach the Chief Profile screen")
+        return None
     try:
         time.sleep(1)
         # read and sanitize page title using OCR filtering helpers
@@ -323,8 +341,13 @@ def player_initialization():
         title="[bold magenta]🎮 Player Summary[/bold magenta]",
         border_style="bright_blue"
     ))
-    
-    
+
+    # Explicit success signal. Every failure path above returns None, and the
+    # caller now branches on it, so falling off the end here would read as
+    # failure and end the run.
+    return current_player
+
+
 
 
 def get_next_email(current_email):
@@ -356,7 +379,11 @@ def run_bot(selected_tasks):
     completion_records = load_completion_log()
 
     while True:
-        player_initialization()
+        if player_initialization() is None:
+            # Previously this fell through to current_player.email and died with
+            # a NameError, taking the whole run down on a recoverable read miss.
+            print("Player initialization failed, ending this pass.")
+            return
 
         #----Config----
         current_email = current_player.email

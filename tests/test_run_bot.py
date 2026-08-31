@@ -31,6 +31,10 @@ def _setup(monkeypatch, tmp_path, accounts):
         info = dict(accounts)[email]
         player = info["player"][0]
         mm.current_player = mm.Player(player["name"], player["id"], "789", email)
+        # Mirrors the real contract: the player on success, None on failure.
+        # run_bot branches on this, so a double that returns nothing reads as
+        # a failed init and ends the pass.
+        return mm.current_player
 
     def fake_run_task(player_id, selected_tasks):
         calls["run_task"].append((player_id, tuple(selected_tasks)))
@@ -79,3 +83,21 @@ def test_two_emails_still_progress_to_next_email(monkeypatch, tmp_path):
         mm.run_bot(["mail"])
 
     assert calls["change_account"] == ["b@x.com"]
+
+
+def test_failed_player_initialization_ends_pass_without_nameerror(monkeypatch):
+    """A failed profile read must not take the whole run down.
+
+    run_bot used to call player_initialization() and then dereference the
+    module-level current_player regardless. When initialization bailed early
+    (observed live: the avatar tap opened City Bonus, so the Chief Profile title
+    never read back) that line raised NameError and killed the run.
+    """
+    monkeypatch.setattr(mm, "player_initialization", lambda: None)
+    monkeypatch.setattr(mm, "load_completion_log", lambda: {})
+    called = []
+    monkeypatch.setattr(mm, "run_task", lambda *a: called.append(a))
+
+    mm.run_bot(("mail",))          # must return, not raise
+
+    assert called == [], "no task should run when initialization failed"

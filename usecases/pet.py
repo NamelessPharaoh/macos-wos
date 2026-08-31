@@ -4,6 +4,7 @@ from core.recalibrate import recalibrate
 from core.core import (
     req_ocr,
     req_text,
+    ensure_screen,
     tap_on_text,
     req_temp_match,
     tap_on_template,
@@ -15,13 +16,50 @@ from cmd_program.screen_action import(
     input_text
 )
 
+ADVENTURE_ATTEMPTS_KEY = "Home.Pet.BeastCage.Adventure.RemainingAttempt"
+ADVENTURE_GROUND_KEY = "Home.Pet.BeastCage.Adventrue.AdventureGround"
+
+
+def _read_remaining_attempts():
+    """Remaining adventure attempts, or None when the read is not a number.
+
+    Read on its OWN roi. Reading it alongside AdventureGround (which spans
+    almost the whole content area) put both ROIs' lines in one flat list with no
+    ROI attribution, and req_ocr drops ROIs that return nothing — so index 0
+    slid silently from the digit box into the other ROI's first line. That is
+    how int() came to be handed a mail subject.
+    """
+    res = req_text(ADVENTURE_ATTEMPTS_KEY, read_kind="value")
+    if not res:
+        return None
+    text = str(res[0][0]).strip()
+    digits = re.sub(r"\D", "", text)
+    if not digits:
+        print(f"Remaining-attempts read was not a number: {text!r}")
+        return None
+    return int(digits)
+
+
+def _count_adventuring():
+    """How many pets are already out, counted by their HH:MM:SS timers."""
+    res = req_text(ADVENTURE_GROUND_KEY, read_kind="value") or []
+    return sum(1 for t in res if len(str(t[0]).split(":")) == 3)
+
+
 def collect_ally_treasure():
     recalibrate()
     status = tap_on_template("Home.Pet", wait=2)
     if not status:
+        print("Pet icon not found on the homepage, ending the task...")
         return None
     tap_on_text("Home.Pet.Skill.BeastCage", sleep=1, wait=2)
     tap_on_text("Home.Pet.BeastCage.Adventure", wait=2)
+    # Arrival check: a mis-tapped icon still returns True above, and every tap
+    # below ignores its own return value — so without this the task silently
+    # no-ops against whatever screen it actually landed on.
+    if not ensure_screen("Home.Pet.BeastCage.Adventure.Title", "Pet Adventure"):
+        print("Did not reach the Pet Adventure screen, ending the task...")
+        return None
     tap_on_text("Home.Pet.BeastCage.Adventure.AllyTreasure", wait=2, align=[0, -50])
     tap_on_text("Home.Pet.BeastCage.Adventure.AllyTreasure.AllianceShares", wait=2, sleep=0.5)
     tap_on_text("Home.Pet.BeastCage.Adventure.AllyTreasure.AllianceShares.ClaimAll", wait=2)
@@ -46,23 +84,20 @@ def start_pet_exploration():
 
     status = tap_on_template("Home.Pet", wait=2)
     if not status:
+        print("Pet icon not found on the homepage, ending the task...")
         return None
-    
+
     tap_on_text("Home.Pet.Skill.BeastCage", sleep=1, wait=2)
     tap_on_text("Home.Pet.BeastCage.Adventure", wait=2, sleep=2)
-    text = req_text(["Home.Pet.BeastCage.Adventure.RemainingAttempt", "Home.Pet.BeastCage.Adventrue.AdventureGround"], read_kind="value")
-    
-    adventuring = 0
-    remaining_attempts = 4
-    
-    try:
-        remaining_attempts = int(text[0][0])
-        for t in text:
-            if len(t[0].split(":")) == 3:
-                adventuring += 1
-    except Exception as e:
-        print(f"Reading Error - {e}, Exiting the task...")
+    if not ensure_screen("Home.Pet.BeastCage.Adventure.Title", "Pet Adventure"):
+        print("Did not reach the Pet Adventure screen, ending the task...")
         return None
+
+    remaining_attempts = _read_remaining_attempts()
+    if remaining_attempts is None:
+        print("Could not read the remaining attempts, ending the task...")
+        return None
+    adventuring = _count_adventuring()
 
     status = True
     while(status):
@@ -76,16 +111,14 @@ def start_pet_exploration():
             tap_on_template("Global.Close", wait=2)
 
     while(adventuring<3 and remaining_attempts>0):
-        text = req_text(["Home.Pet.BeastCage.Adventure.RemainingAttempt", "Home.Pet.BeastCage.Adventrue.AdventureGround"], read_kind="value")
-        try:
-            remaining_attempts = int(text[0][0])
-            for t in text:
-                if len(t[0].split(":")) == 3:
-                    adventuring += 1
-        except Exception as e:
-            print(f"Reading Error - {e}, Exiting the task...")
+        fresh = _read_remaining_attempts()
+        if fresh is None:
+            print("Could not read the remaining attempts, assuming one was spent...")
             adventuring += 1
             remaining_attempts -= 1
+        else:
+            remaining_attempts = fresh
+            adventuring = _count_adventuring()
         print(f"Remaining Attempt: {remaining_attempts}, Adventuring: {adventuring}")
 
         treasure_boxs = [

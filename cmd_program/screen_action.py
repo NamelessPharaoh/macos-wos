@@ -70,6 +70,28 @@ def invalidate_device():
 
 
 
+# One flaky input injection used to kill a whole task: run_adb_command had no
+# retry at all, and treated ANY non-zero exit as device loss.
+INJECT_RETRY_ATTEMPTS = 3
+INJECT_RETRY_BACKOFF_S = 0.4
+
+# Focus moved for an instant (host overlay, window transition, in-app popup) and
+# the framework refused the gesture. Transient: the next attempt lands.
+_INJECTION_ERROR_MARKERS = (
+    "securityexception",
+    "injecting to another application",
+    "inject_events",
+)
+def is_transient_injection_error(cmd, stderr):
+    """True for an input-injection rejection worth retrying."""
+    if not stderr:
+        return False
+    if not cmd or cmd[0] != "shell" or "input" not in cmd:
+        return False
+    low = stderr.lower()
+    return any(m in low for m in _INJECTION_ERROR_MARKERS)
+
+
 def run_adb_command(cmd, device_id=None):
     #running the adb command and chekcing if the adb is available or not
     if device_id is None:
@@ -85,22 +107,44 @@ def run_adb_command(cmd, device_id=None):
             f"adb command failed - no adb device available "
             f"(WOS_ADB_SERIAL={os.getenv('WOS_ADB_SERIAL')!r})"
         )
-    try:
-        subprocess.run(
-            ["adb", "-s", str(device_id)] + cmd,
-            check=True,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-    except subprocess.CalledProcessError as e:
-        invalidate_device()
-        stderr = e.stderr.strip() if e.stderr else ""
-        raise RuntimeError(
-            f"adb command failed - device={device_id} cmd={cmd} exit_code={e.returncode}"
-            + (f" stderr={stderr}" if stderr else "")
-        )
-    except FileNotFoundError as e:
-        raise RuntimeError(f"adb command failed - adb binary not found: {e}")
+    last_stderr = ""
+    for attempt in range(1, INJECT_RETRY_ATTEMPTS + 1):
+        try:
+            subprocess.run(
+                ["adb", "-s", str(device_id)] + cmd,
+                check=True,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            return
+        except subprocess.CalledProcessError as e:
+            last_stderr = e.stderr.strip() if e.stderr else ""
+
+            # A momentary focus change makes the framework refuse an injected
+            # gesture; the very next attempt succeeds. This killed the Alliance
+            # Chests task mid-swipe. It is NOT device loss, so it must not
+            # invalidate the cached device the way a real disconnect does.
+            if is_transient_injection_error(cmd, last_stderr) and attempt < INJECT_RETRY_ATTEMPTS:
+                print(
+                    f"adb input rejected (attempt {attempt}/{INJECT_RETRY_ATTEMPTS}), "
+                    f"retrying: {last_stderr.splitlines()[0] if last_stderr else ''}"
+                )
+                time.sleep(INJECT_RETRY_BACKOFF_S * attempt)
+                continue
+
+            # Invalidate for everything EXCEPT a known-transient injection
+            # rejection. Enumerating disconnect strings instead would be the
+            # fragile direction (real adb says "device 'serial-a' not found",
+            # not "device not found"), and guessing wrong there silently keeps
+            # a dead serial cached.
+            if not is_transient_injection_error(cmd, last_stderr):
+                invalidate_device()
+            raise RuntimeError(
+                f"adb command failed - device={device_id} cmd={cmd} exit_code={e.returncode}"
+                + (f" stderr={last_stderr}" if last_stderr else "")
+            )
+        except FileNotFoundError as e:
+            raise RuntimeError(f"adb command failed - adb binary not found: {e}")
 
 
 

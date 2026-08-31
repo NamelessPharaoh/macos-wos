@@ -240,6 +240,28 @@ def tap_on_green_button(text=None, rois=None, wait=None, sleep=0.5, require_red_
         time.sleep(0.4)
 
 
+def ensure_screen(title_key, expected, threshold=80):
+    """True when the current screen's title reads `expected` (fuzzy match).
+
+    A task that navigates by tapping an icon MUST confirm it arrived before it
+    reads anything. tap_on_template returns True on a mis-tap, so without this
+    the task carries on against whatever screen it landed on — which is how the
+    Pet task came to parse a mail subject as an attempt count.
+
+    The pattern was already here, copy-pasted across alliance.py:25-32 and
+    friends, and written incorrectly in training_troops.py (a list compared to a
+    string, so the branch always fired). This is the single correct version.
+    """
+    res = req_text(title_key)
+    if not res:
+        return False
+    try:
+        title = str(res[0][0])
+    except (IndexError, TypeError):
+        return False
+    return fuzz.ratio(title.lower(), expected.lower()) >= threshold
+
+
 def req_cache_clear(session_id):
     payload = {
         "session_id" : session_id
@@ -265,8 +287,21 @@ def tap_on_template(
     if name in template_area:
         if threshold == None:
             threshold = (template_area[name]["threshold"] or 0.8)
+            # A threshold pinned in template_config.json is an explicit
+            # statement about THIS template, so it is as authoritative as one
+            # the caller passed: suppress the time-decay below.
+            #
+            # Without this the decay wins and the config is decorative. Measured
+            # on a real home screen: Home.Pet peaks at 0.614 over the MAIL icon
+            # (91.9%,86.0% vs Mail's 92.0%,85.8%), so a bare
+            # tap_on_template("Home.Pet", wait=2) decays to the 0.6 floor, opens
+            # Mail, and reports success — which is how the Pet task came to read
+            # mail subjects and crash on int('Gathering Income Report').
+            # Icons that ARE present score 0.92-0.97, so a pinned 0.85 separates
+            # cleanly.
+            passed_threshold = threshold
         rois = template_area.get(name,{}).get("box", None)
-    
+
     if not threshold:
         threshold = 0.8
     # remember original threshold for time-based decay

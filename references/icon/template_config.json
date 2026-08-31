@@ -1,9 +1,36 @@
 {
     "_demo": {
-        "box" : [0, 0],
-        "threshold" : 0.8
+        "box": [0, 0],
+        "threshold": 0.8
     },
     "Home.PowerIcon": {
-        "threshold" : 0.1
+        "threshold": 0.1
+    },
+
+    "_comment_home_icons": "Home-screen navigation icons are all the same blue rounded square differing only by glyph, so they cross-match each other. Measured against a real home screen: an icon that IS present scores 0.92-0.97, one that is ABSENT peaks at 0.38-0.61 (Home.Pet hits 0.614 over the Mail icon). Pinning 0.85 separates those cleanly, and a pinned threshold also suppresses the time-decay that otherwise slides down to a 0.6 floor and matches the wrong icon.",
+
+    "Home.Pet": {
+        "threshold": 0.85
+    },
+    "Home.Mail": {
+        "threshold": 0.85
+    },
+    "Home.Missions": {
+        "threshold": 0.85
+    },
+    "Home.Store": {
+        "threshold": 0.85
+    },
+    "Home.Labyrinth": {
+        "threshold": 0.85
+    },
+    "Home.ChiefOrder": {
+        "threshold": 0.85
+    },
+    "Home.Arena": {
+        "threshold": 0.85
+    },
+    "Global.SidePanel": {
+        "threshold": 0.85
     }
 }

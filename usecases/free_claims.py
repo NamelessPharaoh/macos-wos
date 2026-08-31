@@ -12,11 +12,14 @@ screen offering nothing free simply gets backed out of.
 
 Adding coverage for another screen is one row in ENTRY_POINTS, not a new module.
 """
+import time
+
 from core.recalibrate import recalibrate
 
 from core.core import (
     req_detect,
     tap_on_text,
+    tap_on_template,
     tap_on_green_button,
 )
 from cmd_program.screen_action import tap_screen
@@ -47,8 +50,11 @@ def _pct_box_to_pixels(box):
             int(box[2] / 100 * BASE_WIDTH), int(box[3] / 100 * BASE_HEIGHT)]
 
 
-def _claim_here(label, max_rounds=3):
-    """Press every free reward this screen offers. Returns how many landed."""
+def _claim_here(label, max_rounds=3, descend=True):
+    """Press every free reward this screen offers, then look one level down.
+
+    Returns how many landed.
+    """
     claimed = 0
     for _ in range(max_rounds):
         if not tap_on_green_button(wait=2):
@@ -57,7 +63,49 @@ def _claim_here(label, max_rounds=3):
         print(f"Claimed a free reward on {label}.")
         # Reward popups close on a tap-anywhere; recalibrate mops up the rest.
         tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
+
+    if claimed or not descend:
+        return claimed
+    return _descend_into_subtabs(label)
+
+
+def _descend_into_subtabs(label, max_subtabs=4):
+    """Follow dots one level deeper when the screen itself offers nothing free.
+
+    Heroes, Backpack and Events all flag pending work at the top level but keep
+    their claimables in sub-tabs, so a home-level-only sweep walks right past
+    them. Strictly one level: tap a dotted element, take anything green, come
+    back, re-read. Bounded by max_subtabs, and each dot is visited once, so a
+    dot that never clears cannot spin.
+    """
+    claimed = 0
+    seen = set()
+    for _ in range(max_subtabs):
+        dots = [c for c in (req_detect("red_dot") or []) if c.get("kind") == "dot"]
+        target = next((d for d in dots if _key(d) not in seen), None)
+        if target is None:
+            break
+        seen.add(_key(target))
+
+        x1, y1, x2, y2 = target["box"]
+        tap_screen(((x1 + x2) // 2, (y1 + y2) // 2))
+        time.sleep(1)
+
+        if tap_on_green_button(wait=2):
+            claimed += 1
+            print(f"Claimed a free reward one level into {label}.")
+            tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
+
+        # Back up to the screen we descended from so the next dot is addressable.
+        tap_on_template("Global.Back", wait=2)
+        time.sleep(0.5)
     return claimed
+
+
+def _key(dot):
+    """Grid-snapped identity so a dot that shifts a pixel is not 'new'."""
+    x1, y1, x2, y2 = dot["box"]
+    return ((x1 + x2) // 2 // 20, (y1 + y2) // 2 // 20)
 
 
 def sweep_free_claims():

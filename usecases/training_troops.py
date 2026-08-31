@@ -2,6 +2,7 @@ import time
 from core.recalibrate import recalibrate
 
 from core.core import (
+    ensure_screen,
     req_ocr,
     req_text,
     tap_on_text,
@@ -20,29 +21,38 @@ side_panel = [0, 28.05, 62.04, 67.07]
 training_menu = [23.15, 56.91, 86.11, 73.17]
 
 
+def _side_panel_is_open():
+    """The panel is open only if one of its tab labels actually reads back."""
+    for key, expected in (("Global.SidePanel.City", "City"),
+                          ("Global.SidePanel.Wilderness", "Wilderness")):
+        if ensure_screen(key, expected):
+            return True
+    return False
+
+
 def train():
 
     recalibrate()
 
-    status = tap_on_template("Global.SidePanel", wait=2, threshold=0.5)
-
-    if not status:
-        print("Side Panel Not found")
-        tap_screen(0.37, 44.84)
+    # threshold=0.5 matched the city map itself (measured 0.518 with no panel
+    # open), so this "succeeded" and the Infantry search below ran against the
+    # city view. Confirm the panel by reading a tab label.
+    tap_on_template("Global.SidePanel", wait=2)
+    if not _side_panel_is_open():
+        print("Side panel did not open, ending the task...")
+        return None
 
     status = tap_on_text("Infantry", rois=[side_panel], wait=2, sleep=1)
 
     if not status:
-        print("Error finding side panel, Exiting the task")
+        print("Infantry row not found in the side panel, ending the task...")
         return None
     
     for i in range(3):
         tap_screen(50, 48.78)
         time.sleep(0.3)
     tap_on_text("Train", rois = [training_menu], wait=2, sleep=0.5)
-    title = req_text("Home.TroopTraining.Title")
-
-    if title != "infantry":
+    if not ensure_screen("Home.TroopTraining.Title", "infantry"):
         tap_on_text("Click anywhere", wait=2, sleep=0.5)
 
     status = tap_on_text("Home.TroopTraining.Train", wait=2)
@@ -53,18 +63,14 @@ def train():
         print("Infantry Training is not finished yet, Skipping Infantry...")
 
     tap_on_text("Home.TroopTraining.LancerCamp", wait=2, sleep=0.5)
-    title = req_text("Home.TroopTraining.Title")
-
-    if title != "lancer":
+    if not ensure_screen("Home.TroopTraining.Title", "lancer"):
         tap_on_text("Click anywhere", wait=2, sleep=0.5)
     status = tap_on_text("Home.TroopTraining.Train", wait=2)
     if not status:
         print("Lancer Training is not finished yet, Skipping Lancer...")
 
     tap_on_text("Home.TroopTraining.MarksmanCamp", wait=2, sleep=0.5)
-    title = req_text("Home.TroopTraining.Title")
-
-    if title != "marksman":
+    if not ensure_screen("Home.TroopTraining.Title", "marksman"):
         tap_on_text("Click anywhere", wait=2, sleep=0.5)
     status = tap_on_text("Home.TroopTraining.Train", wait=2)
     if not status:
@@ -163,12 +169,12 @@ def train_marksman(Amount=None):
 
     tap_on_text("Marksman", rois=[side_panel], wait=2)
     for i in range(3):
-        tap_screen(540, 1200)
+        tap_screen(50.0, 48.78)
         time.sleep(0.3)
     tap_on_text("Train", rois = [training_menu], wait=2)
 
-    tap_screen(550, 1100)            #Taping at the middle of the screen to remove the tutorial hand icon
-    traned = 0
+    tap_screen(50.93, 44.72)         # remove the tutorial hand icon
+    trained = 0
 
     while(trained < Amount):
         time.sleep(0.5)

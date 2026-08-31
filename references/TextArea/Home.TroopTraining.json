@@ -59,16 +59,6 @@
             77.4
         ]
     },
-    "Home.TroopTraining.TrainigAmount": {
-        "text": "992",
-        "score": 0.9993441700935364,
-        "box": [
-            71.3,
-            80.77,
-            78.7,
-            82.48
-        ]
-    },
     "Home.TroopTraining.Finish": {
         "text": "Finish",
         "score": 0.9973459839820862,
@@ -217,6 +207,16 @@
             72.28,
             54.91,
             75.2
+        ]
+    },
+    "Home.TroopTraining.TrainingAmount": {
+        "text": "992",
+        "score": 0.9993441700935364,
+        "box": [
+            71.3,
+            80.77,
+            78.7,
+            82.48
         ]
     }
 }

@@ -2,6 +2,7 @@ import time
 from core.recalibrate import recalibrate
 
 from core.core import (
+    ensure_screen,
     req_ocr,
     req_text,
     tap_on_text,
@@ -33,17 +34,38 @@ def collect_missions_reward():
 
 
 
+def _side_panel_is_open():
+    """The panel is open only if one of its tab labels actually reads back."""
+    for key, expected in (("Global.SidePanel.Wilderness", "Wilderness"),
+                          ("Global.SidePanel.City", "City")):
+        if ensure_screen(key, expected):
+            return True
+    return False
+
+
 def collect_life_essence():
     recalibrate()
-    status = tap_on_template("Global.SidePanel", wait=3, sleep=0.5, threshold=0.5)
-    if not status:
-        print("Side panel not found")
-        tap_screen(0.37, 44.84)
+    # threshold=0.5 was matching the city map itself: measured on a home screen
+    # with NO panel open, Global.SidePanel peaks at 0.518. The tap "succeeded",
+    # the swipes below dragged the map camera, and the search then ran against
+    # the city view. Prove the panel is really open by reading a tab label
+    # instead of trusting a score.
+    tap_on_template("Global.SidePanel", wait=3, sleep=0.5)
+    if not _side_panel_is_open():
+        print("Side panel did not open, ending the task...")
         return None
-    for _ in range(2):
+
+    # Tree of Life lives under Wilderness; this tab was never selected, so even
+    # a correctly-opened panel was searched on the wrong tab.
+    tap_on_text("Global.SidePanel.Wilderness", wait=2, sleep=1)
+
+    status = None
+    for _ in range(3):
+        status = tap_on_text("Tree of Life", rois=[side_panel], sleep=6)
+        if status:
+            break
         swipe_screen(32.41, 65.04, 32.41, 32.52)
         time.sleep(2)
-    status = tap_on_text("Tree of Life", rois=[side_panel], sleep=6)
     if not status:
         print("Tree of life not found, Exiting..")
         status = tap_on_text("Global.SidePanel.City", tap=False)

@@ -76,6 +76,14 @@ TOLERANCE_PCT = 0.30
 # routinely returns a character or two off on this game's font.
 TEXT_MATCH_THRESHOLD = 80
 
+# Shortest expected text allowed to match on a substring. A live label often
+# carries state the recorded one did not -- Home.VIPLevel recorded as 'VIP' reads
+# back as 'VIP 1' once the account has a level, which scores 75 on a whole-string
+# ratio and silently drops the only static anchor in the upper band. Substring
+# matching fixes that, but on a two-character label it would match half the
+# screen, so it is gated on length.
+MIN_LEN_FOR_SUBSTRING_MATCH = 3
+
 # Verdicts
 OK = "OK"
 TRANSLATION = "TRANSLATION"
@@ -137,10 +145,17 @@ def _best_match(expected_text, expected_centre, read):
     one frame, and picking the wrong one injects a fake delta the size of the
     screen.
     """
-    candidates = [
-        item for item in read
-        if fuzz.ratio(str(item[0]).lower(), expected_text.lower()) >= TEXT_MATCH_THRESHOLD
-    ]
+    wanted = expected_text.lower()
+
+    def matches(found):
+        found = str(found).lower()
+        if fuzz.ratio(found, wanted) >= TEXT_MATCH_THRESHOLD:
+            return True
+        # 'VIP' -> 'VIP 1': the element is the same, the label just grew.
+        return (len(wanted) >= MIN_LEN_FOR_SUBSTRING_MATCH
+                and fuzz.partial_ratio(found, wanted) >= TEXT_MATCH_THRESHOLD)
+
+    candidates = [item for item in read if matches(item[0])]
     if not candidates:
         return None
 

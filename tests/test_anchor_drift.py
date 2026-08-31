@@ -304,3 +304,30 @@ class TestRecalibrateDiagnostics:
         monkeypatch.setattr(rc, "measure_drift", lambda: self._report(ad.OCR_UNAVAILABLE))
         rc._warn_if_anchor_moved([])
         assert capsys.readouterr().out == ""
+
+
+class TestLabelsThatGrew:
+    """A live label often carries state the recorded one did not."""
+
+    def test_vip_with_a_level_still_matches_vip(self, monkeypatch):
+        # Recorded as 'VIP', reads back as 'VIP 1' once the account has a level.
+        # Whole-string ratio scores that 75 and drops the only static upper anchor.
+        read = frame()
+        for item in read:
+            if item[0] == ad.text_area["Home.VIPLevel"]["text"]:
+                item[0] = item[0] + " 1"
+        arm(monkeypatch, read)
+        r = ad.measure_drift()
+        assert "Home.VIPLevel" not in r.missing
+        assert r.verdict == ad.OK
+
+    def test_substring_matching_is_gated_on_length(self):
+        # A two-character expected label would match half the screen.
+        assert ad.MIN_LEN_FOR_SUBSTRING_MATCH >= 3
+        for key, _ in ad.ANCHORS:
+            assert len(ad.text_area[key]["text"]) >= ad.MIN_LEN_FOR_SUBSTRING_MATCH, key
+
+    def test_an_unrelated_word_still_does_not_match(self, monkeypatch):
+        read = [["Gathering Income Report", _recorded_box("Home.World")]]
+        arm(monkeypatch, read)
+        assert ad.measure_drift().verdict == ad.INCONCLUSIVE

@@ -53,6 +53,107 @@ the gathering task), and the RAM guard was completely inert on macOS.
   silently was reversed — silent substitution would tap a different device with rescaled
   frames and no error.
 
+## Screen inset calibration — 2026-08-31 (IN PROGRESS)
+
+**ROLLBACK, if anything below goes wrong:**
+
+```
+adb -s 127.0.0.1:16384 shell cmd overlay enable com.android.internal.display.cutout.emulation.tall
+```
+
+…and set the game's Settings > Non-standard Screen Adaptation distance back to **77**.
+Overlay state lives in `/data/system/overlays.xml`, so it survives a reboot but NOT a
+MuMu instance reset — same durability as the in-game setting, which lives in the app's
+own data.
+
+**Why this is being changed.** Three layers push content down and only one has a UI:
+
+| Layer | Mechanism | State at baseline |
+|---|---|---|
+| MuMu emulator | its own cutout option (maxes 72px) | off |
+| Android framework | `cutout.emulation.tall` RRO | on, 126px, set by adb, no UI |
+| The game | "Non-standard Screen Adaptation" | distance 77 |
+
+The RRO is invisible manual emulator state that nothing in the repo sets, so a fresh
+machine silently gets a different layout. Removing it and driving the inset from the
+in-game slider leaves one knob, and that one has a UI.
+
+**Baseline measured 2026-08-31, RRO still on, slider 77** (`anchor_drift` task,
+reproduced identically twice):
+
+```
+Anchor drift: SAFE_AREA_RELAYOUT
+  band means: UPPER -4.83%   BOTTOM +0.14%   (tolerance +/-0.30%)
+  Home.Events   -4.86%     Home.World   +0.14%    Home.Shop      +0.16%
+  Home.Deal     -4.80%     Home.Heroes  +0.10%    Home.Alliance  +0.14%
+                           Home.Backpack +0.16%   Home.Exploration +0.10%
+  not found: Home.VIPLevel
+```
+
+-4.83% of 2460px is **-118.8px** — the "~120px top safe-area inset" the 2026-08-29 note
+below says the shipped ROIs assume. So even WITH the RRO enabled, the top-band content
+sits a full inset higher than the recorded boxes expect, while the bottom nav is exactly
+in place. The bottom nav being pinned is what makes this a safe-area relayout rather than
+a whole-screen shift.
+
+**Anchor caveats found on the first live run** — the UPPER band is currently not
+trustworthy and needs replacing before this measurement carries weight:
+
+- `Home.VIPLevel` ('VIP') does not OCR at all. Consistent with the known Vision
+  behaviour on short isolated strings in this game's font.
+- `Home.Events` and `Home.Deal` are buttons in a dynamic vertical stack, not fixed
+  chrome. They move together when the number of active event banners changes, which
+  produces exactly the signature above. Both moved by the same amount, so a lost slot
+  in that column is a live alternative explanation to an inset change.
+
+**Measured with the overlay OFF, slider still 77** (full quorum, 3/3 upper, 6/6 bottom,
+nothing missing):
+
+```
+Anchor drift: SAFE_AREA_RELAYOUT
+  band means: UPPER -4.80%   BOTTOM +0.14%   (tolerance +/-0.30%)
+  Home.Events   -4.86%     Home.Heroes   +0.10%   Home.Alliance    +0.14%
+  Home.Deal     -4.80%     Home.Exploration +0.10%  Home.Shop      +0.16%
+  Home.VIPLevel -4.74%     Home.World    +0.14%   Home.Backpack    +0.16%
+```
+
+## The finding: the cutout overlay was doing nothing
+
+| | UPPER band | BOTTOM nav |
+|---|---|---|
+| overlay ON, slider 77 | -4.83% | +0.14% |
+| overlay OFF, slider 77 | **-4.80%** | **+0.14%** |
+
+Removing a 126px display cutout moved the game's layout by **0.03%** — inside measurement
+noise. The game never honoured the Android cutout inset at all; it lays itself out from
+its own "Non-standard Screen Adaptation" setting and ignores the framework's. The RRO has
+been invisible manual emulator state contributing nothing since the port.
+
+**The overlay stays off.** It is not load-bearing, and nothing in the repo set it, so
+leaving it enabled only guaranteed that the next machine would silently differ.
+
+Also note `wm size` / framebuffer is unchanged at 1080x2460 with the overlay off, so
+`run.sh`'s existing gate is unaffected.
+
+## What is actually stale: the top-band ROIs
+
+The -4.80% (-118px) upper-band offset is real, reproducible, and **predates the overlay
+removal** — it shows identically with the RRO on. It is not the dynamic-event-column
+artefact suspected at baseline: `Home.VIPLevel` sits at x 64.4-70.6% in the top resource
+row while `Home.Events` / `Home.Deal` sit at x 88.9-96.0% in the right-hand column, two
+independent regions, and all three moved by the same amount with their x unchanged
+(dx +0.09%, -0.19%, +1.06%).
+
+Bottom nav pinned + top band displaced = a safe-area relayout, not a whole-screen shift.
+The recorded top-band boxes assume ~118px more top inset than the game currently applies.
+
+**Open, needs one manual action:** raise the in-game Settings > Non-standard Screen
+Adaptation distance above 77 and re-run `anchor_drift`. Two values give pixels-per-unit,
+and from there the target solves directly. If the slider moves the top band without
+disturbing the bottom nav, this closes with no ROI edits at all; if it moves both, the
+top-band ROIs get re-anchored by the measured -4.80% instead.
+
+
 ## State as of 2026-08-29
 
 Done and verified (see the 2026-08-29 ledger section for evidence):

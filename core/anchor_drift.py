@@ -68,9 +68,19 @@ ANCHORS = [
 # end up retuning 355 ROIs against noise.
 QUORUM = {UPPER_BAND: 2, BOTTOM_BAND: 3}
 
-# Percent of frame height. 0.30% of 2460px is ~7px, comfortably inside a text
-# box's own height, so anything under this is measurement noise rather than drift.
-TOLERANCE_PCT = 0.30
+# Tolerance is DERIVED from each anchor's own recorded box, not picked. A read
+# whose centre sits within half a box height of where the box says it should be
+# still falls inside that box, so it still crops correctly -- which is the only
+# thing an ROI has to do. Anything beyond that is drift beginning to clip.
+#
+# Measured 2026-08-31, and the two states separate cleanly: with the in-game
+# screen-adaptation distance at 0 the upper band read -4.86% against a 0.57%
+# half-height, ~8x outside. At the calibrated 70 every anchor sits inside its own
+# half-height (band mean +0.01%). A hardcoded threshold either fires forever on
+# the good state or misses the bad one; the box heights already know the answer.
+#
+# The floor stops a very small recorded box from making its anchor hypersensitive.
+MIN_TOLERANCE_PCT = 0.20
 
 # Same bar ensure_screen uses (core/core.py:262), for the same reason: OCR
 # routinely returns a character or two off on this game's font.
@@ -105,6 +115,11 @@ class AnchorMatch:
     found: str
     dx_pct: float
     dy_pct: float
+    tolerance_pct: float = MIN_TOLERANCE_PCT
+
+    @property
+    def in_place(self):
+        return abs(self.dy_pct) <= self.tolerance_pct
 
 
 @dataclass
@@ -115,6 +130,8 @@ class DriftReport:
     missing: list = field(default_factory=list)
     upper_dy_pct: float = None
     bottom_dy_pct: float = None
+    upper_tol_pct: float = None
+    bottom_tol_pct: float = None
 
     @property
     def measured(self):
@@ -128,6 +145,15 @@ class DriftReport:
 def _centre(box):
     x1, y1, x2, y2 = box
     return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
+
+
+def _tolerance(key):
+    """Half the anchor's recorded box height, in percent of frame height."""
+    entry = text_area.get(key)
+    if not entry or not entry.get("box"):
+        return MIN_TOLERANCE_PCT
+    box = entry["box"]
+    return max((box[3] - box[1]) / 2.0, MIN_TOLERANCE_PCT)
 
 
 def _expected(key):
@@ -166,22 +192,23 @@ def _best_match(expected_text, expected_centre, read):
     return min(candidates, key=distance)
 
 
-def _band_mean(matches, band):
-    values = [m.dy_pct for m in matches if m.band == band]
+def _band_mean(matches, band, attr="dy_pct"):
+    values = [getattr(m, attr) for m in matches if m.band == band]
     if not values:
         return None
     return sum(values) / len(values)
 
 
-def _classify(upper_dy, bottom_dy):
+def _classify(upper_dy, bottom_dy, upper_tol, bottom_tol):
     """Name the failure mode, because each one has a different remedy."""
-    upper_moved = abs(upper_dy) > TOLERANCE_PCT
-    bottom_moved = abs(bottom_dy) > TOLERANCE_PCT
+    upper_moved = abs(upper_dy) > upper_tol
+    bottom_moved = abs(bottom_dy) > bottom_tol
+    agree_tol = max(upper_tol, bottom_tol)
 
     if not upper_moved and not bottom_moved:
         return OK, "Anchors are where the recorded ROIs expect them."
 
-    if abs(upper_dy - bottom_dy) <= TOLERANCE_PCT:
+    if abs(upper_dy - bottom_dy) <= agree_tol:
         return TRANSLATION, (
             f"Whole screen shifted {upper_dy:+.2f}%. A single inset change explains "
             f"this; retuning one knob (or one global offset) fixes every ROI."
@@ -248,6 +275,7 @@ def measure_drift():
             found=str(hit[0]),
             dx_pct=(found_centre[0] - expected_centre[0]) / BASE_WIDTH * 100,
             dy_pct=(found_centre[1] - expected_centre[1]) / BASE_HEIGHT * 100,
+            tolerance_pct=_tolerance(key),
         ))
 
     short = [
@@ -269,7 +297,9 @@ def measure_drift():
 
     upper_dy = _band_mean(matches, UPPER_BAND)
     bottom_dy = _band_mean(matches, BOTTOM_BAND)
-    verdict, reason = _classify(upper_dy, bottom_dy)
+    upper_tol = _band_mean(matches, UPPER_BAND, "tolerance_pct")
+    bottom_tol = _band_mean(matches, BOTTOM_BAND, "tolerance_pct")
+    verdict, reason = _classify(upper_dy, bottom_dy, upper_tol, bottom_tol)
 
     return DriftReport(
         verdict=verdict,
@@ -278,6 +308,8 @@ def measure_drift():
         missing=missing,
         upper_dy_pct=upper_dy,
         bottom_dy_pct=bottom_dy,
+        upper_tol_pct=upper_tol,
+        bottom_tol_pct=bottom_tol,
     )
 
 
@@ -305,7 +337,7 @@ def anchor_is_in_place(key, read_result):
     if expected_centre is None:
         return False
     dy_pct = (_centre(box)[1] - expected_centre[1]) / BASE_HEIGHT * 100
-    return abs(dy_pct) <= TOLERANCE_PCT
+    return abs(dy_pct) <= _tolerance(key)
 
 
 def format_report(report):
@@ -313,18 +345,28 @@ def format_report(report):
     lines = [f"Anchor drift: {report.verdict}", report.reason]
     if report.matches:
         lines.append("")
-        lines.append(f"  {'anchor':<22} {'band':<7} {'dy%':>8} {'dx%':>8}  read as")
+        lines.append(
+            f"  {'anchor':<22} {'band':<7} {'dy%':>8} {'tol%':>7} {'dx%':>8}  read as")
         for m in sorted(report.matches, key=lambda m: m.dy_pct):
+            flag = " " if m.in_place else "!"
             lines.append(
-                f"  {m.key:<22} {m.band:<7} {m.dy_pct:>+8.2f} {m.dx_pct:>+8.2f}  {m.found!r}"
+                f" {flag}{m.key:<22} {m.band:<7} {m.dy_pct:>+8.2f} {m.tolerance_pct:>7.2f} "
+                f"{m.dx_pct:>+8.2f}  {m.found!r}"
             )
     if report.missing:
         lines.append("")
         lines.append(f"  not found: {', '.join(report.missing)}")
     if report.upper_dy_pct is not None:
         lines.append("")
+        # Tolerances are absent on a report built by hand (a caller staging a
+        # verdict); the formatter must not be the thing that raises.
+        def band(label, dy, tol):
+            return f"{label} {dy:+.2f}%" + (f" (tol +/-{tol:.2f}%)" if tol else "")
+
         lines.append(
-            f"  band means: UPPER {report.upper_dy_pct:+.2f}%  "
-            f"BOTTOM {report.bottom_dy_pct:+.2f}%  (tolerance +/-{TOLERANCE_PCT}%)"
+            "  band means: "
+            + band("UPPER", report.upper_dy_pct, report.upper_tol_pct)
+            + "  "
+            + band("BOTTOM", report.bottom_dy_pct, report.bottom_tol_pct)
         )
     return "\n".join(lines)

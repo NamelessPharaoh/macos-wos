@@ -234,6 +234,12 @@ class TestRecalibrateDiagnostics:
     def _report(self, verdict, **kw):
         return ad.DriftReport(verdict=verdict, reason="because", **kw)
 
+    def test_the_formatter_survives_a_report_with_no_tolerances(self):
+        # _diagnose_missing_homepage formats whatever measure_drift hands it.
+        out = ad.format_report(self._report(ad.TRANSLATION, upper_dy_pct=-5.1,
+                                            bottom_dy_pct=-5.1))
+        assert "-5.10" in out
+
     def test_ocr_down_blames_the_reader_not_the_layout(self, monkeypatch):
         import core.recalibrate as rc
         monkeypatch.setattr(rc, "measure_drift",
@@ -331,3 +337,60 @@ class TestLabelsThatGrew:
         read = [["Gathering Income Report", _recorded_box("Home.World")]]
         arm(monkeypatch, read)
         assert ad.measure_drift().verdict == ad.INCONCLUSIVE
+
+
+class TestDerivedTolerance:
+    """The ruler comes from the recorded boxes, not from a number I picked."""
+
+    def test_tolerance_is_half_the_recorded_box_height(self):
+        for key, _ in ad.ANCHORS:
+            b = ad.text_area[key]["box"]
+            assert ad._tolerance(key) == pytest.approx(max((b[3] - b[1]) / 2,
+                                                           ad.MIN_TOLERANCE_PCT))
+
+    def test_a_tiny_box_cannot_make_an_anchor_hypersensitive(self, monkeypatch):
+        monkeypatch.setitem(ad.text_area, "Home.World",
+                            {"text": "World", "box": [85, 98.0, 95, 98.02]})
+        assert ad._tolerance("Home.World") == ad.MIN_TOLERANCE_PCT
+
+    def test_the_calibrated_reading_is_healthy(self, monkeypatch):
+        # Measured 2026-08-31, overlay off, screen-adaptation distance 70 (the
+        # shipped setting). Every anchor sits inside half its own box, so the
+        # boot gate must stay quiet. A hardcoded 0.30% would have been fine here
+        # but warned forever at 78, one probe step away.
+        live = {"Home.VIPLevel": 0.06, "Home.Events": -0.02, "Home.Deal": 0.00,
+                "Home.World": 0.14, "Home.Shop": 0.16, "Home.Heroes": 0.18,
+                "Home.Alliance": 0.14, "Home.Backpack": 0.16,
+                "Home.Exploration": 0.10}
+        read = []
+        for key, _ in ad.ANCHORS:
+            box = _recorded_box(key)
+            read.append([ad.text_area[key]["text"],
+                         _shift(box, live[key] / 100 * BASE_HEIGHT)])
+        arm(monkeypatch, read)
+        r = ad.measure_drift()
+        assert r.verdict == ad.OK, ad.format_report(r)
+        assert all(m.in_place for m in r.matches)
+
+    def test_the_uncalibrated_reading_is_still_caught(self, monkeypatch):
+        # Same rig with the screen-adaptation distance at 0: -4.86% against a
+        # 0.57% half-height. This is the state that broke the Chief Profile tap.
+        live = {"Home.VIPLevel": -4.74, "Home.Events": -4.86, "Home.Deal": -4.80,
+                "Home.World": 0.14, "Home.Shop": 0.16, "Home.Heroes": 0.10,
+                "Home.Alliance": 0.14, "Home.Backpack": 0.16,
+                "Home.Exploration": 0.10}
+        read = []
+        for key, _ in ad.ANCHORS:
+            box = _recorded_box(key)
+            read.append([ad.text_area[key]["text"],
+                         _shift(box, live[key] / 100 * BASE_HEIGHT)])
+        arm(monkeypatch, read)
+        r = ad.measure_drift()
+        assert r.verdict == ad.SAFE_AREA_RELAYOUT
+        assert not any(m.in_place for m in r.matches if m.band == ad.UPPER_BAND)
+        assert all(m.in_place for m in r.matches if m.band == ad.BOTTOM_BAND)
+
+    def test_the_report_shows_the_tolerance_it_used(self, monkeypatch):
+        arm(monkeypatch, frame())
+        out = ad.format_report(ad.measure_drift())
+        assert "tol" in out

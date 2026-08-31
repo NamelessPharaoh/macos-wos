@@ -18,6 +18,7 @@ from usecases.alliance import (
     help,
 )
 from usecases.vip import collect_vip_rewards
+from usecases.free_claims import sweep_free_claims
 from usecases.heal import heal
 from usecases.arena import arena
 from usecases.mail import collect_mail_rewards
@@ -59,6 +60,7 @@ def _run_gather(current_player_id):
 
 TASKS = [
     TaskSpec("vip", "VIP Rewards", "Collect VIP rewards before anything else.", lambda _player_id: collect_vip_rewards()),
+    TaskSpec("free_claims", "Free Claims Sweep", "Follow home-screen red dots and claim what is free.", lambda _player_id: sweep_free_claims()),
     TaskSpec("exploration_idle", "Exploration Idle Income", "Claim passive exploration income.", lambda _player_id: claim_exploration_idle_income()),
     TaskSpec("exploration_continue", "Continue Exploring", "Resume exploration progress.", lambda _player_id: continue_exploring()),
     TaskSpec("mail", "Mail Rewards", "Collect mailbox rewards.", lambda _player_id: collect_mail_rewards()),

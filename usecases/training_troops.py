@@ -3,6 +3,7 @@ from core.recalibrate import recalibrate
 
 from core.core import (
     ensure_screen,
+    side_panel_is_open,
     req_ocr,
     req_text,
     tap_on_text,
@@ -21,15 +22,6 @@ side_panel = [0, 28.05, 62.04, 67.07]
 training_menu = [23.15, 56.91, 86.11, 73.17]
 
 
-def _side_panel_is_open():
-    """The panel is open only if one of its tab labels actually reads back."""
-    for key, expected in (("Global.SidePanel.City", "City"),
-                          ("Global.SidePanel.Wilderness", "Wilderness")):
-        if ensure_screen(key, expected):
-            return True
-    return False
-
-
 def train():
 
     recalibrate()
@@ -38,7 +30,7 @@ def train():
     # open), so this "succeeded" and the Infantry search below ran against the
     # city view. Confirm the panel by reading a tab label.
     tap_on_template("Global.SidePanel", wait=2)
-    if not _side_panel_is_open():
+    if not side_panel_is_open():
         print("Side panel did not open, ending the task...")
         return None
 
@@ -80,13 +72,16 @@ def train():
 
 
 
-def train_infantry(Amount=None):
+def train_infantry(Amount):
 
     recalibrate()
 
-    status = tap_on_template("Global.SidePanel", wait=2, threshold=0.5)
-    if not status:
-        print("Side Panel Not found, Exiting The Task")
+    # threshold=0.5 scored 0.518 against the city map with no panel open, so
+    # this "succeeded" and everything below ran on the wrong view. The template
+    # is pinned at 0.85 in template_config.json; prove the panel by reading a tab.
+    tap_on_template("Global.SidePanel", wait=2)
+    if not side_panel_is_open():
+        print("Side panel did not open, ending the task...")
         return None
 
     tap_on_text("Infantry", rois=[side_panel], wait=2)
@@ -119,13 +114,16 @@ def train_infantry(Amount=None):
         
 
 
-def train_lancer(Amount=None):
+def train_lancer(Amount):
 
     recalibrate()
 
-    status = tap_on_template("Global.SidePanel", wait=2, threshold=0.5)
-    if not status:
-        print("Side Panel Not found, Exiting The Task")
+    # threshold=0.5 scored 0.518 against the city map with no panel open, so
+    # this "succeeded" and everything below ran on the wrong view. The template
+    # is pinned at 0.85 in template_config.json; prove the panel by reading a tab.
+    tap_on_template("Global.SidePanel", wait=2)
+    if not side_panel_is_open():
+        print("Side panel did not open, ending the task...")
         return None
 
     tap_on_text("Lancer", rois=[side_panel], wait=2)
@@ -158,13 +156,16 @@ def train_lancer(Amount=None):
 
 
 
-def train_marksman(Amount=None):
+def train_marksman(Amount):
     
     recalibrate()
 
-    status = tap_on_template("Global.SidePanel", wait=2, threshold=0.5)
-    if not status:
-        print("Side Panel Not found, Exiting The Task")
+    # threshold=0.5 scored 0.518 against the city map with no panel open, so
+    # this "succeeded" and everything below ran on the wrong view. The template
+    # is pinned at 0.85 in template_config.json; prove the panel by reading a tab.
+    tap_on_template("Global.SidePanel", wait=2)
+    if not side_panel_is_open():
+        print("Side panel did not open, ending the task...")
         return None
 
     tap_on_text("Marksman", rois=[side_panel], wait=2)

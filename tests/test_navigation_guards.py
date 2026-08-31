@@ -147,3 +147,115 @@ class TestInjectionRetry:
             sa.run_adb_command(["shell", "input", "tap", "1", "1"])
         assert calls["n"] == 1
         assert sa._device_id is None      # real loss still drops the cache
+
+
+class TestSidePanelIsOpen:
+    """A template score is not proof the panel opened."""
+
+    def test_the_city_tab_proves_it(self, monkeypatch):
+        monkeypatch.setattr(cc, "req_text", lambda k: [["City", [0, 0, 1, 1]]])
+        assert cc.side_panel_is_open()
+
+    def test_the_wilderness_tab_proves_it(self, monkeypatch):
+        seen = []
+        def read(key):
+            seen.append(key)
+            return [["Wilderness", [0, 0, 1, 1]]] if "Wilderness" in key else []
+        monkeypatch.setattr(cc, "req_text", read)
+        assert cc.side_panel_is_open()
+        assert any("City" in k for k in seen)          # tried City first, fell through
+
+    def test_neither_tab_means_the_panel_never_opened(self, monkeypatch):
+        # Global.SidePanel peaks at 0.518 on a home screen with NO panel open, so
+        # the threshold=0.5 four call sites used reported success against the map.
+        monkeypatch.setattr(cc, "req_text", lambda k: [])
+        assert not cc.side_panel_is_open()
+
+    def test_a_wrong_screen_does_not_count(self, monkeypatch):
+        monkeypatch.setattr(cc, "req_text", lambda k: [["Chief Profile", [0, 0, 1, 1]]])
+        assert not cc.side_panel_is_open()
+
+    def test_it_lives_in_exactly_one_place(self):
+        # It was copy-pasted into collect.py and training_troops.py, identical but
+        # for the tab order. Re-duplicating it is the regression to catch.
+        import pathlib
+        hits = [p for p in pathlib.Path("usecases").glob("*.py")
+                if "def side_panel_is_open" in p.read_text()
+                or "def _side_panel_is_open" in p.read_text()]
+        assert hits == [], f"side_panel_is_open re-duplicated into {hits}"
+
+
+class TestTrainingTroopsGuards:
+    def _quiet(self, monkeypatch):
+        import usecases.training_troops as tt
+        monkeypatch.setattr(tt, "recalibrate", lambda: None)
+        monkeypatch.setattr(tt, "tap_on_template", lambda *a, **k: True)
+        monkeypatch.setattr(tt.time, "sleep", lambda *_: None)
+        return tt
+
+    @pytest.mark.parametrize("fn", ["train", "train_infantry", "train_lancer",
+                                    "train_marksman"])
+    def test_every_variant_bails_when_the_panel_did_not_open(self, monkeypatch, fn):
+        tt = self._quiet(monkeypatch)
+        monkeypatch.setattr(tt, "side_panel_is_open", lambda: False)
+        monkeypatch.setattr(tt, "tap_on_text",
+                            lambda *a, **k: pytest.fail("searched the wrong view"))
+        args = () if fn == "train" else (1,)
+        assert getattr(tt, fn)(*args) is None
+
+    @pytest.mark.parametrize("fn", ["train_infantry", "train_lancer", "train_marksman"])
+    def test_amount_is_required(self, monkeypatch, fn):
+        # Amount=None reached `while(trained < Amount)` and raised TypeError deep
+        # inside the task. These spend in-game resources: fail at the call site.
+        tt = self._quiet(monkeypatch)
+        with pytest.raises(TypeError):
+            getattr(tt, fn)()
+
+    @pytest.mark.parametrize("fn", ["train_infantry", "train_lancer", "train_marksman"])
+    def test_no_variant_still_passes_the_defeated_threshold(self, fn):
+        import inspect
+        import usecases.training_troops as tt
+        src = inspect.getsource(getattr(tt, fn))
+        assert "threshold=0.5" not in src.replace("# threshold=0.5", "")
+
+
+class TestAllianceArrival:
+    """Migrating five hand-rolled checks must not flip their polarity."""
+
+    def _arm(self, monkeypatch, arrived):
+        import usecases.alliance as al
+        calls = {"recalibrate": 0}
+        monkeypatch.setattr(al, "ensure_screen", lambda *a, **k: arrived)
+        monkeypatch.setattr(al, "recalibrate",
+                            lambda: calls.__setitem__("recalibrate",
+                                                      calls["recalibrate"] + 1))
+        monkeypatch.setattr(al, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(al, "tap_on_template", lambda *a, **k: True)
+        monkeypatch.setattr(al.time, "sleep", lambda *_: None)
+        return al, calls
+
+    def test_already_there_means_no_round_trip(self, monkeypatch):
+        al, calls = self._arm(monkeypatch, arrived=True)
+        al.tech_contribution()
+        assert calls["recalibrate"] == 0
+
+    def test_wrong_screen_re_navigates(self, monkeypatch):
+        al, calls = self._arm(monkeypatch, arrived=False)
+        al.tech_contribution()
+        assert calls["recalibrate"] == 1
+
+    def test_a_failed_read_still_re_navigates(self, monkeypatch):
+        # Polarity preservation: the old code left `title` as req_text's raw list
+        # on a failed read, so `!= "alliance"` was True and it re-navigated.
+        # ensure_screen returns False there, so `not` must do the same.
+        import usecases.alliance as al
+        monkeypatch.setattr(al, "req_text", lambda *a, **k: None)
+        al2, calls = self._arm(monkeypatch, arrived=False)
+        al2.tech_contribution()
+        assert calls["recalibrate"] == 1
+
+    def test_no_hand_rolled_checks_remain(self):
+        import pathlib
+        src = pathlib.Path("usecases/alliance.py").read_text()
+        assert 'title != "alliance"' not in src
+        assert src.count("ensure_screen(") == 5

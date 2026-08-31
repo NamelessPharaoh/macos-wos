@@ -262,6 +262,24 @@ def ensure_screen(title_key, expected, threshold=80):
     return fuzz.ratio(title.lower(), expected.lower()) >= threshold
 
 
+def side_panel_is_open():
+    """True only when the city/wilderness side panel is REALLY open.
+
+    tap_on_template("Global.SidePanel") returning True is not evidence. Measured
+    on a home screen with no panel open, that template peaks at 0.518 -- so the
+    threshold=0.5 four call sites passed "succeeded" against the city map itself,
+    and every search below it ran against the wrong view.
+
+    Was copy-pasted into collect.py and training_troops.py, identical but for the
+    tab order. Order is a latency hint only: either tab proves the panel.
+    """
+    for key, expected in (("Global.SidePanel.City", "City"),
+                          ("Global.SidePanel.Wilderness", "Wilderness")):
+        if ensure_screen(key, expected):
+            return True
+    return False
+
+
 def req_cache_clear(session_id):
     payload = {
         "session_id" : session_id

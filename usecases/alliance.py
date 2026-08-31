@@ -2,6 +2,7 @@ import time
 from core.recalibrate import recalibrate
 
 from core.core import (
+    ensure_screen,
     req_ocr,
     req_text,
     tap_on_text,
@@ -22,12 +23,7 @@ from cmd_program.screen_action import(
 
 def tech_contribution():
     time.sleep(0.5)
-    title = req_text("Home.Alliance.Title")
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Title Reading Error, Ignoring the read...")
-    if title != "alliance":
+    if not ensure_screen("Home.Alliance.Title", "Alliance"):
         recalibrate()
         tap_on_text("Home.Alliance", wait=2)
     tap_on_text("Home.Alliance.Tech", wait=2)
@@ -39,12 +35,7 @@ def tech_contribution():
 
 def auto_join():
     time.sleep(0.5)
-    title = req_text("Home.Alliance.Title")
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Title Reading Error, Ignoring the read...")
-    if title != "alliance":
+    if not ensure_screen("Home.Alliance.Title", "Alliance"):
         recalibrate()
         tap_on_text("Home.Alliance", wait=2)
     tap_on_text("Home.Alliance.War", wait=2)
@@ -60,12 +51,7 @@ def auto_join():
 
 def collect_chests():
     time.sleep(0.5)
-    title = req_text("Home.Alliance.Title")
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Title Reading Error, Ignoring the read...")
-    if title != "alliance":
+    if not ensure_screen("Home.Alliance.Title", "Alliance"):
         recalibrate()
         tap_on_text("Home.Alliance", wait=2)
     tap_on_text("Home.Alliance.Chests", wait=2)
@@ -89,12 +75,7 @@ def collect_chests():
 
 def help():
     time.sleep(0.5)
-    title = req_text("Home.Alliance.Title")
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Title Reading Error, Ignoring the read...")
-    if title != "alliance":
+    if not ensure_screen("Home.Alliance.Title", "Alliance"):
         recalibrate()
         tap_on_text("Home.Alliance", wait=2)
     tap_on_text("Home.Alliance.Help", wait=2)
@@ -109,12 +90,7 @@ def shop():
 
 def collect_triumph():
     time.sleep(0.5)
-    title = req_text("Home.Alliance.Title")
-    try:
-        title = title[0][0].lower()
-    except Exception as e:
-        print(f"Title Reading Error, Ignoring the read...")
-    if title != "alliance":
+    if not ensure_screen("Home.Alliance.Title", "Alliance"):
         recalibrate()
         tap_on_text("Home.Alliance", wait=2)
 

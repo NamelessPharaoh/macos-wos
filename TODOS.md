@@ -53,5 +53,58 @@ Deferred work with context. Each entry carries enough reasoning to pick up cold.
   v1 ships with the committed legacy frame as the oracle. Do on next bot run.
 - **Effort:** S (CC ~30min with emulator up). **Priority:** P2.
 
+## Top-band ROI offset: finish the slider calibration
+
+- **What:** Raise the in-game Settings > Non-standard Screen Adaptation distance
+  above 77, re-run the `anchor_drift` task, and either pin the value that zeroes
+  the top band or re-anchor the top-band ROIs by the measured delta.
+- **Why:** the upper band reads **-4.80% (-118px)** against its recorded boxes,
+  reproducibly, with the cutout overlay on *or* off. Bottom nav is exactly in
+  place, so it is a safe-area relayout: the recorded top boxes assume ~118px more
+  top inset than the game applies. This is the same ~120px the 2026-08-29 port
+  note says the shipped ROIs assume.
+- **Context:** the `cutout.emulation.tall` RRO turned out to be doing **nothing** —
+  removing a 126px cutout moved the layout by 0.03%. The game ignores the Android
+  cutout and lays out from its own setting. The overlay is now off and stays off.
+  Two slider values give pixels-per-unit and the target solves directly. If the
+  slider moves the top band without disturbing the bottom nav this closes with no
+  ROI edits; if it moves both, re-anchor the top-band boxes by -4.80% instead.
+  Needs one manual in-game menu action, which is why it is not done.
+- **Where to start:** `printf 'anchor_drift' | ./run.sh` (note: `Main.main` does
+  player init first and currently fails on Chief Profile, so call
+  `usecases.anchor_drift.report_anchor_drift()` directly against a running OCR
+  server until that is fixed). Full ledger in `docs/port/INDEX.md`.
+- **Effort:** S (CC ~20min once the slider is moved). **Priority:** P2.
+
+## Pin an unreachable OCR endpoint in tests/conftest.py
+
+- **What:** Point the OCR base URL at a dead port during tests so any unmocked
+  HTTP fails in milliseconds instead of retrying against whatever is listening.
+- **Why:** `tests/conftest.py` sets `OCR_CAPTURE_TOOL` and `OCR_BURNIN` but never
+  pins the port, so a test that misses a mock talks to `127.0.0.1:8000`. Observed
+  once this session: a full-suite run spent 35s on template-replay retries and
+  reported 2 failures that did not reproduce. `run.sh:11` already documents that a
+  foreign dev server on 8000 answers `/docs` while 404-ing `/ocr`, so a missed
+  mock can get *plausible-looking* answers from a stranger.
+- **Context:** the free-claims sub-tab descent added in `ea32aa2` is the path that
+  reached out. Suite timing should not depend on what else is running on the box.
+- **Where to start:** `tests/conftest.py`; set the env var `core/core.py` reads for
+  `ocr_url`. Any test that genuinely wants a live server then opts out explicitly.
+- **Effort:** S (CC ~5min). **Priority:** P3.
+
+## Chief Profile init blocks every task
+
+- **What:** `Main.main`'s player initialization taps the avatar, fails to reach
+  Chief Profile three times, and ends the whole pass — so no task runs at all.
+- **Why:** observed live 2026-08-31: `Avatar tap did not open Chief Profile
+  (attempt 3/3)` / `Player initialization failed, ending this pass.` The guard
+  added in `7727e7f` is working as designed; what it is guarding against is not
+  fixed. `ChiefProfile.Title` read back `'Wars'` at y 6.5-8.0%.
+- **Context:** found while running the `anchor_drift` task through the menu. Worth
+  checking against the -4.80% top-band offset above — the avatar is top-of-screen
+  chrome, so a stale top-band ROI is a live candidate for the mis-tap.
+- **Where to start:** `Main/main.py:237` `pick_best_text` / the avatar tap above it.
+- **Effort:** M. **Priority:** **P1 — the bot cannot run any task until this is fixed.**
+
 ## Completed
 (nothing yet — entries move here when a shipped diff completes them)

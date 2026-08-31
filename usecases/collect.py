@@ -3,6 +3,7 @@ from core.recalibrate import recalibrate
 
 from core.core import (
     ensure_screen,
+    side_panel_is_open,
     req_ocr,
     req_text,
     tap_on_text,
@@ -34,15 +35,6 @@ def collect_missions_reward():
 
 
 
-def _side_panel_is_open():
-    """The panel is open only if one of its tab labels actually reads back."""
-    for key, expected in (("Global.SidePanel.Wilderness", "Wilderness"),
-                          ("Global.SidePanel.City", "City")):
-        if ensure_screen(key, expected):
-            return True
-    return False
-
-
 def collect_life_essence():
     recalibrate()
     # threshold=0.5 was matching the city map itself: measured on a home screen
@@ -51,7 +43,7 @@ def collect_life_essence():
     # the city view. Prove the panel is really open by reading a tab label
     # instead of trusting a score.
     tap_on_template("Global.SidePanel", wait=3, sleep=0.5)
-    if not _side_panel_is_open():
+    if not side_panel_is_open():
         print("Side panel did not open, ending the task...")
         return None
 
@@ -70,7 +62,7 @@ def collect_life_essence():
         print("Tree of life not found, Exiting..")
         status = tap_on_text("Global.SidePanel.City", tap=False)
         if status:
-            status = tap_on_template("Global.SidePanel", wait=2, threshold=0.5)
+            status = tap_on_template("Global.SidePanel", wait=2)
             if not status:
                 tap_screen(62.96, 44.88)
         return None

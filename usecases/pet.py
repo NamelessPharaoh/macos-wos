@@ -1,4 +1,6 @@
+import re
 import time
+
 from core.recalibrate import recalibrate
 
 from core.core import (
@@ -33,11 +35,15 @@ def _read_remaining_attempts():
     if not res:
         return None
     text = str(res[0][0]).strip()
-    digits = re.sub(r"\D", "", text)
-    if not digits:
+    # First run of digits, not every digit stripped together: the recorded field
+    # is a bare '1', but the moment OCR picks up a neighbouring glyph and returns
+    # '1/3', concatenating gives 13 attempts out of thin air. The sibling
+    # Labyrinth field reads 'Remaining attempts today: 4' and works either way.
+    match = re.search(r"\d+", text)
+    if not match:
         print(f"Remaining-attempts read was not a number: {text!r}")
         return None
-    return int(digits)
+    return int(match.group())
 
 
 def _count_adventuring():

@@ -9,6 +9,14 @@ Exit criteria (docs/designs/vision-ocr-swap.md):
     (waive by listing decision_ids, one per line, in logs/burnin_waivers.txt)
   - RSS growth: last-day median - first-day median < 200 MB
 
+A coordinate-frame change (removing the cutout overlay, retuning the in-game
+screen-adaptation slider) moves all 355 recorded ROIs at once, so reads taken
+either side of it describe different layouts. Record the moment in
+logs/burnin_epoch.txt as one ISO-8601 UTC timestamp and the accuracy criteria
+restart there. It is NOT a reset: elapsed days and RSS growth do not care where
+text sits, so those stay measured across the whole ledger and the accumulated
+clock survives.
+
 Usage: uv run python scripts/burnin_report.py [path-to-jsonl]
 """
 import json
@@ -23,6 +31,7 @@ CAP_DAYS = 14
 MIN_DECISIONS = 2000
 MAX_FALLBACK_RATE = 0.01
 MAX_RSS_GROWTH_MB = 200.0
+EPOCH_FILE = "burnin_epoch.txt"
 
 
 def load_records(path):
@@ -39,29 +48,38 @@ def load_records(path):
     return records
 
 
-def load_waivers(path):
+def load_epoch(path):
+    """Unix ts of the last coordinate-frame change, or None if there was none.
+
+    One ISO-8601 UTC timestamp; '#' comments and blank lines are ignored so the
+    reason for the epoch can live beside it. A malformed value is reported and
+    ignored rather than silently dropping half the ledger.
+    """
     if not path.exists():
-        return set()
-    return {line.strip() for line in path.read_text().splitlines() if line.strip()}
+        return None
+    for line in path.read_text().splitlines():
+        line = line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        try:
+            return datetime.fromisoformat(line.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            print(f"burn-in epoch {line!r} is not an ISO-8601 timestamp; ignoring")
+            return None
+    return None
 
 
-def compute_verdict(records, waivers=frozenset(), now=None):
-    """Pure verdict computation — unit-testable. Returns a dict."""
-    if not records:
-        return {"verdict": "NO DATA", "reasons": ["burn-in log is empty"]}
-
-    first_ts = min(r["ts"] for r in records)
-    last_ts = max(r["ts"] for r in records)
-    days = (last_ts - first_ts) / DAY_S
-
+def _expectation_decisions(records):
+    """Roll reads up into decisions. Retries share a decision_id, so a flaky read
+    retried three times is one decision, not three."""
     def is_expectation(r):
         return bool(r.get("expected")) or r.get("read_kind") == "value"
 
-    exp_decisions = {}
+    decisions = {}
     for r in records:
         if not is_expectation(r):
             continue
-        d = exp_decisions.setdefault(r.get("decision_id") or "unknown", {
+        d = decisions.setdefault(r.get("decision_id") or "unknown", {
             "fallback": False, "mismatch": False, "value": False,
         })
         if r.get("fallback_hits"):
@@ -70,6 +88,43 @@ def compute_verdict(records, waivers=frozenset(), now=None):
             d["mismatch"] = True
         if r.get("read_kind") == "value":
             d["value"] = True
+    return decisions
+
+
+def load_waivers(path):
+    if not path.exists():
+        return set()
+    return {line.strip() for line in path.read_text().splitlines() if line.strip()}
+
+
+def compute_verdict(records, waivers=frozenset(), now=None, epoch_ts=None):
+    """Pure verdict computation — unit-testable. Returns a dict.
+
+    epoch_ts splits the ledger at a coordinate-frame change. Accuracy criteria
+    (fallback rate, DIGIT_MISMATCH, decision volume) are measured only AFTER it,
+    because a clipped box under a moved layout is a layout fault wearing an
+    accuracy fault's clothes. Duration and RSS growth span the whole ledger:
+    neither depends on where the text sits.
+    """
+    if not records:
+        return {"verdict": "NO DATA", "reasons": ["burn-in log is empty"]}
+
+    # Whole-ledger, layout-independent.
+    first_ts = min(r["ts"] for r in records)
+    last_ts = max(r["ts"] for r in records)
+    days = (last_ts - first_ts) / DAY_S
+
+    if epoch_ts is None:
+        pre, post = [], records
+    else:
+        pre = [r for r in records if r.get("ts", 0) < epoch_ts]
+        post = [r for r in records if r.get("ts", 0) >= epoch_ts]
+
+    exp_decisions = _expectation_decisions(post)
+    pre_decisions = _expectation_decisions(pre)
+    pre_unwaived = sorted(
+        k for k, d in pre_decisions.items() if d["mismatch"] and k not in waivers
+    )
 
     n_decisions = len(exp_decisions)
     value_decisions = sum(1 for d in exp_decisions.values() if d["value"])
@@ -78,6 +133,8 @@ def compute_verdict(records, waivers=frozenset(), now=None):
     unwaived = [k for k in mismatched if k not in waivers]
     fallback_rate = (n_fallback / value_decisions) if value_decisions else 0.0
 
+    # RSS is a process-memory property, not a layout one: measure it across
+    # everything, epoch or no epoch.
     by_day = {}
     for r in records:
         day = datetime.fromtimestamp(r["ts"], tz=timezone.utc).date().isoformat()
@@ -111,6 +168,11 @@ def compute_verdict(records, waivers=frozenset(), now=None):
         )
 
     progress_shortfalls = []
+    if epoch_ts is not None and not post:
+        progress_shortfalls.append(
+            "no reads since the coordinate-frame change — the accuracy clock "
+            "restarts at the epoch"
+        )
     if not duration_ok:
         progress_shortfalls.append(f"only {days:.1f}/{MIN_DAYS} days elapsed")
     if not volume_ok:
@@ -141,6 +203,14 @@ def compute_verdict(records, waivers=frozenset(), now=None):
         "rss_growth_mb": round(rss_growth_mb, 1),
         "rss_day_medians": day_medians,
         "total_reads": len(records),
+        # The pre-epoch half is reported, never silently dropped: a pile of
+        # mismatches on the old layout is exactly the evidence that the
+        # calibration was worth doing.
+        "epoch": (datetime.fromtimestamp(epoch_ts, tz=timezone.utc).isoformat()
+                  if epoch_ts is not None else None),
+        "pre_epoch_reads": len(pre),
+        "pre_epoch_decisions": len(pre_decisions),
+        "pre_epoch_unwaived_mismatches": pre_unwaived,
     }
 
 
@@ -154,8 +224,9 @@ def main():
         print(f"no burn-in log at {log_path}")
         return 1
     waivers = load_waivers(log_path.parent / "burnin_waivers.txt")
+    epoch_ts = load_epoch(log_path.parent / EPOCH_FILE)
     records = [rec for p in sources for rec in load_records(p)]
-    result = compute_verdict(records, waivers)
+    result = compute_verdict(records, waivers, epoch_ts=epoch_ts)
     print(json.dumps(result, indent=2))
     return 0
 

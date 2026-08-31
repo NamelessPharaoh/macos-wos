@@ -4,7 +4,15 @@ import time
 
 import pytest
 
-from scripts.burnin_report import compute_verdict, load_records, load_waivers, DAY_S
+from datetime import datetime, timezone
+
+from scripts.burnin_report import (
+    DAY_S,
+    compute_verdict,
+    load_epoch,
+    load_records,
+    load_waivers,
+)
 
 
 NOW = time.time()
@@ -155,3 +163,107 @@ class TestRotatedSegments:
         # Both segments counted: rotation must not reset measured progress.
         assert out["total_reads"] == 2
         assert out["decisions"] == 2
+
+
+class TestCoordinateFrameEpoch:
+    """A layout change makes accuracy data either side of it incomparable.
+
+    Removing the cutout overlay or retuning the in-game screen-adaptation slider
+    moves all 355 recorded ROIs at once. A clipped box afterwards reads as a
+    DIGIT_MISMATCH, and days of clean pre-change data would average it away.
+    """
+
+    def _epoch(self, day):
+        return NOW - (10 - day) * DAY_S
+
+    def _after_epoch(self, n=2500):
+        """A healthy week whose decisions all land AFTER a day-5 epoch.
+
+        _healthy_week() spreads across days 0-7, so an epoch mid-week would
+        strand most of it on the wrong side and the volume criterion — not the
+        thing under test — would drive the verdict.
+        """
+        return [_read(6 + (i % 4), f"d{i}") for i in range(n)]
+
+    def test_no_epoch_is_unchanged_behaviour(self):
+        records = _healthy_week()
+        assert compute_verdict(records) == compute_verdict(records, epoch_ts=None)
+
+    def test_pre_epoch_mismatches_do_not_fail_the_post_epoch_verdict(self):
+        # The calibration FIXED the clipping. Old mismatches must not veto that.
+        records = self._after_epoch()
+        records += [_read(1, f"old{i}", mismatch=True) for i in range(20)]
+        # Without the epoch the old mismatches veto the exit.
+        assert compute_verdict(records)["unwaived_mismatches"]
+        r = compute_verdict(records, epoch_ts=self._epoch(5))
+        assert r["unwaived_mismatches"] == []
+        assert r["verdict"].startswith("EXIT: PASS")
+
+    def test_pre_epoch_evidence_is_reported_not_discarded(self):
+        # A pile of mismatches on the old layout is the evidence the calibration
+        # was worth doing. Losing it silently would hide that.
+        records = self._after_epoch()
+        records += [_read(1, f"old{i}", mismatch=True) for i in range(20)]
+        r = compute_verdict(records, epoch_ts=self._epoch(5))
+        assert len(r["pre_epoch_unwaived_mismatches"]) == 20
+        assert r["pre_epoch_reads"] == 20
+        assert r["pre_epoch_decisions"] == 20
+        assert r["epoch"] is not None
+
+    def test_post_epoch_mismatches_still_fail(self):
+        records = self._after_epoch()
+        records += [_read(7, "fresh", mismatch=True)]
+        r = compute_verdict(records, epoch_ts=self._epoch(5))
+        assert r["unwaived_mismatches"] == ["fresh"]
+
+    def test_the_clock_is_not_reset_by_the_epoch(self):
+        # The whole point of annotating rather than truncating: elapsed days and
+        # RSS growth do not depend on where the text sits.
+        records = _healthy_week()
+        assert compute_verdict(records, epoch_ts=self._epoch(5))["days"] == \
+               compute_verdict(records)["days"]
+
+    def test_rss_growth_spans_the_whole_ledger(self):
+        records = [_read(0, "a", rss=300.0), _read(9, "b", rss=900.0)]
+        r = compute_verdict(records, epoch_ts=self._epoch(5))
+        assert r["rss_growth_mb"] == 600.0
+
+    def test_an_epoch_with_no_reads_after_it_says_so(self):
+        r = compute_verdict(_healthy_week(), epoch_ts=NOW + DAY_S)
+        assert r["verdict"] == "IN PROGRESS"
+        assert any("no reads since the coordinate-frame change" in x
+                   for x in r["reasons"])
+
+    def test_waivers_apply_to_the_pre_epoch_half_too(self):
+        records = _healthy_week() + [_read(1, "old0", mismatch=True)]
+        r = compute_verdict(records, waivers={"old0"}, epoch_ts=self._epoch(5))
+        assert r["pre_epoch_unwaived_mismatches"] == []
+
+
+class TestLoadEpoch:
+    def test_missing_file_is_no_epoch(self, tmp_path):
+        assert load_epoch(tmp_path / "nope.txt") is None
+
+    def test_reads_an_iso_timestamp(self, tmp_path):
+        p = tmp_path / "e.txt"
+        p.write_text("2026-08-31T12:00:00+00:00\n")
+        assert load_epoch(p) == pytest.approx(
+            datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc).timestamp())
+
+    def test_accepts_a_trailing_z(self, tmp_path):
+        p = tmp_path / "e.txt"
+        p.write_text("2026-08-31T12:00:00Z\n")
+        assert load_epoch(p) is not None
+
+    def test_comments_and_blanks_are_ignored(self, tmp_path):
+        p = tmp_path / "e.txt"
+        p.write_text("# removed the cutout RRO, slider 77 -> 91\n\n"
+                     "2026-08-31T12:00:00Z  # measured dy -5.12%\n")
+        assert load_epoch(p) is not None
+
+    def test_a_malformed_epoch_is_ignored_not_guessed(self, tmp_path, capsys):
+        # Guessing here would silently drop half the ledger.
+        p = tmp_path / "e.txt"
+        p.write_text("yesterday afternoon\n")
+        assert load_epoch(p) is None
+        assert "not an ISO-8601 timestamp" in capsys.readouterr().out

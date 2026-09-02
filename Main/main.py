@@ -78,6 +78,7 @@ from core.recalibrate import recalibrate
 from core.change_player import change_account, change_character
 
 from Main.task_menu import prompt_task_selection, run_selected_tasks
+from core import capability
 from core.player_profile import (
     apply_furnace_reset,
     load_profile,
@@ -395,16 +396,21 @@ def get_players_by_email(target_email):
 
 
 
-def run_task(current_player_id, selected_tasks):
-    run_selected_tasks(current_player_id, selected_tasks)
+def run_task(current_player_id, selected_tasks, was_explicit=False):
+    run_selected_tasks(current_player_id, selected_tasks,
+                       was_explicit=was_explicit)
 
 
 
 
-def run_bot(selected_tasks):
+def run_bot(selected_tasks, was_explicit=False):
     completion_records = load_completion_log()
 
     while True:
+        # `while True` means a module-level cache would live until the process
+        # dies, so a corrected knowledge base would be ignored for the rest of
+        # the run. Drop it once per account pass.
+        capability._reset_cache()
         if player_initialization() is None:
             # Previously this fell through to current_player.email and died with
             # a NameError, taking the whole run down on a recoverable read miss.
@@ -431,7 +437,8 @@ def run_bot(selected_tasks):
                     print(f"Skipping {current_player.name} ({current_player.id}) - completed recently at {last_time}")
                 else:
                     print(f"Running tasks for: {current_player.name} ({current_player.id})")
-                    run_task(current_player.id, selected_tasks)
+                    run_task(current_player.id, selected_tasks,
+                             was_explicit=was_explicit)
                     mark_player_completed(current_player.id, completion_records)
                     print(f"Marked completed: {current_player.id} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
                 processed_ids.add(active_id)
@@ -469,5 +476,5 @@ if __name__=="__main__":
     # Runtime order for `python -m Main.main` is unchanged.
     start_game()
     init_database()
-    selected_tasks = prompt_task_selection()
-    run_bot(selected_tasks)
+    selected_tasks, was_explicit = prompt_task_selection()
+    run_bot(selected_tasks, was_explicit=was_explicit)

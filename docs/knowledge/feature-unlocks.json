@@ -1,0 +1,242 @@
+{
+  "_schema": {
+    "purpose": "Which game features an account has unlocked, so the task queue can skip work that cannot succeed. Read by core/capability.py and scripts/capability_report.py.",
+    "entry": {
+      "label": "human name, shown in the report",
+      "conditions": "list of {state_key, op, value}; ALL must hold. A condition whose state_key is unreadable evaluates UNKNOWN and FAILS OPEN (the task runs).",
+      "confidence": "high | medium | low | unknown",
+      "source": "list of URLs the value came from",
+      "last_verified": "YYYY-MM-DD; the report flags entries older than 180 days as STALE",
+      "notes": "disputes, version dependence, anything a reader needs"
+    },
+    "disputed_values_rule": "Where sources disagree, encode the LOWEST claimed threshold. The gate then skips only when the account is below every source's number, so a dispute can never cause a false skip.",
+    "researched": "2026-09-02, community sources. Community data is not ground truth: run scripts/capability_report.py and check it against the game before trusting a skip.",
+    "mapping": "Tasks declare which feature they need via TaskSpec.gate in Main/task_menu.py. tests/test_capability.py asserts every declared key resolves to a feature here or is the ALWAYS/UNKNOWN sentinel."
+  },
+  "features": {
+    "exploration": {
+      "label": "Exploration / Hero Hall",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 4
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/",
+        "https://theriagames.com/guide/whiteout-survival-explorers-cabin-guide/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "Two independent sources agree. Hero Hall and Explorer's Cabin both open at 4."
+    },
+    "chiefs_house": {
+      "label": "Chief's House (Chief Orders)",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 6
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/",
+        "https://theriagames.com/guide/whiteout-survival-chiefs-house-guide/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": ""
+    },
+    "infantry_camp": {
+      "label": "Infantry Camp (troop training)",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 7
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "The train() task runs all three troop types. Gated on the EARLIEST camp so it runs and trains what it can: Marksman is F8 and Lancer F9."
+    },
+    "daily_missions": {
+      "label": "Daily Missions",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 7
+        }
+      ],
+      "confidence": "medium",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "Single source."
+    },
+    "alliance": {
+      "label": "Alliance (join / tech / chests / triumph)",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 7
+        }
+      ],
+      "confidence": "medium",
+      "source": [
+        "https://www.ldcloud.net/blog/whiteout-survival-en-alliance-guide"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "Joining opens at 7; creating costs 400 gems until F10. Being IN an alliance is a separate fact the bot cannot read yet \u2014 profile alliance.name is still the seed literal 'xxx'."
+    },
+    "arena_of_glory": {
+      "label": "Arena of Glory",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 8
+        }
+      ],
+      "confidence": "low",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/",
+        "https://www.ajackof.com/games/whiteout-survival-wos/whiteout-survival-arena-guide-strategy/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "DISPUTED: building at F8 (whiteoutdata) vs mode at F10 (ajackof). Encoded at 8 per the disputed-values rule, so an F8-F9 account runs it rather than being wrongly skipped."
+    },
+    "infirmary": {
+      "label": "Infirmary (healing)",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 8
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/",
+        "https://whiteoutdata.com/buildings/infirmary/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "The Clinic opens earlier at F4; the Infirmary that heals wounded troops is F8."
+    },
+    "beast_cage": {
+      "label": "Pets (Beast Cage)",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 18
+        },
+        {
+          "state_key": "state_age_days",
+          "op": ">=",
+          "value": 60
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://whiteoutdata.com/buildings/beast-cage/",
+        "https://outof.games/realms/whiteoutsurvival/guides/405-server-age-and-timeline-in-whiteout-survival/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "COMPOSITE. state_age_days is not readable today, so that half evaluates UNKNOWN and fails open; the furnace half still decides below 18. Sources give 55-60 days; 60 used."
+    },
+    "labyrinth": {
+      "label": "Labyrinth",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 19
+        },
+        {
+          "state_key": "command_center_level",
+          "op": ">=",
+          "value": 1
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://centurygames.helpshift.com/hc/en/64-whiteout-survival/faq/7390-how-is-this-feature-unlocked/",
+        "https://mobi.gg/en/tips/whiteout-survival-labyrinth/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "COMPOSITE, and the only entry with an OFFICIAL source. command_center_level is not readable today so it fails open. Also opens no earlier than the Monday of the 4th week after the state opens."
+    },
+    "daybreak_island": {
+      "label": "Life Essence (Daybreak Island)",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 19
+        }
+      ],
+      "confidence": "medium",
+      "source": [
+        "https://mobi.gg/en/tips/daybreak-island-whiteout-survival/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "Single source. The dock to the island is the gate."
+    },
+    "embassy": {
+      "label": "Embassy",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 8
+        }
+      ],
+      "confidence": "high",
+      "source": [
+        "https://whiteoutdata.com/buildings/furnace/",
+        "https://heaven-guardian.com/whiteout-survival-embassy-guide/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "The building is solidly F8, but whether SENDING alliance help requires it or merely scales with it is unverified \u2014 so alliance_help is deliberately left UNKNOWN rather than gated on this."
+    },
+    "alliance_mobilization": {
+      "label": "Alliance Mobilization",
+      "conditions": [
+        {
+          "state_key": "furnace_level",
+          "op": ">=",
+          "value": 10
+        },
+        {
+          "state_key": "alliance_member_count",
+          "op": ">=",
+          "value": 15
+        }
+      ],
+      "confidence": "medium",
+      "source": [
+        "https://centurygames.helpshift.com/hc/en/64-whiteout-survival/faq/6541-why-can-t-i-participate-in-alliance-mobilization/",
+        "https://whiteoutdata.com/events/alliance-mobilization/"
+      ],
+      "last_verified": "2026-09-02",
+      "notes": "COMPOSITE. Furnace 10 is official; the 15-member figure is community-sourced and the official FAQ says only that the alliance must 'meet the requirements'. No task maps here yet."
+    }
+  },
+  "_unverified_gates": {
+    "_comment": "Research record: tasks whose gate could NOT be verified on 2026-09-02. They declare the UNKNOWN sentinel in Main/task_menu.py and never skip. Recorded so nobody re-researches them.",
+    "vip": "No furnace gate found. Claiming VIP daily rewards needs active VIP status, which is a different axis entirely.",
+    "mail": "No unlock gate documented anywhere.",
+    "free_claims": "Not a single feature; the home-screen dots are several unrelated surfaces.",
+    "alliance_help": "Embassy (F8) gates the NUMBER of ally assists; whether it gates sending help at all is unverified.",
+    "gather": "No explicit gate on world-map gathering. Secured Alliance Gathering Nodes need F16, but ordinary nodes appear ungated.",
+    "anchor_drift": "A diagnostic task in this repo, not a game feature. Never gated."
+  }
+}

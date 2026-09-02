@@ -36,8 +36,10 @@ def _setup(monkeypatch, tmp_path, accounts):
         # a failed init and ends the pass.
         return mm.current_player
 
-    def fake_run_task(player_id, selected_tasks):
-        calls["run_task"].append((player_id, tuple(selected_tasks)))
+    def fake_run_task(player_id, selected_tasks, was_explicit=False):
+        # was_explicit reaches run_selected_tasks so an explicitly-named task
+        # warns and runs instead of being silently gated away.
+        calls["run_task"].append((player_id, tuple(selected_tasks), was_explicit))
 
     def fake_change_account(next_email):
         calls["change_account"].append(next_email)
@@ -58,7 +60,7 @@ def test_single_email_runs_tasks_and_exits_without_change_account(monkeypatch, t
 
     mm.run_bot(["mail"])  # returns instead of looping forever
 
-    assert calls["run_task"] == [("111", ("mail",))]
+    assert calls["run_task"] == [("111", ("mail",), False)]
     assert calls["change_account"] == []
     # mark_player_completed still writes through to the (redirected) log.
     assert "111" in (tmp_path / "completion_log.txt").read_text()

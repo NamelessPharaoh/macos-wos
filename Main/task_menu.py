@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 import re
 
 from rich.console import Console
@@ -32,15 +33,30 @@ from usecases.chief_order import activate_chief_order
 from usecases.pet import collect_ally_treasure, start_pet_exploration
 from usecases.labyrinth import labyrinth
 from usecases.gather import gather
+from core import capability
 from core.player_profile import get_gather_flags, load_profile
 
 
 @dataclass(frozen=True)
 class TaskSpec:
+    """One runnable routine.
+
+    `gate` names the game feature this task needs, resolved against
+    docs/knowledge/feature-unlocks.json, or one of the capability sentinels
+    (ALWAYS = no game gate, UNKNOWN = a gate may exist but is unverified).
+    Both sentinels fail open.
+
+    It defaults to None only so existing positional construction keeps working
+    (tests/test_chief_order.py builds TaskSpec with four positional args). Every
+    entry in TASKS must still declare it explicitly — tests/test_capability.py
+    fails if one is left at the default, so a new task cannot gate by accident.
+    """
+
     key: str
     title: str
     description: str
     runner: object
+    gate: str = None
 
 
 console = Console()
@@ -57,27 +73,27 @@ def _run_gather(current_player_id):
 
 
 TASKS = [
-    TaskSpec("vip", "VIP Rewards", "Collect VIP rewards before anything else.", lambda _player_id: collect_vip_rewards()),
-    TaskSpec("free_claims", "Free Claims Sweep", "Follow home-screen red dots and claim what is free.", lambda _player_id: sweep_free_claims()),
-    TaskSpec("anchor_drift", "Anchor Drift Check", "Measure how far the UI has moved from the recorded ROIs.", lambda _player_id: report_anchor_drift()),
-    TaskSpec("exploration_idle", "Exploration Idle Income", "Claim passive exploration income.", lambda _player_id: claim_exploration_idle_income()),
-    TaskSpec("exploration_continue", "Continue Exploring", "Resume exploration progress.", lambda _player_id: continue_exploring()),
-    TaskSpec("mail", "Mail Rewards", "Collect mailbox rewards.", lambda _player_id: collect_mail_rewards()),
-    TaskSpec("life_essence", "Life Essence", "Collect life essence.", lambda _player_id: collect_life_essence()),
-    TaskSpec("training", "Train Troops", "Run the troop training routine.", lambda _player_id: train()),
-    TaskSpec("arena", "Arena", "Enter the arena routine.", lambda _player_id: arena()),
-    TaskSpec("chief_order", "Chief Order", "Activate chief order tasks.", lambda _player_id: activate_chief_order()),
-    TaskSpec("pet_treasure", "Ally Treasure", "Collect ally treasure.", lambda _player_id: collect_ally_treasure()),
-    TaskSpec("pet_exploration", "Pet Exploration", "Start pet exploration.", lambda _player_id: start_pet_exploration()),
-    TaskSpec("labyrinth", "Labyrinth", "Run the labyrinth routine.", lambda _player_id: labyrinth()),
-    TaskSpec("alliance_join", "Alliance Auto Join", "Auto-join alliance activity.", lambda _player_id: auto_join()),
-    TaskSpec("alliance_chests", "Alliance Chests", "Collect alliance chests.", lambda _player_id: collect_chests()),
-    TaskSpec("alliance_tech", "Alliance Tech", "Contribute to alliance tech.", lambda _player_id: tech_contribution()),
-    TaskSpec("alliance_help", "Alliance Help", "Send alliance help.", lambda _player_id: help()),
-    TaskSpec("alliance_triumph", "Alliance Triumph", "Collect triumph rewards.", lambda _player_id: collect_triumph()),
-    TaskSpec("heal", "Heal", "Run healing workflow.", lambda _player_id: heal()),
-    TaskSpec("gather", "World Gather", "Gather resources with the current character rules.", _run_gather),
-    TaskSpec("missions", "Missions Reward", "Collect mission rewards.", lambda _player_id: collect_missions_reward()),
+    TaskSpec("vip", "VIP Rewards", "Collect VIP rewards before anything else.", lambda _player_id: collect_vip_rewards(), gate="UNKNOWN"),
+    TaskSpec("free_claims", "Free Claims Sweep", "Follow home-screen red dots and claim what is free.", lambda _player_id: sweep_free_claims(), gate="ALWAYS"),
+    TaskSpec("anchor_drift", "Anchor Drift Check", "Measure how far the UI has moved from the recorded ROIs.", lambda _player_id: report_anchor_drift(), gate="ALWAYS"),
+    TaskSpec("exploration_idle", "Exploration Idle Income", "Claim passive exploration income.", lambda _player_id: claim_exploration_idle_income(), gate="exploration"),
+    TaskSpec("exploration_continue", "Continue Exploring", "Resume exploration progress.", lambda _player_id: continue_exploring(), gate="exploration"),
+    TaskSpec("mail", "Mail Rewards", "Collect mailbox rewards.", lambda _player_id: collect_mail_rewards(), gate="UNKNOWN"),
+    TaskSpec("life_essence", "Life Essence", "Collect life essence.", lambda _player_id: collect_life_essence(), gate="daybreak_island"),
+    TaskSpec("training", "Train Troops", "Run the troop training routine.", lambda _player_id: train(), gate="infantry_camp"),
+    TaskSpec("arena", "Arena", "Enter the arena routine.", lambda _player_id: arena(), gate="arena_of_glory"),
+    TaskSpec("chief_order", "Chief Order", "Activate chief order tasks.", lambda _player_id: activate_chief_order(), gate="chiefs_house"),
+    TaskSpec("pet_treasure", "Ally Treasure", "Collect ally treasure.", lambda _player_id: collect_ally_treasure(), gate="beast_cage"),
+    TaskSpec("pet_exploration", "Pet Exploration", "Start pet exploration.", lambda _player_id: start_pet_exploration(), gate="beast_cage"),
+    TaskSpec("labyrinth", "Labyrinth", "Run the labyrinth routine.", lambda _player_id: labyrinth(), gate="labyrinth"),
+    TaskSpec("alliance_join", "Alliance Auto Join", "Auto-join alliance activity.", lambda _player_id: auto_join(), gate="alliance"),
+    TaskSpec("alliance_chests", "Alliance Chests", "Collect alliance chests.", lambda _player_id: collect_chests(), gate="alliance"),
+    TaskSpec("alliance_tech", "Alliance Tech", "Contribute to alliance tech.", lambda _player_id: tech_contribution(), gate="alliance"),
+    TaskSpec("alliance_help", "Alliance Help", "Send alliance help.", lambda _player_id: help(), gate="UNKNOWN"),
+    TaskSpec("alliance_triumph", "Alliance Triumph", "Collect triumph rewards.", lambda _player_id: collect_triumph(), gate="alliance"),
+    TaskSpec("heal", "Heal", "Run healing workflow.", lambda _player_id: heal(), gate="infirmary"),
+    TaskSpec("gather", "World Gather", "Gather resources with the current character rules.", _run_gather, gate="ALWAYS"),
+    TaskSpec("missions", "Missions Reward", "Collect mission rewards.", lambda _player_id: collect_missions_reward(), gate="daily_missions"),
 ]
 
 
@@ -108,9 +124,17 @@ def _render_menu():
 
 
 def _select_tasks(raw_input):
+    """Returns (tasks, was_explicit).
+
+    was_explicit distinguishes "the user typed these task names" from "run the
+    default list", which the capability gate needs: an explicitly named task is
+    a human overriding a guess made from community data, so it warns and runs
+    instead of skipping. Without the flag the two cases are indistinguishable —
+    an empty input and a full enumeration both yield the same 21 tasks.
+    """
     normalized = raw_input.strip().lower()
     if not normalized or normalized in {"all", "default", "*"}:
-        return TASKS
+        return TASKS, False
 
     selected_indexes = []
     seen = set()
@@ -147,7 +171,7 @@ def _select_tasks(raw_input):
     if not selected_indexes:
         raise ValueError("No valid task selections were provided.")
 
-    return [TASKS[index] for index in selected_indexes]
+    return [TASKS[index] for index in selected_indexes], True
 
 
 def prompt_task_selection():
@@ -160,7 +184,7 @@ def prompt_task_selection():
         )
 
         try:
-            selected_tasks = _select_tasks(raw_input)
+            selected_tasks, was_explicit = _select_tasks(raw_input)
         except ValueError as exc:
             console.print(f"[bold red]❌ {exc}[/bold red]")
             continue
@@ -176,11 +200,63 @@ def prompt_task_selection():
                 border_style="green",
             )
         )
-        return selected_tasks
+        return selected_tasks, was_explicit
 
 
-def run_selected_tasks(current_player_id, selected_tasks):
+GATE_ENV = "WOS_CAPABILITY_GATE"
+
+
+def gating_enabled():
+    """The gate is on unless WOS_CAPABILITY_GATE=0.
+
+    Rollback switch: if a wrong knowledge-base value or a bad furnace read makes
+    the gate skip something it should not, this restores today's behaviour
+    without a revert. Same convention as OCR_CAPTURE_TOOL / OCR_RAM_CAP_GB.
+    """
+    return os.environ.get(GATE_ENV, "1").strip() != "0"
+
+
+def run_selected_tasks(current_player_id, selected_tasks, was_explicit=False):
+    gate_on = gating_enabled()
+    profile = load_profile(current_player_id) if gate_on else None
+    table = None
+
+    if gate_on:
+        table, warnings = capability.load_table()
+        # capability.evaluate is pure and prints nothing, so its warnings ride
+        # out on the verdict and get drained here.
+        for warning in warnings:
+            console.print(f"[bold yellow]{warning}[/bold yellow]")
+    else:
+        console.print(f"[bold yellow]{GATE_ENV}=0 — capability gate off, "
+                      f"running every selected task[/bold yellow]")
+
     for task in selected_tasks:
+        if gate_on:
+            verdict = capability.evaluate(task.gate, profile, table=table)
+            if not verdict.should_run:
+                if was_explicit:
+                    # A human naming the task outranks a guess made from
+                    # community-sourced data. Say what the gate thought, then
+                    # run it: this is also how you test a suspect gate entry.
+                    console.print(
+                        f"[bold yellow]{task.key}: {verdict.reason} — "
+                        f"you asked for it explicitly, running anyway[/bold yellow]"
+                    )
+                else:
+                    # A skipped task otherwise produces no output at all, which
+                    # is indistinguishable from never having been selected.
+                    console.print(
+                        f"[yellow]SKIP {task.key}[/yellow] — {verdict.reason} "
+                        f"[dim](source: {verdict.source})[/dim]"
+                    )
+                    continue
+            elif verdict.source == "table" and any(
+                    status == "unknown" for _, status, _ in verdict.checked):
+                # Failing open on a half-readable gate is a decision worth
+                # seeing; "unlocked, running" is not, so it stays quiet.
+                console.print(f"[dim]RUN  {task.key} — {verdict.reason}[/dim]")
+
         console.print(
             Panel.fit(
                 f"[bold white]Running[/bold white] [bold cyan]{task.title}[/bold cyan]",

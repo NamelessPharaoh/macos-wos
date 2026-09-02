@@ -48,6 +48,125 @@ def save_profile(profile):
     os.replace(tmp, path)
 
 
+FURNACE_MIN = 1
+# Base furnace caps at 30. Fire Crystal levels (FC1-FC10) come after it and are
+# NOT representable as a plain int, so a read outside this range is rejected
+# rather than guessed at. Revisit when there is an FC account to read from.
+FURNACE_MAX = 30
+FURNACE_MAX_STEP = 1
+
+
+def get_furnace_level(profile):
+    """The account's last trusted furnace level, or None if never confirmed."""
+    level = profile.get("furnace_level")
+    if level is None:
+        return None
+    try:
+        level = int(level)
+    except (TypeError, ValueError):
+        return None
+    return level if FURNACE_MIN <= level <= FURNACE_MAX else None
+
+
+def validate_furnace_read(profile, raw):
+    """Decide whether an OCR'd furnace level may be persisted.
+
+    The capability gate reads this number, so a misread is a silent behaviour
+    change rather than an error: 7 read as 17 marks Pets, Arena and Storehouse
+    unlocked and sends the bot into locked screens; 7 read as 1 gates nearly
+    everything off. `int()` on its own accepts both.
+
+    Three rules, cheapest first — the value must parse and sit in range, it may
+    never decrease (furnaces do not), and it may not climb more than one level
+    between runs. Returns (level_or_None, reason); a rejected read leaves the
+    stored value untouched.
+
+    A profile with no stored level has no floor to compare against, so its first
+    read is accepted at face value and reported as unconfirmed. WOS_FURNACE_RESET
+    is the escape when that first read was wrong.
+    """
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        return None, "no-read"
+
+    try:
+        level = int(str(raw).strip())
+    except (TypeError, ValueError):
+        return None, f"not-a-number: {raw!r}"
+
+    if not (FURNACE_MIN <= level <= FURNACE_MAX):
+        return None, f"out-of-range: {level} not in {FURNACE_MIN}..{FURNACE_MAX}"
+
+    stored = get_furnace_level(profile)
+    if stored is None:
+        return level, "unconfirmed-first-read"
+    if level < stored:
+        return None, f"decreased: {stored} -> {level}, furnace levels never drop"
+    if level - stored > FURNACE_MAX_STEP:
+        return None, f"jumped: {stored} -> {level}, more than {FURNACE_MAX_STEP} level"
+    return level, "ok"
+
+
+def apply_furnace_reset(profile):
+    """WOS_FURNACE_RESET=<n>: the operator escape when a bad value stuck.
+
+    The monotonic rule above means a too-high level can never be corrected
+    downward by another read, and a fresh profile's first read has no floor to
+    reject it. This writes the value directly and clears every observed lock
+    recorded at or above it, so a feature wrongly marked locked becomes
+    testable again. Returns the applied level, or None when unset or invalid.
+    """
+    raw = os.environ.get("WOS_FURNACE_RESET")
+    if raw is None or not str(raw).strip():
+        return None
+
+    try:
+        level = int(str(raw).strip())
+    except (TypeError, ValueError):
+        print(f"⚠️ WOS_FURNACE_RESET={raw!r} is not a number, ignoring")
+        return None
+
+    if not (FURNACE_MIN <= level <= FURNACE_MAX):
+        print(f"⚠️ WOS_FURNACE_RESET={level} outside "
+              f"{FURNACE_MIN}..{FURNACE_MAX}, ignoring")
+        return None
+
+    profile["furnace_level"] = level
+    locks = profile.get("observed_locks") or {}
+    kept = {
+        key: rec for key, rec in locks.items()
+        if isinstance(rec, dict)
+        and isinstance(rec.get("furnace_at_observation"), int)
+        and rec["furnace_at_observation"] < level
+    }
+    cleared = len(locks) - len(kept)
+    profile["observed_locks"] = kept
+    save_profile(profile)
+    print(f"WOS_FURNACE_RESET applied: furnace_level={level}, "
+          f"cleared {cleared} observed lock(s)")
+    return level
+
+
+DEFAULT_GATHER_REMOVE_HERO = False
+DEFAULT_GATHER_EQUALIZE = True
+
+
+def get_gather_flags(profile):
+    """Per-account gather behaviour, as (remove_hero, equalize).
+
+    This was a hardcoded `if current_player_id == "578380047"` in the task
+    dispatcher. That account is upstream's, and its profile was deliberately
+    removed from this repo as a privacy fix (see .gitignore) — it ran
+    remove_hero=True, equalize=False, recorded here so the setting is not lost.
+    Every other account takes the defaults above. Per-account facts belong in
+    the profile, not in a dispatch conditional.
+    """
+    gather_cfg = profile.get("gather") or {}
+    return (
+        bool(gather_cfg.get("remove_hero", DEFAULT_GATHER_REMOVE_HERO)),
+        bool(gather_cfg.get("equalize", DEFAULT_GATHER_EQUALIZE)),
+    )
+
+
 def get_gather_node_level(profile):
     """The gather node level this account is known to sustain."""
     level = profile.get("gather", {}).get("node_level", DEFAULT_GATHER_NODE_LEVEL)

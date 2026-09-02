@@ -247,7 +247,12 @@ class TestRunOcrPlumbing:
         assert seen["shape"] == (300, 300, 3)
         # ...and the crop-relative box is re-offset into frame space:
         # x - pad + x1 = 60 - 50 + 100, y - pad + y1 = 60 - 50 + 200.
-        assert results == [{"text": "42", "score": 0.99, "box": [110, 210, 130, 220]}]
+        # roi_index ties the line back to the ROI it came from, so a batched
+        # read cannot silently mislabel one box's text as another's.
+        assert results == [{
+            "text": "42", "score": 0.99, "roi_index": 0,
+            "box": [110, 210, 130, 220],
+        }]
 
         rec = json.loads((tmp_path / "burnin.jsonl").read_text().splitlines()[0])
         assert rec["decision_id"] == "abc123"

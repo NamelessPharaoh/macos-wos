@@ -1029,6 +1029,14 @@ def run_ocr(
                 all_results.append({
                     "text": item["text"],
                     "score": item["score"],
+                    # Which ROI this line came from. The flat list otherwise
+                    # loses it, and an ROI that reads nothing is skipped above
+                    # (`if not items: continue`) — so a positional index slides
+                    # from the box the caller wanted into a neighbour's first
+                    # line. That is how int() was handed a mail subject
+                    # (usecases/pet.py:25-31). The full-frame branch below has
+                    # no ROI, so consumers read this with .get().
+                    "roi_index": i,
                     "box": [
                         b[0] + offset_x,
                         b[1] + offset_y,

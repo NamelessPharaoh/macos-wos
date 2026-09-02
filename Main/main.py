@@ -78,7 +78,12 @@ from core.recalibrate import recalibrate
 from core.change_player import change_account, change_character
 
 from Main.task_menu import prompt_task_selection, run_selected_tasks
-from core.player_profile import load_profile, save_profile
+from core.player_profile import (
+    apply_furnace_reset,
+    load_profile,
+    save_profile,
+    validate_furnace_read,
+)
 
 
 
@@ -301,7 +306,15 @@ def player_initialization():
     # pick best text per field
     name_raw = pick_best_text([data[0]]) if data and len(data) > 0 else None
     id_raw = pick_best_text([data[1]]) if data and len(data) > 1 else None
-    furnace_raw = pick_best_text([data[2]]) if data and len(data) > 2 else None
+    # NOT pick_best_text: that helper is tuned for names and titles, and BOTH
+    # its min_len=2 and its is_garbage() reject anything shorter than two
+    # characters — so every single-digit furnace level silently became None.
+    # The frozen oracle in tests/fixtures/crop_manifest.json has this ROI
+    # reading exactly "3", so 1-9 never persisted. A furnace level is a bare
+    # number; go straight to the digits.
+    furnace_raw = (
+        clean_text(data[2][0]) if data and len(data) > 2 and data[2] else None
+    )
     state_raw = pick_best_text([data[3]]) if data and len(data) > 3 else None
 
     # cleanup and extract values
@@ -329,11 +342,24 @@ def player_initialization():
     # schema) with what this session observed; tasks read evolving fields
     # (e.g. gather node level) from it.
     profile = load_profile(id_val)
+    apply_furnace_reset(profile)  # operator escape, before anything validates
     profile["name"] = name
     if state:
         profile["state"] = state
-    if furnace:
-        profile["furnace_level"] = int(furnace)
+    # Was `if furnace: profile["furnace_level"] = int(furnace)`, which swallowed
+    # a legitimate "0" and accepted any digits at all — a 7 misread as 17 would
+    # mark Pets and Arena unlocked for a gate that then walks into locked
+    # screens. Rejected reads keep the last known good value.
+    level, reason = validate_furnace_read(profile, furnace)
+    if level is None:
+        if reason != "no-read":
+            print(f"⚠️ Furnace read rejected ({reason}); keeping "
+                  f"{profile.get('furnace_level')!r}")
+    else:
+        if reason == "unconfirmed-first-read":
+            print(f"⚠️ Furnace {level} accepted unconfirmed — no prior value to "
+                  f"check it against. Correct with WOS_FURNACE_RESET=<n>.")
+        profile["furnace_level"] = level
     save_profile(profile)
 
     console.print(Panel.fit(

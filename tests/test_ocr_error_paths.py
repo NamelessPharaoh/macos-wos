@@ -132,3 +132,66 @@ class TestTapOnTextDecisionSharing:
         assert len(payloads) >= 2  # retries happened
         ids = {p["decision_id"] for p in payloads}
         assert len(ids) == 1  # one decision across all retried reads
+
+
+# --- req_text_named: ROI attribution survives a batched read ---------------
+# The three cases below are the entire justification for roi_index. Case 2 is
+# the documented bug: core/ocr.py skips an ROI that read nothing, so a
+# positional index slides into the next ROI's first line (usecases/pet.py:25-31).
+
+
+def _named_response(monkeypatch, results):
+    """Arm req_ocr's transport with a canned server response."""
+    import core.core as cc
+    captured = {}
+
+    def fake_post(url, payload, request_name, wait_sec=None):
+        captured["payload"] = payload
+        return {"success": True, "count": len(results), "results": results}
+
+    monkeypatch.setattr(cc, "_post_json_with_replay", fake_post)
+    return cc, captured
+
+
+def test_named_read_maps_each_line_to_its_own_roi(monkeypatch):
+    cc, _ = _named_response(monkeypatch, [
+        {"text": "lord", "score": 0.9, "box": [0, 0, 1, 1], "roi_index": 0},
+        {"text": "7", "score": 0.8, "box": [2, 2, 3, 3], "roi_index": 1},
+    ])
+    out = cc.req_text_named(["ChiefProfile.PlayerName", "ChiefProfile.FurnaceLevel"])
+    assert out["ChiefProfile.PlayerName"][0]["text"] == "lord"
+    assert out["ChiefProfile.FurnaceLevel"][0]["text"] == "7"
+    assert out["ChiefProfile.FurnaceLevel"][0]["score"] == 0.8
+
+
+def test_roi_that_read_nothing_does_not_shift_the_others(monkeypatch):
+    """The server drops an empty ROI entirely, so index 1 is simply absent.
+    Positionally, "4653" would have become the furnace level."""
+    cc, _ = _named_response(monkeypatch, [
+        {"text": "lord", "score": 0.9, "box": [0, 0, 1, 1], "roi_index": 0},
+        {"text": "4653", "score": 0.7, "box": [4, 4, 5, 5], "roi_index": 2},
+    ])
+    out = cc.req_text_named([
+        "ChiefProfile.PlayerName",
+        "ChiefProfile.FurnaceLevel",
+        "ChiefProfile.State",
+    ])
+    assert out["ChiefProfile.FurnaceLevel"] == [], "empty ROI must stay empty"
+    assert out["ChiefProfile.State"][0]["text"] == "4653"
+
+
+def test_roi_returning_two_lines_keeps_both_under_its_own_name(monkeypatch):
+    cc, _ = _named_response(monkeypatch, [
+        {"text": "7", "score": 0.9, "box": [0, 0, 1, 1], "roi_index": 0},
+        {"text": "/10", "score": 0.6, "box": [1, 0, 2, 1], "roi_index": 0},
+        {"text": "4653", "score": 0.8, "box": [4, 4, 5, 5], "roi_index": 1},
+    ])
+    out = cc.req_text_named(["ChiefProfile.FurnaceLevel", "ChiefProfile.State"])
+    assert [r["text"] for r in out["ChiefProfile.FurnaceLevel"]] == ["7", "/10"]
+    assert out["ChiefProfile.State"][0]["text"] == "4653"
+
+
+def test_named_read_rejects_an_unknown_roi_name(monkeypatch):
+    cc, _ = _named_response(monkeypatch, [])
+    with pytest.raises(KeyError, match="Unknown ROI name"):
+        cc.req_text_named("ChiefProfile.FurnaceLevl")

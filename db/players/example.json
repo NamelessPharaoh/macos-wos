@@ -73,6 +73,8 @@
         "last_visit" : "44:44:44"
     },
     "gather" : {
+        "remove_hero" : false,
+        "equalize" : true,
         "current_march" : 0,
         "possible_march" : 4,
         "priority" : null,
@@ -118,6 +120,8 @@
             "last_visit" : "44:44:44"
         }
     },
+
+    "furnace_level" : null,
 
     "training_troops" : {
         "infantry" : {

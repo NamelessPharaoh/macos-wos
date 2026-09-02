@@ -91,6 +91,12 @@ Deferred work with context. Each entry carries enough reasoning to pick up cold.
 
 ## Completed
 
+- **`core/fsm.py` deleted (2026-09-02).** A 167-line `GameFSM` navigation graph
+  that nothing ever imported. Navigation stays deliberately hand-rolled as
+  `recalibrate()` -> tap -> `ensure_screen()`. If a routing layer is ever wanted,
+  start from `usecases/alliance.py`, which repeats that block five times, not
+  from the deleted graph. Deleted in the Layer-1 capability-gate PR1.
+
 - **Screen inset calibration (2026-08-31).** Removed the `cutout.emulation.tall`
   RRO — measured as doing nothing (0.03%) — and calibrated the in-game
   Non-standard Screen Adaptation distance to 70, where drift reads UPPER +0.01%,

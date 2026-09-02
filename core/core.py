@@ -633,25 +633,40 @@ def req_text(names=None, img_path=None, rois=None, save_result=False, coord=None
         return texts
 
     def load_config(names, rois=None):
+        """Resolve ROI names to boxes.
+
+        `rois` OVERRIDES the name lookup entirely, matching tap_on_text's own
+        load_config (which does item["box"] = rois). It is NOT appended to the
+        named boxes: the previous code rebound names_boxes to the CALLER'S list
+        inside the loop and then appended, so passing rois returned
+        rois + one box per name and silently grew the caller's list too. No
+        caller has ever passed rois, so it never fired — fixed before
+        req_text_named starts mapping a result's roi_index back to a name,
+        which that aliasing would have shifted by len(rois).
+
+        An unknown name raises. It used to fall back to [0, 0, 100, 100], so a
+        typo returned a full-screen read under the wrong name — and now that the
+        score is surfaced, that is high-confidence whole-screen OCR feeding
+        whatever asked. The Chief Profile furnace read goes through here.
+        """
         if isinstance(names, str):
             names = [names]
 
-        names_boxes = []
         title = ""
-
         for name in names:
-            if name in text_area:
-                title += name + ", "
-                box = text_area[name]["box"]
-            else:
-                box = [0, 0, 100, 100]  # Full screen in percentage (100% width, 100% height)
+            if name not in text_area:
+                raise KeyError(
+                    f"Unknown ROI name {name!r} — no such entry in "
+                    f"references/TextArea/**/*.json. Reading the full screen "
+                    f"instead would return confident garbage under this name."
+                )
+            title += name + ", "
 
-            if rois is not None:
-                names_boxes = rois
+        if rois is not None:
+            # Copy: never alias or mutate the caller's list.
+            return list(rois), title
 
-            names_boxes.append(box)
-
-        return names_boxes, title
+        return [text_area[name]["box"] for name in names], title
 
     boxes, title = load_config(names, rois)
 
@@ -670,6 +685,61 @@ def req_text(names=None, img_path=None, rois=None, save_result=False, coord=None
     for t in res:
         texts.append([t['text'], t['box']])
     return texts
+
+
+def req_text_named(names, img_path=None, save_result=False, read_kind=None):
+    """Named reads that keep their ROI attribution, and their score.
+
+    req_text returns a flat [[text, box], ...] with no way to tell which ROI a
+    line came from, and the server skips ROIs that read nothing — so index 0
+    can slide out of the box you asked for and into a neighbour's first line.
+    That is how int() came to be handed a mail subject (usecases/pet.py:25-31).
+
+    Returns {name: [{"text", "score", "box"}, ...]}, one key per requested name
+    in request order. A name whose ROI read nothing maps to an EMPTY LIST —
+    present, not missing, so callers branch on emptiness instead of KeyError.
+    Returns None when the OCR request itself failed, matching req_text.
+
+    The score req_text drops is kept: anything acting on a number needs to know
+    how much the reader trusted it. Attribution comes from the server's
+    roi_index; a full-frame read carries none, so it is read with .get().
+    """
+    if isinstance(names, str):
+        names = [names]
+
+    decision_id = uuid.uuid4().hex
+
+    boxes = []
+    for name in names:
+        if name not in text_area:
+            raise KeyError(
+                f"Unknown ROI name {name!r} — no such entry in "
+                f"references/TextArea/**/*.json."
+            )
+        boxes.append(text_area[name]["box"])
+
+    if not boxes:
+        print("No location found")
+        return None
+
+    res = req_ocr(img_path, save_result, rois=boxes, name=", ".join(names),
+                  read_kind=read_kind, decision_id=decision_id)
+
+    if res is None:
+        print("OCR failed")
+        return None
+
+    out = {name: [] for name in names}
+    for item in res:
+        idx = item.get("roi_index")
+        if idx is None or not (0 <= idx < len(names)):
+            continue
+        out[names[idx]].append({
+            "text": item["text"],
+            "score": item["score"],
+            "box": item["box"],
+        })
+    return out
 
 
 

@@ -80,6 +80,12 @@ ENTRY_POINTS = [
     # tapping (90, 33) opens "Daily Sign-in Gift" with a claimable. The old
     # coordinates are why the free daily sign-in was never collected.
     ("Daily sign-in",  (90.0, 33.0), [83.0, 29.0, 100.0, 35.5]),
+    # Trials sits immediately left of Events and was never an entry point, so
+    # the sweep had never opened it. Found live 2026-09-03 holding a COMPLETED
+    # mission ("Reach Squad's Total Power of 50,000", 50,000/50,000) with a
+    # green Claim button going unpressed. Box stops short of the VIP dot at
+    # y=8.2% on purpose: that one leads to a Locked bundle, not a claim.
+    ("Trials",         (76.0, 13.5), [68.0, 10.0, 86.0, 17.0]),
     ("Exploration",    (9.7, 96.3),  [5.0, 92.0, 20.0, 99.0]),
     # Events' box used to run to y=18 and overlap Deals' 16-24. A dot in that
     # band matched Events first, so Deals could be skipped for its own dot.

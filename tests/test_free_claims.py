@@ -37,28 +37,75 @@ class TestDotFiltering:
 
 
 class TestSweep:
-    def test_no_dots_ends_without_touching_the_screen(self, monkeypatch):
+    def test_no_dots_detected_still_visits_every_screen(self, monkeypatch):
+        """This asserted the opposite until 2026-09-03, and that was the bug.
+
+        Zero dots DETECTED is not zero dots PRESENT. A dot on a red icon merges
+        with it and is rejected by req_detect -- measured live, the Trials blob
+        is area 4179 against a 2600 cap and the Deals blob circularity 0.24
+        against a 0.70 floor. So "no dots" is precisely what a home screen full
+        of unclaimed rewards looks like to the detector, and returning early
+        there meant claiming nothing while reporting success.
+        """
         monkeypatch.setattr(fc, "recalibrate", lambda: None)
         monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
-        monkeypatch.setattr(fc, "tap_screen",
-                            lambda *a: pytest.fail("tapped with nothing pending"))
-        assert fc.sweep_free_claims() is True
+        taps = []
+        monkeypatch.setattr(fc, "tap_screen", lambda c: taps.append(c))
+        monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: False)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
 
-    def test_only_dotted_entry_points_are_visited(self, monkeypatch):
-        # A single dot over the 7-day icon must open that screen and no other.
-        seven_day_box = fc._pct_box_to_pixels(fc.ENTRY_POINTS[0][2])
-        dot = {"box": seven_day_box, "area": 400, "kind": "dot"}
+        assert fc.sweep_free_claims() is True
+        for label, centre, _box in fc.ENTRY_POINTS:
+            assert centre in taps, f"{label} went unvisited on a dotless read"
+
+    def test_every_entry_point_is_visited_regardless_of_dots(self, monkeypatch):
+        """The dot USED to gate this, and that silently cost whole screens.
+
+        Trials is a red shield and Deals a red gift box, so their dots merge
+        with the icon: measured live, the Trials blob is area 4179 against a
+        2600 cap and the Deals blob circularity 0.24 against a 0.70 floor.
+        Both are invisible to req_detect, so both were never visited. Skipping
+        the gate is safe because the CLAIM is guarded -- _claim_here presses
+        green only -- so a screen with nothing free costs seconds, not risk.
+        """
+        first_box = fc._pct_box_to_pixels(fc.ENTRY_POINTS[0][2])
+        dot = {"box": first_box, "area": 400, "kind": "dot"}
         monkeypatch.setattr(fc, "recalibrate", lambda: None)
         monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [dot])
         taps = []
         monkeypatch.setattr(fc, "tap_screen", lambda c: taps.append(c))
         monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: False)
         monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
         fc.sweep_free_claims()
-        # First tap opens the 7-day icon; the rest is the one-level descent
-        # following that same dot, which is bounded and visits it once.
-        assert taps[0] == fc.ENTRY_POINTS[0][1]
-        assert len(taps) <= 1 + 1
+
+        centres = [centre for _l, centre, _b in fc.ENTRY_POINTS]
+        for centre in centres:
+            assert centre in taps, f"{centre} was never visited"
+
+    def test_a_screen_with_nothing_free_is_still_safe_to_visit(self, monkeypatch):
+        """Visiting costs navigation, never a press.
+
+        With no dots at all the sweep still opens every entry point and still
+        asks tap_on_green_button on each -- that ask IS the money guard, so the
+        thing worth asserting is that it happens once per screen and that
+        nothing is claimed when it always says no.
+        """
+        monkeypatch.setattr(fc, "recalibrate", lambda: None)
+        monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
+        asked = []
+        monkeypatch.setattr(fc, "tap_screen", lambda c: None)
+        monkeypatch.setattr(fc, "tap_on_green_button",
+                            lambda **k: (asked.append(k), False)[1])
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: False)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+
+        assert fc.sweep_free_claims() is True
+        assert len(asked) >= len(fc.ENTRY_POINTS), (
+            f"green was checked {len(asked)} times for "
+            f"{len(fc.ENTRY_POINTS)} entry points — a screen went unchecked"
+        )
 
 
 class TestSubtabDescent:

@@ -287,20 +287,38 @@ def claim_shop_freebies():
 def sweep_free_claims():
     recalibrate()
     dots = _home_dots()
-    if not dots:
-        print("No pending-action dots on the home screen, ending the task...")
-        return True
+    # No early return on an empty dot list. That was the same mistake as the
+    # per-entry-point gate below, one level up: zero dots DETECTED is not zero
+    # dots PRESENT. Every dot on a red icon (Trials' shield, Deals' gift box)
+    # merges with it and is rejected, so "no dots" is exactly what a screen
+    # full of unclaimed rewards looks like to req_detect.
+    print(f"{len(dots)} pending-action dot(s) detected on the home screen "
+          f"(reported, not used as a gate).")
 
-    print(f"{len(dots)} pending-action dot(s) on the home screen.")
+    # Visit EVERY entry point, dot or no dot. The dot was only ever an
+    # optimisation -- it decided whether to bother navigating -- and it was
+    # costing whole screens silently:
+    #
+    #   Trials is a RED shield and Deals a RED gift box, so their dots merge
+    #   with the icon into one blob. Measured live 2026-09-03: the Trials blob
+    #   is area 4179 against a RED_AREA cap of 2600, the Deals blob circularity
+    #   0.24 against a 0.70 floor. Both are rejected. 54 red contours on that
+    #   frame, 3 reported. The detector is fine on blue icons and blind on red
+    #   ones, and no amount of tuning makes that guarantee coverage.
+    #
+    # Skipping the gate is safe because the CLAIM is already guarded: _claim_here
+    # presses green buttons only, so visiting a screen with nothing free costs a
+    # few seconds and takes nothing. Trading ~40s of navigation for the end of an
+    # entire class of silent miss is the right way round -- the dot count is now
+    # reported for the operator, not used as a gate.
     total = 0
     for label, (cx, cy), search_box in ENTRY_POINTS:
-        if not dot_near(dots, _pct_box_to_pixels(search_box), margin=0):
-            continue
-        print(f"Following the dot on {label}...")
+        flagged = dot_near(dots, _pct_box_to_pixels(search_box), margin=0)
+        print(f"Visiting {label}{' (dot)' if flagged else ''}...")
         tap_screen((cx, cy))
         total += _claim_here(label)
         recalibrate()
-        dots = _home_dots()          # the dot we just cleared should be gone
+        dots = _home_dots()
 
     print(f"Free-claim sweep done — {total} reward(s) claimed.")
     return True

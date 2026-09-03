@@ -23,15 +23,18 @@ either a permanent indicator or gated behind spending:
                 free to press. _activate_owned_vip_time already spends an item
                 if one is owned; with none, this dot cannot clear.
 
-  Shop banner   Holds a genuinely free daily chest, and claiming it does NOT
-                clear the dot -- verified by claiming it and re-reading. The
-                dot is advertising for the paid packs beside it. Deliberately
-                NOT automated: the reward is one small chest, the dot persists
-                either way, and it would put the bot inside a screen carrying
-                real-money buttons (observed: "Purchase All Discount Packs,
-                AED 17.99") on every run. req_detect finds ZERO green buttons
-                there, so the colour money guard cannot vouch for anything on
-                that screen -- which is exactly when not to automate it.
+  Shop banner   The dot never clears -- it advertises the paid packs -- but
+                REAL free rewards sit behind it, across more than one tab: a
+                daily Free chest and the unlocked Free-column tier of the Dawn
+                Fund furnace track. 200 gems in one visit on 2026-09-03, none
+                of which the bot had ever collected. Now handled by
+                claim_shop_freebies(), guarded by PRICE_MARKER because
+                req_detect finds ZERO green buttons on those screens and the
+                colour guard therefore cannot vouch for them.
+
+                (An earlier version of this note said the shop offered nothing
+                worth automating. That was wrong: it generalised from the one
+                free chest found first and missed the Dawn Fund track.)
 
   Events        Three dots: two are "new event available" tab markers, one is a
                 Tips list of point-earning tasks (Lucky Wheel spins, hero-shard
@@ -45,12 +48,15 @@ So a persistent dot is not evidence of a bug. Before "fixing" one, open it and
 check for a green button; if there is none, the game is advertising, not
 offering.
 """
+import re
 import time
 
+from core.coord_utils import BASE_HEIGHT, BASE_WIDTH
 from core.recalibrate import recalibrate
 
 from core.core import (
     req_detect,
+    req_text,
     tap_on_text,
     tap_on_template,
     tap_on_green_button,
@@ -82,6 +88,44 @@ ENTRY_POINTS = [
     ("Heroes",         (26.2, 96.3), [21.0, 92.0, 36.0, 99.0]),
     ("Backpack",       (42.1, 96.3), [37.0, 92.0, 52.0, 99.0]),
 ]
+
+
+# Anything that looks like real money or a gem price. The shop is the one screen
+# where a mis-tap costs something, so a tap is refused outright when any of this
+# sits near the target -- belt and braces on top of the colour guard, because
+# req_detect finds ZERO green buttons on these screens and so cannot vouch for
+# them at all.
+PRICE_MARKER = re.compile(
+    r"(AED|USD|EUR|GBP|JPY|SAR|\$|€|£|¥|\d+[.,]\d{2}\b|purchase|buy)", re.I
+)
+
+# How far from a price a tap must stay, as a fraction of screen height/width.
+PRICE_EXCLUSION_PCT = 9.0
+
+# Where the shop lives on the home screen, and how far below a "Free"
+# label its claimable tile sits (measured live 2026-09-03).
+SHOP_ENTRY = (96.0, 8.2)
+SHOP_TILE_OFFSET_PCT = 7.8
+SHOP_MAX_TABS = 4
+
+
+def _price_free_zone(target_pct, texts):
+    """True when no price-looking text sits within the exclusion radius.
+
+    target_pct is (x%, y%); texts is req_text()'s [[text, box], ...].
+    """
+    tx, ty = target_pct
+    for text, box in texts or []:
+        if not PRICE_MARKER.search(str(text)):
+            continue
+        x1, y1, x2, y2 = box
+        cx = (x1 + x2) / 2 / BASE_WIDTH * 100
+        cy = (y1 + y2) / 2 / BASE_HEIGHT * 100
+        if abs(cx - tx) <= PRICE_EXCLUSION_PCT and abs(cy - ty) <= PRICE_EXCLUSION_PCT:
+            print(f"Refusing to tap ({tx:.1f}%, {ty:.1f}%): {text!r} is "
+                  f"{abs(cy - ty):.1f}% away and looks like a price.")
+            return False
+    return True
 
 
 def _home_dots():
@@ -151,6 +195,70 @@ def _key(dot):
     """Grid-snapped identity so a dot that shifts a pixel is not 'new'."""
     x1, y1, x2, y2 = dot["box"]
     return ((x1 + x2) // 2 // 20, (y1 + y2) // 2 // 20)
+
+
+def claim_shop_freebies():
+    """Claim the free rewards the shop hands out, and nothing else.
+
+    The shop dot never clears -- it advertises the paid packs -- but real free
+    rewards sit behind it: a daily Free chest, and the unlocked Free-column
+    tier of the Dawn Fund furnace track. Observed live 2026-09-03: 200 gems in
+    one visit, none of which the bot had ever collected.
+
+    This is the only routine that navigates a screen carrying real-money
+    buttons ("AED 74.99", "AED 17.99" both observed), so it is guarded twice:
+
+      1. Every candidate is a tile whose own label says "Free". Nothing is
+         tapped on position alone.
+      2. _price_free_zone refuses the tap if anything price-shaped is within
+         PRICE_EXCLUSION_PCT of it. The colour guard cannot help here --
+         req_detect reports zero green buttons on these screens -- so this
+         text check IS the money guard for the shop.
+
+    A layout change therefore makes this claim nothing, never something wrong.
+    """
+    recalibrate()
+    if not tap_on_text("Home.Shop", wait=2):
+        tap_screen(SHOP_ENTRY)
+    time.sleep(2)
+
+    claimed = 0
+    for _ in range(SHOP_MAX_TABS):
+        texts = req_text() or []
+        targets = [
+            (box, text) for text, box in texts
+            if str(text).strip().lower() == "free"
+        ]
+        if not targets:
+            break
+
+        progressed = False
+        for box, _label in targets:
+            x1, y1, x2, y2 = box
+            # The claimable tile sits just below its "Free" label.
+            tx = (x1 + x2) / 2 / BASE_WIDTH * 100
+            ty = (y1 + y2) / 2 / BASE_HEIGHT * 100 + SHOP_TILE_OFFSET_PCT
+            if not _price_free_zone((tx, ty), texts):
+                continue
+            tap_screen((tx, ty))
+            time.sleep(1.5)
+            after = [t for t, _b in (req_text() or [])]
+            if any("claim" in str(t).lower() for t in after):
+                claimed += 1
+                progressed = True
+                print(f"Claimed a free shop reward at ({tx:.1f}%, {ty:.1f}%).")
+                tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
+                recalibrate()
+                if not tap_on_text("Home.Shop", wait=2):
+                    tap_screen(SHOP_ENTRY)
+                time.sleep(2)
+                break
+        if not progressed:
+            break
+
+    recalibrate()
+    print(f"Shop free-claim sweep done — {claimed} reward(s) claimed.")
+    return True
 
 
 def sweep_free_claims():

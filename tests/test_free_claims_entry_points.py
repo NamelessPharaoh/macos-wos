@@ -69,3 +69,117 @@ def test_every_tap_centre_sits_inside_its_own_search_box():
         assert x1 <= cx <= x2 and y1 <= cy <= y2, (
             f"{label}: tap centre ({cx}, {cy}) is outside its box {[x1, y1, x2, y2]}"
         )
+
+
+# --- the shop price guard --------------------------------------------------
+# claim_shop_freebies is the only routine that navigates a screen carrying
+# real-money buttons, and req_detect finds ZERO green buttons there — so the
+# colour money guard cannot vouch for anything on it. This text check IS the
+# money guard for the shop, which makes it the most safety-critical function in
+# the module.
+
+from core.coord_utils import BASE_HEIGHT as _H, BASE_WIDTH as _W  # noqa: E402
+from usecases.free_claims import (  # noqa: E402
+    PRICE_EXCLUSION_PCT,
+    PRICE_MARKER,
+    _price_free_zone,
+)
+
+
+def _text_at(text, x_pct, y_pct, w=60, h=20):
+    """A text box CENTRED on the given screen percentage.
+
+    The guard measures from the box centre, so a helper that anchored the left
+    edge would silently shift every case by half the box width.
+    """
+    cx, cy = x_pct / 100 * _W, y_pct / 100 * _H
+    return [text, [int(cx - w / 2), int(cy - h / 2),
+                   int(cx + w / 2), int(cy + h / 2)]]
+
+
+@pytest.mark.parametrize("price", [
+    "AED 74.99", "AED 17.99", "$4.99", "€9,99", "£19.99", "¥1200",
+    "USD 1.00", "Purchase All Discount Packs", "Buy & Use", "21.97",
+])
+def test_price_shapes_are_recognised(price):
+    assert PRICE_MARKER.search(price), f"{price!r} must read as a price"
+
+
+@pytest.mark.parametrize("safe", ["Free", "Claim", "Daily Limit: 1", "Lv. 7",
+                                  "100", "Dawn Fund", "1,543"])
+def test_non_prices_are_not_flagged(safe):
+    assert not PRICE_MARKER.search(safe), f"{safe!r} must not read as a price"
+
+
+def test_a_tap_next_to_a_price_is_refused():
+    """The exact failure this exists to prevent: a drifted tile position landing
+    on 'AED 74.99' instead of the free reward."""
+    texts = [_text_at("AED 74.99", 32.0, 55.0)]
+    assert _price_free_zone((32.0, 51.0), texts) is False
+
+
+def test_a_tap_far_from_any_price_is_allowed():
+    texts = [_text_at("AED 74.99", 66.0, 36.6)]   # measured live, other column
+    assert _price_free_zone((32.0, 51.0), texts) is True
+
+
+def test_the_exclusion_radius_is_enforced_on_both_axes():
+    inside = PRICE_EXCLUSION_PCT - 1
+    outside = PRICE_EXCLUSION_PCT + 1
+    assert _price_free_zone((50.0, 50.0), [_text_at("$1.99", 50.0, 50 + inside)]) is False
+    assert _price_free_zone((50.0, 50.0), [_text_at("$1.99", 50 + inside, 50.0)]) is False
+    assert _price_free_zone((50.0, 50.0), [_text_at("$1.99", 50.0, 50 + outside)]) is True
+
+
+def test_an_empty_or_unreadable_screen_is_treated_as_safe_to_skip():
+    """No text means no evidence. The caller only taps tiles it positively
+    identified as 'Free', so an empty read yields no targets at all."""
+    assert _price_free_zone((32.0, 51.0), []) is True
+    assert _price_free_zone((32.0, 51.0), None) is True
+
+
+# --- claim_shop_freebies actually runs -------------------------------------
+# The guard tests above call _price_free_zone directly, so they never executed
+# claim_shop_freebies' own body — and a missing `req_text` import survived all
+# of them, surfacing only on a live run. Same class as the NameError in 210bbf5.
+
+
+def _shop_stub(monkeypatch, screens):
+    """Drive claim_shop_freebies with canned screens; record every tap."""
+    import usecases.free_claims as fc
+    taps = []
+    seq = list(screens)
+
+    monkeypatch.setattr(fc, "recalibrate", lambda *a, **k: None)
+    monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+    monkeypatch.setattr(fc, "tap_screen", lambda pt, *a, **k: taps.append(pt))
+    monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+    monkeypatch.setattr(fc, "req_text",
+                        lambda *a, **k: seq.pop(0) if seq else [])
+    return fc, taps
+
+
+def test_claim_shop_freebies_runs_end_to_end(monkeypatch):
+    """Catches import and wiring errors the isolated guard tests cannot."""
+    fc, taps = _shop_stub(monkeypatch, [[], []])
+    assert fc.claim_shop_freebies() is True
+    assert taps == [], "no 'Free' label means nothing is tapped"
+
+
+def test_it_taps_below_a_free_label_when_no_price_is_near(monkeypatch):
+    free = _text_at("Free", 27.0, 43.0)
+    fc, taps = _shop_stub(monkeypatch, [[free], [["Claimed", [0, 0, 1, 1]]], []])
+    fc.claim_shop_freebies()
+    assert taps, "a clean Free tile must be tapped"
+    tx, ty = taps[0]
+    assert abs(tx - 27.0) < 1.0
+    assert ty > 43.0, "the claimable tile sits below its label"
+
+
+def test_it_refuses_a_free_label_sitting_next_to_a_price(monkeypatch):
+    """The failure mode this whole guard exists for."""
+    free = _text_at("Free", 27.0, 43.0)
+    price = _text_at("AED 74.99", 27.0, 48.0)
+    fc, taps = _shop_stub(monkeypatch, [[free, price], []])
+    fc.claim_shop_freebies()
+    assert taps == [], "a price within the exclusion radius must block the tap"

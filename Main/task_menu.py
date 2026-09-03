@@ -19,7 +19,7 @@ from usecases.alliance import (
     help,
 )
 from usecases.vip import collect_vip_rewards
-from usecases.free_claims import sweep_free_claims
+from usecases.free_claims import claim_shop_freebies, sweep_free_claims
 from usecases.anchor_drift import report_anchor_drift
 from usecases.heal import heal
 from usecases.arena import arena
@@ -75,6 +75,10 @@ def _run_gather(current_player_id):
 TASKS = [
     TaskSpec("vip", "VIP Rewards", "Collect VIP rewards before anything else.", lambda _player_id: collect_vip_rewards(), gate="UNKNOWN"),
     TaskSpec("free_claims", "Free Claims Sweep", "Follow home-screen red dots and claim what is free.", lambda _player_id: sweep_free_claims(), gate="ALWAYS"),
+    # Its own task, not folded into free_claims: this is the only routine that
+    # enters a screen with real-money buttons, so it must be separately
+    # skippable without giving up the rest of the free-claim sweep.
+    TaskSpec("shop_freebies", "Shop Free Rewards", "Claim the shop's free daily chest and unlocked Dawn Fund tiers.", lambda _player_id: claim_shop_freebies(), gate="ALWAYS"),
     TaskSpec("anchor_drift", "Anchor Drift Check", "Measure how far the UI has moved from the recorded ROIs.", lambda _player_id: report_anchor_drift(), gate="ALWAYS"),
     TaskSpec("exploration_idle", "Exploration Idle Income", "Claim passive exploration income.", lambda _player_id: claim_exploration_idle_income(), gate="exploration"),
     TaskSpec("exploration_continue", "Continue Exploring", "Resume exploration progress.", lambda _player_id: continue_exploring(), gate="exploration"),

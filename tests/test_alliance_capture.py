@@ -45,6 +45,10 @@ def _ago(**kw):
     ({"name": "[TST]FakeAlliance", "last_verified": "not-a-date"}, True, "unparseable"),
     ({"name": "[TST]FakeAlliance", "last_verified": _ago(hours=1)}, False, "fresh"),
     ({"name": "[TST]FakeAlliance", "last_verified": _ago(hours=25)}, True, "past the window"),
+    ({"name": None, "last_verified": _ago(hours=1)}, False,
+     "confirmed to be in no alliance, recently — a verified answer"),
+    ({"name": None, "last_verified": _ago(hours=25)}, True,
+     "that answer has aged out like any other"),
 ])
 def test_alliance_staleness(alliance, stale, why):
     assert pp.alliance_state_is_stale({"alliance": alliance}) is stale, why
@@ -109,13 +113,44 @@ def test_captures_name_and_current_member_count(profile_dir, monkeypatch):
     assert saved["alliance"]["member_count"] == 52, "current, not the capacity"
 
 
-def test_unreadable_name_keeps_the_stored_snapshot(profile_dir, monkeypatch):
+def test_leaving_the_alliance_clears_the_snapshot(profile_dir, monkeypatch):
+    """Membership is mutable. On the Alliance screen with working OCR (the title
+    read succeeded) an empty name box is a FACT -- the account is in no alliance
+    -- not a failed read. Without this the profile keeps a guild the account
+    left weeks ago, and re-probes every run trying to confirm it."""
     profile = pp.load_profile("111")
     pp.set_alliance_state(profile, "[TST]FakeAlliance", 52)
+
     _arm(monkeypatch, {"Home.Alliance.Name": [], "Home.Alliance.MemberCount": []})
-    assert al.capture_alliance_state("111", force=True) is False
+    assert al.capture_alliance_state("111", force=True) is True
+
     saved = json.loads((profile_dir / "111.json").read_text())
-    assert saved["alliance"]["name"] == "[TST]FakeAlliance"
+    assert saved["alliance"]["name"] is None
+    assert saved["alliance"]["member_count"] is None
+    assert saved["alliance"]["last_verified"], (
+        "must stamp, or the staleness gate re-probes on every single run"
+    )
+
+
+def test_a_cleared_snapshot_stops_re_probing(profile_dir, monkeypatch):
+    profile = pp.load_profile("111")
+    pp.clear_alliance_state(profile)
+    assert pp.alliance_state_is_stale(profile) is False, (
+        "no alliance is a verified answer, not a missing one"
+    )
+
+
+def test_rejoining_overwrites_a_cleared_snapshot(profile_dir, monkeypatch):
+    profile = pp.load_profile("111")
+    pp.clear_alliance_state(profile)
+    _arm(monkeypatch, {
+        "Home.Alliance.Name": [{"text": "[TST]NewAlliance", "score": 1.0}],
+        "Home.Alliance.MemberCount": [{"text": "8/50", "score": 1.0}],
+    })
+    assert al.capture_alliance_state("111", force=True) is True
+    saved = json.loads((profile_dir / "111.json").read_text())
+    assert saved["alliance"]["name"] == "[TST]NewAlliance"
+    assert saved["alliance"]["member_count"] == 8
 
 
 def test_a_failed_read_never_raises(profile_dir, monkeypatch):

@@ -203,10 +203,15 @@ ALLIANCE_SEED_NAME = "xxx"
 def alliance_state_is_stale(profile, now=None):
     """Whether the alliance snapshot is worth re-reading."""
     alliance = profile.get("alliance") or {}
-    name = alliance.get("name")
-    if not name or name == ALLIANCE_SEED_NAME:
+
+    # example.json's placeholder is not an observation at all.
+    if alliance.get("name") == ALLIANCE_SEED_NAME:
         return True
 
+    # Freshness is decided by the STAMP, not by whether a name is present.
+    # "No alliance, checked an hour ago" is a verified answer -- driving off the
+    # name would make a cleared snapshot look permanently unknown and re-probe
+    # a 4-6s round-trip on every single run.
     seen = alliance.get("last_verified")
     if not seen:
         return True
@@ -224,9 +229,10 @@ def alliance_state_is_stale(profile, now=None):
 def set_alliance_state(profile, name, member_count):
     """Persist an observed alliance snapshot. Returns True when it wrote.
 
-    Refuses a blank name: the capture path returns None when the screen could
-    not be read, and overwriting a good value with nothing would make the gate
-    forget an alliance the account is still in.
+    Refuses a blank name, because the capture path also yields None when the
+    screen could not be READ, and overwriting a good value with a failed read
+    would make the gate forget an alliance the account is still in.
+    Confirmed absence is a different thing -- see clear_alliance_state.
     """
     if not name:
         return False
@@ -241,6 +247,37 @@ def set_alliance_state(profile, name, member_count):
         save_profile(profile)
     except OSError as exc:
         print(f"⚠️ could not persist the alliance snapshot: {exc}")
+        return False
+    return True
+
+
+def clear_alliance_state(profile):
+    """Record that the account is in NO alliance. Returns True when it wrote.
+
+    Deliberately separate from set_alliance_state's blank-name refusal: that
+    refusal covers a FAILED READ, this covers a CONFIRMED ABSENCE. Alliance
+    membership is a mutable profile field -- an account can leave, be kicked, or
+    never have joined -- and without this a profile keeps whatever alliance it
+    last saw forever.
+
+    It also has to stamp last_verified. The staleness check only advances on a
+    successful write, so a profile that can never write re-probes on every run:
+    a ~4-6s round-trip per pass instead of per day.
+    """
+    alliance = profile.setdefault("alliance", {})
+    had_one = alliance.get("name") not in (None, "", ALLIANCE_SEED_NAME)
+    if had_one:
+        print(f"Alliance {alliance.get('name')!r} is gone from this account; "
+              f"clearing the stored snapshot")
+
+    alliance["name"] = None
+    alliance["member_count"] = None
+    alliance["last_verified"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    try:
+        save_profile(profile)
+    except OSError as exc:
+        print(f"⚠️ could not persist the cleared alliance snapshot: {exc}")
         return False
     return True
 

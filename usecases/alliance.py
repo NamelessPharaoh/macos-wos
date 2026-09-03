@@ -3,6 +3,7 @@ import time
 from core.recalibrate import recalibrate
 from core.player_profile import (
     alliance_state_is_stale,
+    clear_alliance_state,
     load_profile,
     set_alliance_state,
 )
@@ -66,7 +67,12 @@ def capture_alliance_state(player_id, force=False):
         return False
 
     try:
-        if not open_alliance() and not ensure_screen("Home.Alliance.Title", "Alliance"):
+        open_alliance()
+        # Verify arrival with our own read rather than trusting open_alliance's
+        # return. That read succeeding is also what makes an EMPTY name box
+        # meaningful below: it proves OCR works and that this is the Alliance
+        # screen, so nothing there is a fact rather than a failure.
+        if not ensure_screen("Home.Alliance.Title", "Alliance"):
             print("Could not reach the Alliance screen, keeping the stored snapshot")
             return False
 
@@ -87,8 +93,13 @@ def capture_alliance_state(player_id, force=False):
                 member_count = int(digits[0])
 
         if not name:
-            print("Alliance name did not read, keeping the stored snapshot")
-            return False
+            # We are demonstrably on the Alliance screen with working OCR (the
+            # title read above), and there is no name in the box. That is an
+            # account with no alliance -- left, kicked, or never joined -- not a
+            # failed read. Membership is mutable, so this has to be recordable
+            # or the profile keeps a guild the account has not been in for
+            # weeks, and re-probes every run trying to confirm it.
+            return clear_alliance_state(profile)
 
         wrote = set_alliance_state(profile, name, member_count)
         if wrote:

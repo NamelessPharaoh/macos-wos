@@ -32,6 +32,7 @@ from usecases.exploration import(
     continue_exploring
 )
 from usecases.alliance import(
+    capture_alliance_state,
     tech_contribution,
     auto_join,
     collect_chests,
@@ -362,6 +363,11 @@ def player_initialization():
                   f"check it against. Correct with WOS_FURNACE_RESET=<n>.")
         profile["furnace_level"] = level
     save_profile(profile)
+
+    # Alliance snapshot: staleness-gated, so this costs a round-trip about once
+    # a day rather than on every pass. It never raises -- a failed read is not a
+    # reason to abandon the run, so the previous value simply stands.
+    capture_alliance_state(id_val)
 
     console.print(Panel.fit(
         f"Email: {current_email}\nName:{name}\nID: {id_val}\nFurnace Level: {furnace}\nState: {state}",

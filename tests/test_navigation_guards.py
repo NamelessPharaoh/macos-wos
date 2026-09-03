@@ -258,11 +258,14 @@ class TestAllianceArrival:
         import pathlib
         src = pathlib.Path("usecases/alliance.py").read_text()
         assert 'title != "alliance"' not in src
-        # Was 5, one per routine. They now share open_alliance(), so exactly one
-        # call site remains -- and it must stay exactly one: a routine that
-        # re-inlines the block would drift from the helper's polarity, which is
-        # what this test class exists to prevent.
-        assert src.count("ensure_screen(") == 1
-        assert src.count("open_alliance()") == 6, (
-            "the helper plus its five callers"
+        # The navigate-and-recover block was copy-pasted into all five routines.
+        # Pin the BLOCK, not the ensure_screen count: other functions may check
+        # arrival for their own reasons (capture_alliance_state confirms it after
+        # open_alliance reports a recovery), and counting calls would forbid that
+        # while still permitting a genuine re-inline elsewhere.
+        assert src.count('tap_on_text("Home.Alliance", wait=2)') == 1, (
+            "the recovery tap belongs to open_alliance() alone"
+        )
+        assert src.count("open_alliance()") >= 6, (
+            "the helper plus its five routine callers"
         )

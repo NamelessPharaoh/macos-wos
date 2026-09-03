@@ -193,6 +193,58 @@ def record_lock(profile, feature, reason, evidence):
     return True
 
 
+# Membership changes rarely: a name almost never, a member count across a gate
+# threshold maybe weekly. Paying a recalibrate + tap + verify round-trip (~4-6s)
+# on every startup would tax every run for data that moves monthly.
+ALLIANCE_REFRESH_SECONDS = 24 * 60 * 60
+ALLIANCE_SEED_NAME = "xxx"
+
+
+def alliance_state_is_stale(profile, now=None):
+    """Whether the alliance snapshot is worth re-reading."""
+    alliance = profile.get("alliance") or {}
+    name = alliance.get("name")
+    if not name or name == ALLIANCE_SEED_NAME:
+        return True
+
+    seen = alliance.get("last_verified")
+    if not seen:
+        return True
+    try:
+        stamped = datetime.fromisoformat(str(seen))
+    except (TypeError, ValueError):
+        return True
+    if stamped.tzinfo is None:
+        stamped = stamped.replace(tzinfo=timezone.utc)
+
+    now = now or datetime.now(timezone.utc)
+    return (now - stamped).total_seconds() >= ALLIANCE_REFRESH_SECONDS
+
+
+def set_alliance_state(profile, name, member_count):
+    """Persist an observed alliance snapshot. Returns True when it wrote.
+
+    Refuses a blank name: the capture path returns None when the screen could
+    not be read, and overwriting a good value with nothing would make the gate
+    forget an alliance the account is still in.
+    """
+    if not name:
+        return False
+
+    alliance = profile.setdefault("alliance", {})
+    alliance["name"] = name
+    if isinstance(member_count, int):
+        alliance["member_count"] = member_count
+    alliance["last_verified"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+    try:
+        save_profile(profile)
+    except OSError as exc:
+        print(f"⚠️ could not persist the alliance snapshot: {exc}")
+        return False
+    return True
+
+
 DEFAULT_GATHER_REMOVE_HERO = False
 DEFAULT_GATHER_EQUALIZE = True
 

@@ -11,7 +11,8 @@
     },
     "disputed_values_rule": "Where sources disagree, encode the LOWEST claimed threshold. The gate then skips only when the account is below every source's number, so a dispute can never cause a false skip.",
     "researched": "2026-09-02, community sources. Community data is not ground truth: run scripts/capability_report.py and check it against the game before trusting a skip.",
-    "mapping": "Tasks declare which feature they need via TaskSpec.gate in Main/task_menu.py. tests/test_capability.py asserts every declared key resolves to a feature here or is the ALWAYS/UNKNOWN sentinel."
+    "mapping": "Tasks declare which feature they need via TaskSpec.gate in Main/task_menu.py. tests/test_capability.py asserts every declared key resolves to a feature here or is the ALWAYS/UNKNOWN sentinel.",
+    "observed_locks": "Buildings that are not yet unlocked are ABSENT from the UI rather than shown locked -- verified live 2026-09-03 for Beast Cage, Arena and Labyrinth at Furnace 7. So the observed-lock path (core/player_profile.record_lock) fires only for STATE-based locks like VIP, which is a purchasable status rather than an unbuilt building. Do not 'fix' the lock detection on the assumption it is broken for buildings; there is nothing on screen to read."
   },
   "features": {
     "exploration": {
@@ -110,8 +111,8 @@
         "https://whiteoutdata.com/buildings/furnace/",
         "https://www.ajackof.com/games/whiteout-survival-wos/whiteout-survival-arena-guide-strategy/"
       ],
-      "last_verified": "2026-09-02",
-      "notes": "DISPUTED: building at F8 (whiteoutdata) vs mode at F10 (ajackof). Encoded at 8 per the disputed-values rule, so an F8-F9 account runs it rather than being wrongly skipped."
+      "last_verified": "2026-09-03",
+      "notes": "DISPUTED: building at F8 (whiteoutdata) vs mode at F10 (ajackof). Encoded at 8 per the disputed-values rule, so an F8-F9 account runs it rather than being wrongly skipped. OBSERVED LIVE 2026-09-03 at Furnace 7: the Daily Missions list has no Arena row. The feature is ABSENT from the UI, not displayed with a lock marker, so read_lock_marker() finds nothing and no observed lock can ever be recorded for it. The static gate is the only thing holding this."
     },
     "infirmary": {
       "label": "Infirmary (healing)",
@@ -149,8 +150,8 @@
         "https://whiteoutdata.com/buildings/beast-cage/",
         "https://outof.games/realms/whiteoutsurvival/guides/405-server-age-and-timeline-in-whiteout-survival/"
       ],
-      "last_verified": "2026-09-02",
-      "notes": "COMPOSITE. state_age_days is not readable today, so that half evaluates UNKNOWN and fails open; the furnace half still decides below 18. Sources give 55-60 days; 60 used."
+      "last_verified": "2026-09-03",
+      "notes": "COMPOSITE. state_age_days is not readable today, so that half evaluates UNKNOWN and fails open; the furnace half still decides below 18. Sources give 55-60 days; 60 used. OBSERVED LIVE 2026-09-03 at Furnace 7: the Pet icon is not on the home screen at all (tap_on_template('Home.Pet') returns None). The feature is ABSENT from the UI, not displayed with a lock marker, so read_lock_marker() finds nothing and no observed lock can ever be recorded for it. The static gate is the only thing holding this."
     },
     "labyrinth": {
       "label": "Labyrinth",
@@ -171,8 +172,8 @@
         "https://centurygames.helpshift.com/hc/en/64-whiteout-survival/faq/7390-how-is-this-feature-unlocked/",
         "https://mobi.gg/en/tips/whiteout-survival-labyrinth/"
       ],
-      "last_verified": "2026-09-02",
-      "notes": "COMPOSITE, and the only entry with an OFFICIAL source. command_center_level is not readable today so it fails open. Also opens no earlier than the Monday of the 4th week after the state opens."
+      "last_verified": "2026-09-03",
+      "notes": "COMPOSITE, and the only entry with an OFFICIAL source. command_center_level is not readable today so it fails open. Also opens no earlier than the Monday of the 4th week after the state opens. OBSERVED LIVE 2026-09-03 at Furnace 7: the Daily Missions list has no Labyrinth row. The feature is ABSENT from the UI, not displayed with a lock marker, so read_lock_marker() finds nothing and no observed lock can ever be recorded for it. The static gate is the only thing holding this."
     },
     "daybreak_island": {
       "label": "Life Essence (Daybreak Island)",

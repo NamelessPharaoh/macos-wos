@@ -128,10 +128,10 @@ def account_state(profile):
         "state_age_days": None,
         # Never read off screen.
         "command_center_level": None,
-        # The ROI exists (Home.Alliance.MemberCount, recorded "78/100") but
-        # nothing writes it, and profile["alliance"]["name"] is still the seed
-        # literal "xxx" from example.json.
-        "alliance_member_count": None,
+        # Captured by usecases.alliance.capture_alliance_state during init.
+        # Absent until the first successful read, and "xxx" is example.json's
+        # seed -- both mean unreadable, so conditions on them fail open.
+        "alliance_member_count": alliance.get("member_count"),
         "alliance_name": None if name in (None, "", "xxx") else name,
     }
 

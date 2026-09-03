@@ -54,6 +54,10 @@ def _arm(monkeypatch, name="[LAT]lord846646676", pid="846646676",
             [state, [0, 0, 1, 1]],
         ]
 
+    # Alliance capture is an emulator round-trip; this suite is offline.
+    # Asserted separately in tests/test_alliance_capture.py.
+    monkeypatch.setattr(mm, "capture_alliance_state", lambda *a, **k: False)
+
     monkeypatch.setattr(mm, "req_text", fake_req_text)
     return calls
 

@@ -731,15 +731,28 @@ def req_text_named(names, img_path=None, save_result=False, read_kind=None):
         return None
 
     out = {name: [] for name in names}
+    attributed = 0
     for item in res:
         idx = item.get("roi_index")
         if idx is None or not (0 <= idx < len(names)):
             continue
+        attributed += 1
         out[names[idx]].append({
             "text": item["text"],
             "score": item["score"],
             "box": item["box"],
         })
+
+    if res and attributed == 0:
+        # The server returned text but tagged none of it with an ROI. That means
+        # it predates roi_index — an OCR server left running from before this
+        # change. Silently returning "every ROI read nothing" would look exactly
+        # like a genuinely blank screen and send a caller down its absent-data
+        # path, so say it out loud instead.
+        print("⚠️ OCR server returned results with no roi_index — it is running "
+              "older code than this client. Restart it (kill the `python -m "
+              "core.ocr` process and re-run run.sh); named reads cannot be "
+              "attributed until you do.")
     return out
 
 

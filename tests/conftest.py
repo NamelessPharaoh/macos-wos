@@ -22,6 +22,18 @@ os.environ.setdefault("OCR_CAPTURE_TOOL", "adb")
 # must not pollute (or depend on) the real burn-in ledger.
 os.environ.setdefault("OCR_BURNIN", "0")
 
+# Any test that misses a mock must fail FAST and against nothing real. Port 1 is
+# never a live OCR server, and a zero replay window turns the 35s retry ladder in
+# core/core.py:_post_json_with_replay into a single refused connection.
+#
+# Without this, one unmocked read costs 35s: adding capture_alliance_state() to
+# player_initialization made the suite hang past 5 minutes, and run.sh:11 already
+# documents that a FOREIGN dev server on the default port answers /docs while
+# 404-ing /ocr -- so a missed mock could otherwise get plausible-looking answers
+# from a stranger. A test that genuinely wants a live server sets these itself.
+os.environ.setdefault("OCR_PORT", "1")
+os.environ.setdefault("OCR_REPLAY_WAIT_SEC", "0")
+
 # Importing Main.main pulls core.core, whose import-time init_database()
 # (core/core.py:754) opens references/*.json via relative paths — the same
 # repo-root-cwd requirement every real run has. Pin the cwd so collection

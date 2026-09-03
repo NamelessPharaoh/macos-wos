@@ -1,11 +1,18 @@
+import re
 import time
 from core.recalibrate import recalibrate
+from core.player_profile import (
+    alliance_state_is_stale,
+    load_profile,
+    set_alliance_state,
+)
 
 from core.core import (
     ensure_screen,
     req_ocr,
     req_text,
     tap_on_text,
+    req_text_named,
     req_temp_match,
     tap_on_template,
     tap_on_templates_batch
@@ -35,6 +42,62 @@ def open_alliance():
     tap_on_text("Home.Alliance", wait=2)
     return False
 
+
+
+def capture_alliance_state(player_id, force=False):
+    """Read the alliance name and member count into the profile.
+
+    Wires two ROIs that have existed unused since the port: the gate already
+    declares alliance_member_count as a state key (feature-unlocks.json gates
+    Alliance Mobilization on >= 15 members) and treats it as unreadable, so
+    every condition on it fails open. This is what makes it readable.
+
+    Staleness-gated -- see ALLIANCE_REFRESH_SECONDS. Returns True when it wrote.
+
+    MUST NOT raise: this runs during player_initialization, and a failed
+    alliance read is not a reason to abandon the whole pass. Everything is
+    caught; a failure leaves the previous value in place.
+    """
+    if not player_id:
+        return False
+
+    profile = load_profile(player_id)
+    if not force and not alliance_state_is_stale(profile):
+        return False
+
+    try:
+        if not open_alliance() and not ensure_screen("Home.Alliance.Title", "Alliance"):
+            print("Could not reach the Alliance screen, keeping the stored snapshot")
+            return False
+
+        read = req_text_named(
+            ["Home.Alliance.Name", "Home.Alliance.MemberCount"], read_kind="value"
+        ) or {}
+
+        name_lines = read.get("Home.Alliance.Name") or []
+        name = name_lines[0]["text"].strip() if name_lines else None
+
+        # "52/52" is current/capacity; the gate wants the current headcount.
+        member_count = None
+        count_lines = read.get("Home.Alliance.MemberCount") or []
+        if count_lines:
+            raw = str(count_lines[0]["text"])
+            digits = re.findall(r"\d+", raw.replace(",", ""))
+            if digits:
+                member_count = int(digits[0])
+
+        if not name:
+            print("Alliance name did not read, keeping the stored snapshot")
+            return False
+
+        wrote = set_alliance_state(profile, name, member_count)
+        if wrote:
+            print(f"Alliance snapshot: {name} ({member_count} members)")
+        return wrote
+
+    except Exception as exc:
+        print(f"Alliance capture failed ({exc}); keeping the stored snapshot")
+        return False
 
 
 def tech_contribution():

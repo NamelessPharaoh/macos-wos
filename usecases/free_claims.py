@@ -11,6 +11,39 @@ entry points it marks, and press only what is green. Colour is the money guard
 screen offering nothing free simply gets backed out of.
 
 Adding coverage for another screen is one row in ENTRY_POINTS, not a new module.
+
+WHY DOTS REMAIN AFTER A CLEAN SWEEP
+-----------------------------------
+Investigated dot by dot on 2026-09-03 (Furnace 7). A home screen with no dots
+left is NOT achievable, and chasing it is the wrong goal -- every dot below is
+either a permanent indicator or gated behind spending:
+
+  VIP badge     "VIP 1 Daily Free Bundle" reads *Locked*. It needs active VIP
+                status, which costs gems or an owned VIP-time item. Nothing
+                free to press. _activate_owned_vip_time already spends an item
+                if one is owned; with none, this dot cannot clear.
+
+  Shop banner   Holds a genuinely free daily chest, and claiming it does NOT
+                clear the dot -- verified by claiming it and re-reading. The
+                dot is advertising for the paid packs beside it. Deliberately
+                NOT automated: the reward is one small chest, the dot persists
+                either way, and it would put the bot inside a screen carrying
+                real-money buttons (observed: "Purchase All Discount Packs,
+                AED 17.99") on every run. req_detect finds ZERO green buttons
+                there, so the colour money guard cannot vouch for anything on
+                that screen -- which is exactly when not to automate it.
+
+  Events        Three dots: two are "new event available" tab markers, one is a
+                Tips list of point-earning tasks (Lucky Wheel spins, hero-shard
+                ascension). All cost gems or materials. Zero green buttons at
+                any level.
+
+  Heroes        Recruit/upgrade counters (0/10, 2/10, "Recruit Hero"). Pressing
+                these spends resources.
+
+So a persistent dot is not evidence of a bug. Before "fixing" one, open it and
+check for a green button; if there is none, the game is advertising, not
+offering.
 """
 import time
 

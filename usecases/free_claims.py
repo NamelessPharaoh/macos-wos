@@ -29,10 +29,22 @@ from core.visual_cues import dot_near
 # (label, icon centre as screen %, dot search box as screen % [x1,y1,x2,y2])
 # The dot hangs off the icon's top-right corner, so the search box is the
 # icon's neighbourhood rather than the icon itself.
+# These are the side/bottom banners, and their positions ROTATE with whatever
+# events are running. A row whose box no longer contains its dot fails silently:
+# the sweep just never follows it and says nothing. tests/test_free_claims_
+# entry_points.py pins the positions measured live so a mismatch is at least
+# visible, but it cannot predict a banner moving again -- re-measure after a
+# game event changes the home screen.
 ENTRY_POINTS = [
-    ("7-Day sign-in",  (75.9, 14.4), [72.0, 10.0, 84.0, 18.0]),
+    # Was (75.9, 14.4) / [72, 10, 84, 18], which contained no dot on any screen
+    # observed. Measured live 2026-09-03: the dot sits at (96.2%, 29.8%) and
+    # tapping (90, 33) opens "Daily Sign-in Gift" with a claimable. The old
+    # coordinates are why the free daily sign-in was never collected.
+    ("Daily sign-in",  (90.0, 33.0), [83.0, 29.0, 100.0, 35.5]),
     ("Exploration",    (9.7, 96.3),  [5.0, 92.0, 20.0, 99.0]),
-    ("Events",         (91.7, 14.4), [88.0, 10.0, 99.0, 18.0]),
+    # Events' box used to run to y=18 and overlap Deals' 16-24. A dot in that
+    # band matched Events first, so Deals could be skipped for its own dot.
+    ("Events",         (91.7, 13.0), [88.0, 10.0, 99.0, 15.9]),
     ("Deals",          (91.7, 20.3), [88.0, 16.0, 99.0, 24.0]),
     ("Heroes",         (26.2, 96.3), [21.0, 92.0, 36.0, 99.0]),
     ("Backpack",       (42.1, 96.3), [37.0, 92.0, 52.0, 99.0]),

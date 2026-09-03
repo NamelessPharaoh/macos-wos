@@ -183,3 +183,54 @@ def test_it_refuses_a_free_label_sitting_next_to_a_price(monkeypatch):
     fc, taps = _shop_stub(monkeypatch, [[free, price], []])
     fc.claim_shop_freebies()
     assert taps == [], "a price within the exclusion radius must block the tap"
+
+
+# --- sub-tab descent budget ------------------------------------------------
+# A fixed budget of 4 left six free hero recruits unclaimed every run: the
+# Heroes screen carries five dots and "Recruit Hero" is last in the list.
+
+
+def _descent_stub(monkeypatch, dot_count, green_after=0):
+    import usecases.free_claims as fc
+    visited = []
+
+    def dots(feature, *a, **k):
+        if feature != "red_dot":
+            return []
+        return [{"box": [i * 100, 500, i * 100 + 30, 530], "kind": "dot"}
+                for i in range(dot_count)]
+
+    monkeypatch.setattr(fc, "req_detect", dots)
+    monkeypatch.setattr(fc, "tap_screen", lambda pt, *a, **k: visited.append(pt))
+    monkeypatch.setattr(fc, "tap_on_green_button", lambda *a, **k: False)
+    monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: False)
+    monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+    monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+    return fc, visited
+
+
+def test_every_dot_on_a_five_dot_screen_gets_visited(monkeypatch):
+    """The regression. Heroes has five dots; the free recruits are behind the
+    last one, so a budget of four never reached them."""
+    fc, visited = _descent_stub(monkeypatch, dot_count=5)
+    fc._descend_into_subtabs("Heroes")
+    assert len(visited) >= 5, f"only visited {len(visited)} of 5 dots"
+
+
+def test_the_budget_is_hard_capped(monkeypatch):
+    """A screen that keeps producing dots must not hold the sweep forever."""
+    fc, visited = _descent_stub(monkeypatch, dot_count=50)
+    fc._descend_into_subtabs("Runaway")
+    assert len(visited) <= fc.SUBTAB_HARD_CAP
+
+
+def test_each_dot_is_visited_at_most_once(monkeypatch):
+    fc, visited = _descent_stub(monkeypatch, dot_count=3)
+    fc._descend_into_subtabs("Events")
+    assert len(visited) == len(set(visited)), "a dot was revisited"
+
+
+def test_an_explicit_budget_still_wins(monkeypatch):
+    fc, visited = _descent_stub(monkeypatch, dot_count=9)
+    fc._descend_into_subtabs("Bounded", max_subtabs=2)
+    assert len(visited) == 2

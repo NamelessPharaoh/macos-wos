@@ -108,6 +108,12 @@ SHOP_ENTRY = (96.0, 8.2)
 SHOP_TILE_OFFSET_PCT = 7.8
 SHOP_MAX_TABS = 4
 
+# Sub-tab descent budget: enough for every dot on screen plus a little room
+# for ones that appear as others clear, hard-capped so a screen that keeps
+# generating dots cannot hold the sweep forever.
+SUBTAB_BUDGET_SLACK = 2
+SUBTAB_HARD_CAP = 10
+
 
 def _price_free_zone(target_pct, texts):
     """True when no price-looking text sits within the exclusion radius.
@@ -158,7 +164,7 @@ def _claim_here(label, max_rounds=3, descend=True):
     return _descend_into_subtabs(label)
 
 
-def _descend_into_subtabs(label, max_subtabs=4):
+def _descend_into_subtabs(label, max_subtabs=None):
     """Follow dots one level deeper when the screen itself offers nothing free.
 
     Heroes, Backpack and Events all flag pending work at the top level but keep
@@ -169,7 +175,18 @@ def _descend_into_subtabs(label, max_subtabs=4):
     """
     claimed = 0
     seen = set()
-    for _ in range(max_subtabs):
+    # Budget derived from what is actually on screen, not a fixed 4. The Heroes
+    # screen carries FIVE dots and the valuable one is last: "Recruit Hero",
+    # behind which sit "Free Recruitments Today: 5" and a second batch of 1,
+    # with real green buttons. A hardcoded 4 ran out one dot early and left six
+    # free hero recruits unclaimed every run. Each dot is still visited at most
+    # once (`seen`), so this cannot spin.
+    budget = max_subtabs if max_subtabs is not None else min(
+        len([c for c in (req_detect("red_dot") or []) if c.get("kind") == "dot"])
+        + SUBTAB_BUDGET_SLACK,
+        SUBTAB_HARD_CAP,
+    )
+    for _ in range(budget):
         dots = [c for c in (req_detect("red_dot") or []) if c.get("kind") == "dot"]
         target = next((d for d in dots if _key(d) not in seen), None)
         if target is None:

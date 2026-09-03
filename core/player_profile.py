@@ -7,6 +7,7 @@ here invents a parallel format.
 """
 import json
 import os
+from datetime import datetime, timezone
 
 PLAYERS_DIR = os.path.join("db", "players")
 EXAMPLE_PATH = os.path.join(PLAYERS_DIR, "example.json")
@@ -144,6 +145,52 @@ def apply_furnace_reset(profile):
     print(f"WOS_FURNACE_RESET applied: furnace_level={level}, "
           f"cleared {cleared} observed lock(s)")
     return level
+
+
+def record_lock(profile, feature, reason, evidence):
+    """Persist that a FEATURE was observed locked, and what proved it.
+
+    Keyed by feature rather than task: pet_treasure and pet_exploration both
+    gate on beast_cage, so a lock either of them sees applies to both.
+
+    `evidence` is POSITIONAL and required, deliberately. A keyword argument
+    validated with a raise would be swallowed -- Main/task_menu.py:195 catches
+    bare Exception, so a ValueError here is reported as "task crashed", and a
+    future failure-streak suspend would then disable a healthy task because the
+    lock recorder was miscalled. A missing positional fails at the call site
+    where no catch-all sees it, and the test suite catches it at collection.
+
+    What must never reach here is ABSENCE. usecases/arena.py find_arena() and
+    usecases/labyrinth.py go_to_labyrinth() return False when a Daily Missions
+    row is missing -- and that row also disappears once the daily is simply
+    done. Recording from those bails would permanently disable a working task
+    on the first day it succeeded. Pass core.core.read_lock_marker()'s return
+    value: text actually read off the screen.
+
+    Stamped with the furnace level that observed it, so a level-up invalidates
+    it automatically (see core/capability.observed_lock) with no expiry timer
+    and no cleanup job.
+    """
+    if not evidence:
+        # Refusing to write is the safe direction: the static table still gates
+        # the feature. Raising would be worse -- see the docstring.
+        print(f"⚠️ record_lock({feature!r}) called with no evidence; not recorded")
+        return False
+
+    profile.setdefault("observed_locks", {})[feature] = {
+        "reason": reason,
+        "evidence": str(evidence)[:200],
+        "furnace_at_observation": get_furnace_level(profile),
+        "observed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
+
+    try:
+        save_profile(profile)
+    except OSError as exc:
+        # A lock that cannot be saved must not kill the task that saw it.
+        print(f"⚠️ could not persist the observed lock for {feature}: {exc}")
+        return False
+    return True
 
 
 DEFAULT_GATHER_REMOVE_HERO = False

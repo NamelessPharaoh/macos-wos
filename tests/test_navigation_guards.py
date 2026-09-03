@@ -258,4 +258,11 @@ class TestAllianceArrival:
         import pathlib
         src = pathlib.Path("usecases/alliance.py").read_text()
         assert 'title != "alliance"' not in src
-        assert src.count("ensure_screen(") == 5
+        # Was 5, one per routine. They now share open_alliance(), so exactly one
+        # call site remains -- and it must stay exactly one: a routine that
+        # re-inlines the block would drift from the helper's polarity, which is
+        # what this test class exists to prevent.
+        assert src.count("ensure_screen(") == 1
+        assert src.count("open_alliance()") == 6, (
+            "the helper plus its five callers"
+        )

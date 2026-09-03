@@ -15,17 +15,30 @@ from cmd_program.screen_action import(
     swipe_screen
 )
 
+def open_alliance():
+    """Make sure the Alliance screen is up, then say whether it is.
 
+    This block was copy-pasted into all five alliance routines byte-for-byte.
+    Extracting it is not just tidiness: the sixth caller (alliance state
+    capture) was about to become a seventh copy, and every copy discards
+    tap_on_text's return value so none of them knows whether the recovery
+    actually worked.
 
-
+    Returns True when the screen is confirmed up. Callers currently ignore the
+    result, exactly as they ignored it when the block was inline, so behaviour
+    is unchanged -- but it is now available to anyone who wants to stop early.
+    """
+    time.sleep(0.5)
+    if ensure_screen("Home.Alliance.Title", "Alliance"):
+        return True
+    recalibrate()
+    tap_on_text("Home.Alliance", wait=2)
+    return False
 
 
 
 def tech_contribution():
-    time.sleep(0.5)
-    if not ensure_screen("Home.Alliance.Title", "Alliance"):
-        recalibrate()
-        tap_on_text("Home.Alliance", wait=2)
+    open_alliance()
     tap_on_text("Home.Alliance.Tech", wait=2)
     tap_on_template("Home.Alliance.Tech.Recommended", wait=2)
     tap_on_text("Home.Alliance.Tech.Contribute.FreeContribute", hold=7000, wait=2)
@@ -34,10 +47,7 @@ def tech_contribution():
     return True
 
 def auto_join():
-    time.sleep(0.5)
-    if not ensure_screen("Home.Alliance.Title", "Alliance"):
-        recalibrate()
-        tap_on_text("Home.Alliance", wait=2)
+    open_alliance()
     tap_on_text("Home.Alliance.War", wait=2)
     status = tap_on_text("Home.Alliance.War.AutoJoin", wait=2)
     if not status:
@@ -50,10 +60,7 @@ def auto_join():
     return True
 
 def collect_chests():
-    time.sleep(0.5)
-    if not ensure_screen("Home.Alliance.Title", "Alliance"):
-        recalibrate()
-        tap_on_text("Home.Alliance", wait=2)
+    open_alliance()
     tap_on_text("Home.Alliance.Chests", wait=2)
     tap_on_text("Home.Alliance.Chests.LootChest",wait=2)
     status = tap_on_text("Home.Alliance.Chests.LootChest.ClaimAll", wait=2)
@@ -74,10 +81,7 @@ def collect_chests():
 
 
 def help():
-    time.sleep(0.5)
-    if not ensure_screen("Home.Alliance.Title", "Alliance"):
-        recalibrate()
-        tap_on_text("Home.Alliance", wait=2)
+    open_alliance()
     tap_on_text("Home.Alliance.Help", wait=2)
     tap_on_text("Home.Alliance.Help.HelpAll", wait=2)
     tap_on_template("Global.Back", wait=2)
@@ -89,10 +93,7 @@ def shop():
 
 
 def collect_triumph():
-    time.sleep(0.5)
-    if not ensure_screen("Home.Alliance.Title", "Alliance"):
-        recalibrate()
-        tap_on_text("Home.Alliance", wait=2)
+    open_alliance()
 
     tap_on_text("Home.Alliance.Triumph", wait=2)
     for i in range(2):

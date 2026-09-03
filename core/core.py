@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 
 import cv2
@@ -947,6 +948,42 @@ def tap_on_closest_text(
         time.sleep(1)
 
     return False
+
+LOCK_MARKER = re.compile(r"(?<!un)\blocked\b")
+
+
+def read_lock_marker(img_path=None):
+    """The on-screen text proving a feature is locked, or None.
+
+    Generalises usecases/vip.py's detector: a full-frame read matching a lock
+    marker anywhere on the page rather than in a stored box. VIP's docstring
+    gives the reason ("no ROI to drift"), and there is no *.Locked ROI anywhere
+    in references/ to drift from in the first place.
+
+    Returns the MATCHED TEXT, not a bool, so the caller has evidence to hand to
+    record_lock(). That distinction is the whole point: usecases/arena.py and
+    usecases/labyrinth.py bail when a Daily Missions row is absent, and absence
+    is not evidence of anything -- the row also vanishes when the daily is
+    simply done. A lock may only be recorded from something actually read.
+
+    Why the regex rather than `"locked" in text`: "unlocked" CONTAINS "locked",
+    so the substring form reports LOCKED on a screen reading "Unlocked at
+    Furnace 18" -- recording a permanent false lock from a message saying the
+    exact opposite. "Blocked" is excluded by the same word boundary.
+
+    read_kind stays unset. A value read on a full frame triggers a Paddle
+    shadow-compare (961-2771ms) and floods logs/ocr_burnin.jsonl with
+    DIGIT_MISMATCH noise for a read that is positional, not numeric -- the same
+    reasoning as core/anchor_drift.py:27-30.
+
+    An OCR failure reads as NOT locked, matching the capability gate's
+    fail-open polarity: never stop doing work on the strength of a failed read.
+    """
+    for entry in (req_text(img_path=img_path) or []):
+        text = str(entry[0]) if entry else ""
+        if LOCK_MARKER.search(text.lower()):
+            return text
+    return None
 
 
 

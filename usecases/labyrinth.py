@@ -1,5 +1,6 @@
 import time
 from core.recalibrate import recalibrate
+from usecases.lock_evidence import note_if_locked
 
 from core.core import (
     req_ocr,
@@ -45,7 +46,7 @@ def go_to_labyrinth():
 
 
 
-def labyrinth():
+def labyrinth(player_id=None):
     recalibrate()
     labyrinth_list = [
         "Home.Labyrinth.CaveOfMonster",
@@ -58,7 +59,11 @@ def labyrinth():
     if not status:
         status = go_to_labyrinth()
         if not status:
-            print("Labyrinth task is already completed, Exiting the task")
+            # Same shape as arena: a missing Daily Missions row. The old message
+            # ASSERTED "already completed", a cause nothing here verified.
+            note_if_locked(player_id, "labyrinth", "daily mission row absent")
+            print("Labyrinth not reachable (locked, already done, or a missed "
+                  "read), Exiting the task")
             return None
     
     for lab in labyrinth_list:

@@ -22,6 +22,7 @@ from core.core import (
     req_ocr,
     req_text,
     req_detect,
+    read_lock_marker,
     tap_on_text,
     req_temp_match,
     tap_on_template,
@@ -45,10 +46,10 @@ def _vip_is_locked():
     Both "VIP 1 Benefits(Locked)" and the daily bundle's "Locked" say the same
     thing, so any Locked marker on the page is the signal — no ROI to drift.
     """
-    for entry in (req_text() or []):
-        if entry and "locked" in str(entry[0]).lower():
-            return True
-    return False
+    # Delegates to core.core.read_lock_marker so this shares one definition of
+    # "locked" with every other feature — and picks up its fix: `"locked" in
+    # text` also matched "unlocked" and "Blocked".
+    return read_lock_marker() is not None
 
 
 def _activate_owned_vip_time():

@@ -2,6 +2,7 @@ import re
 import time
 
 from core.recalibrate import recalibrate
+from usecases.lock_evidence import note_if_locked
 
 from core.core import (
     req_ocr,
@@ -52,7 +53,7 @@ def _count_adventuring():
     return sum(1 for t in res if len(str(t[0]).split(":")) == 3)
 
 
-def collect_ally_treasure():
+def collect_ally_treasure(player_id=None):
     recalibrate()
     status = tap_on_template("Home.Pet", wait=2)
     if not status:
@@ -64,6 +65,11 @@ def collect_ally_treasure():
     # below ignores its own return value — so without this the task silently
     # no-ops against whatever screen it actually landed on.
     if not ensure_screen("Home.Pet.BeastCage.Adventure.Title", "Pet Adventure"):
+        # A lock overlay also stops the title reading "Pet Adventure", so this
+        # message used to misreport a locked feature as a navigation failure —
+        # the same misdiagnosis core/recalibrate.py:48-53 removed for the home
+        # screen. Check before blaming navigation.
+        note_if_locked(player_id, "beast_cage", "pet adventure arrival check")
         print("Did not reach the Pet Adventure screen, ending the task...")
         return None
     tap_on_text("Home.Pet.BeastCage.Adventure.AllyTreasure", wait=2, align=[0, -50])
@@ -76,7 +82,7 @@ def collect_ally_treasure():
 
 
 
-def start_pet_exploration():
+def start_pet_exploration(player_id=None):
     exploration_roi = [0, 16.26, 100, 89.43]
 
     def center(box):
@@ -96,6 +102,11 @@ def start_pet_exploration():
     tap_on_text("Home.Pet.Skill.BeastCage", sleep=1, wait=2)
     tap_on_text("Home.Pet.BeastCage.Adventure", wait=2, sleep=2)
     if not ensure_screen("Home.Pet.BeastCage.Adventure.Title", "Pet Adventure"):
+        # A lock overlay also stops the title reading "Pet Adventure", so this
+        # message used to misreport a locked feature as a navigation failure —
+        # the same misdiagnosis core/recalibrate.py:48-53 removed for the home
+        # screen. Check before blaming navigation.
+        note_if_locked(player_id, "beast_cage", "pet adventure arrival check")
         print("Did not reach the Pet Adventure screen, ending the task...")
         return None
 

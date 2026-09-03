@@ -145,7 +145,7 @@ class Verdict:
                  warnings=None, checked=None):
         self.decision = decision
         self.reason = reason
-        self.source = source          # "table" | "sentinel" | "no-gate" | "disabled"
+        self.source = source   # "table" | "observed" | "sentinel" | "no-gate"
         self.feature = feature
         self.warnings = warnings or []
         # Per-condition trace: [(state_key, "met" | "unmet" | "unknown"), ...].
@@ -158,6 +158,28 @@ class Verdict:
 
     def __repr__(self):
         return f"<Verdict {self.decision} {self.feature or '-'}: {self.reason}>"
+
+
+def observed_lock(feature, profile):
+    """A still-valid observed lock for `feature`, or None.
+
+    A lock stamped at a furnace level BELOW the account's current one is stale
+    by construction: the account has progressed past the state that produced
+    the evidence, so the feature may well be open now. That is what makes the
+    stamp self-invalidating -- no expiry timer, no cleanup job, no operator
+    action. Without it, a lock recorded at Furnace 7 would keep Pets skipped
+    forever on an account that reached Furnace 18, which is a worse failure
+    than the one the gate exists to fix.
+    """
+    record = (profile.get("observed_locks") or {}).get(feature)
+    if not isinstance(record, dict):
+        return None
+
+    stamped = record.get("furnace_at_observation")
+    current = get_furnace_level(profile)
+    if isinstance(stamped, int) and isinstance(current, int) and current > stamped:
+        return None
+    return record
 
 
 def _resolve_condition(condition, state):
@@ -234,6 +256,19 @@ def evaluate(gate, profile, table=None):
             SKIP,
             f"{feature.get('label', gate)} needs {'; '.join(unmet)}",
             "table", feature=gate, warnings=warnings, checked=checked,
+        )
+
+    # The table says nothing definitive stops this task. Before running it,
+    # check what the bot actually SAW: in-game evidence outranks a
+    # community-sourced table, which is the reason this design beat a static
+    # one. A stale stamp is dropped by observed_lock() itself.
+    seen = observed_lock(gate, profile)
+    if seen:
+        return Verdict(
+            SKIP,
+            f"{feature.get('label', gate)} was seen locked "
+            f"({seen.get('evidence', 'no evidence')!r})",
+            "observed", feature=gate, warnings=warnings, checked=checked,
         )
 
     unknown = [c[0] for c in checked if c[1] == "unknown"]

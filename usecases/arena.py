@@ -1,5 +1,6 @@
 import time
 from core.recalibrate import recalibrate
+from usecases.lock_evidence import note_if_locked
 
 from core.core import (
     req_ocr,
@@ -78,13 +79,18 @@ def find_arena():
 
 
 
-def arena():
+def arena(player_id=None):
     attempt = 0
     recalibrate()
     print("Starting the fight in Arena of Glory...")
 
     availabe = find_arena()
     if not availabe:
+        # find_arena() hunts a Daily Missions row that ALSO vanishes once the
+        # daily is done, so this False means locked OR finished OR OCR flake.
+        # Only a lock marker actually on screen may be recorded; absence here
+        # proves nothing and must never become a persisted lock.
+        note_if_locked(player_id, "arena_of_glory", "daily mission row absent")
         print("Arena challenge is not availabe, Ending the task")
         return None
     tap_on_text("Home.Arena.Challenge", wait=2, sleep=1)

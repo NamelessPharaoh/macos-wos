@@ -130,18 +130,18 @@ SHOP_ENTRY = (96.0, 8.2)
 # refuse it, because the "AED 17.99" text sits about 70% away horizontally,
 # far outside PRICE_EXCLUSION_PCT. Probing UP first means that screen claims
 # its chest and never evaluates the downward candidate at all.
-SHOP_TILE_OFFSETS_PCT = (-2.1, 7.8)
+FREE_TILE_OFFSETS_PCT = (-2.1, 7.8)
 
 # Labels that mark a free reward. "Claimable" is not a synonym anyone would
 # guess: it is what the Dawn Market chest says, and that chest is free.
-SHOP_CLAIM_LABELS = ("free", "claimable")
+FREE_TILE_LABELS = ("free", "claimable")
 
 # What the reward popup says once a tile has actually paid out. Matching bare
 # "claim" would be wrong now that "Claimable" is a target label -- the tile's
 # own unclaimed caption would read back as proof it had been claimed.
-SHOP_CLAIMED_MARKERS = ("claimed", "tap anywhere to exit")
+CLAIMED_MARKERS = ("claimed", "tap anywhere to exit")
 
-SHOP_MAX_CLAIMS_PER_TAB = 4
+MAX_TILE_CLAIMS_PER_SCREEN = 4
 
 # The Top-up Center's tab row scrolls, and the shop always opens on the first
 # tab. Nine tabs were counted on 2026-09-04 -- Dawn Market, Training, Rise of
@@ -255,6 +255,20 @@ def _pct_box_to_pixels(box):
 def _claim_here(label, max_rounds=3, descend=True):
     """Press every free reward this screen offers, then look one level down.
 
+    A free reward comes in two shapes and the screen decides which:
+
+      * a GREEN BUTTON (Claim, Free, Use). Colour is the money guard -- orange
+        is a purchase, blue is navigation.
+      * a TILE captioned "Free" or "Claimable", with no button on the screen at
+        all. The colour guard has nothing to vouch for there, so the label plus
+        _price_free_zone stands in for it (see _claim_free_tiles_here).
+
+    Deals' login track is the second kind, and it was invisible to this
+    function until 2026-09-04. Its rewards sit as icon tiles under a "Free"
+    column header; the sweep visited the screen, logged "No free (green) button
+    found" and moved on -- correct by its own lights, there genuinely was no
+    green button. There was still a free SR hero, claimed by hand that day.
+
     Returns how many landed.
     """
     claimed = 0
@@ -265,6 +279,8 @@ def _claim_here(label, max_rounds=3, descend=True):
         print(f"Claimed a free reward on {label}.")
         # Reward popups close on a tap-anywhere; recalibrate mops up the rest.
         tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
+
+    claimed += _claim_free_tiles_here(label)
 
     if claimed or not descend:
         return claimed
@@ -375,14 +391,19 @@ def _swipe_shop_tabs():
     time.sleep(2)
 
 
-def _claim_free_tiles_here():
-    """Claim every free tile on the tab currently open; returns how many."""
+def _claim_free_tiles_here(label="shop"):
+    """Claim every "Free"/"Claimable" TILE on the screen; returns how many.
+
+    Split out of the shop because the shape is not shop-specific. Deals' login
+    track hands out its rewards the same way: icon tiles under a "Free" column
+    header, with no button anywhere on the screen.
+    """
     claimed = 0
-    for _ in range(SHOP_MAX_CLAIMS_PER_TAB):
+    for _ in range(MAX_TILE_CLAIMS_PER_SCREEN):
         texts = req_text() or []
         targets = [
             (box, text) for text, box in texts
-            if str(text).strip().lower() in SHOP_CLAIM_LABELS
+            if str(text).strip().lower() in FREE_TILE_LABELS
         ]
         if not targets:
             break
@@ -392,7 +413,7 @@ def _claim_free_tiles_here():
             x1, y1, x2, y2 = box
             tx = (x1 + x2) / 2 / BASE_WIDTH * 100
             label_y = (y1 + y2) / 2 / BASE_HEIGHT * 100
-            for offset in SHOP_TILE_OFFSETS_PCT:
+            for offset in FREE_TILE_OFFSETS_PCT:
                 ty = label_y + offset
                 if not _price_free_zone((tx, ty), texts):
                     continue
@@ -400,19 +421,19 @@ def _claim_free_tiles_here():
                 time.sleep(1.5)
                 after = [t for t, _b in (req_text() or [])]
                 if not any(marker in str(t).lower()
-                           for t in after for marker in SHOP_CLAIMED_MARKERS):
+                           for t in after for marker in CLAIMED_MARKERS):
                     # A probe that did not pay out may still have navigated
                     # somewhere. Only try the next offset while a label that
                     # could justify this target is demonstrably still on
                     # screen -- otherwise the next tap is a blind one on a
                     # layout nobody has looked at.
-                    if any(str(t).strip().lower() in SHOP_CLAIM_LABELS
+                    if any(str(t).strip().lower() in FREE_TILE_LABELS
                            for t in after):
                         continue
                     break
                 claimed += 1
                 progressed = True
-                print(f"Claimed a free shop reward at ({tx:.1f}%, {ty:.1f}%).")
+                print(f"Claimed a free {label} tile at ({tx:.1f}%, {ty:.1f}%).")
                 # Dismiss the popup and stay put. Deliberately NOT
                 # recalibrate() + re-enter: recalibrate walks back to the home
                 # screen, and re-entering the shop reopens the FIRST tab, so a
@@ -442,7 +463,7 @@ def claim_shop_freebies():
 
       * the top-right cart, not the bottom-nav Shop button (see _enter_shop);
       * every tab, not just the one the shop opens on (see SHOP_TAB_SLOTS_PCT);
-      * an offset that can point UP as well as down (SHOP_TILE_OFFSETS_PCT).
+      * an offset that can point UP as well as down (FREE_TILE_OFFSETS_PCT).
 
     This is the only routine that navigates a screen carrying real-money
     buttons ("AED 74.99", "AED 17.99", "AED 184.99" all observed), so it is
@@ -472,7 +493,7 @@ def claim_shop_freebies():
         for slot in SHOP_TAB_SLOTS_PCT:
             tap_screen((slot, SHOP_TAB_ROW_Y_PCT))
             time.sleep(2)
-            claimed += _claim_free_tiles_here()
+            claimed += _claim_free_tiles_here("shop")
         if page < SHOP_TAB_PAGES - 1:
             _swipe_shop_tabs()
 

@@ -288,6 +288,9 @@ def _descent_stub(monkeypatch, dot_count, green_after=0):
                 for i in range(dot_count)]
 
     monkeypatch.setattr(fc, "req_detect", dots)
+    # A drawn screen carrying no claimable label. Without this the settle gate
+    # polls its full timeout on every dot and the suite crawls.
+    monkeypatch.setattr(fc, "req_text", lambda *a, **k: [["x", [0, 0, 1, 1]]])
     monkeypatch.setattr(fc, "tap_screen", lambda pt, *a, **k: visited.append(pt))
     monkeypatch.setattr(fc, "tap_on_green_button", lambda *a, **k: False)
     monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: False)
@@ -321,3 +324,50 @@ def test_an_explicit_budget_still_wins(monkeypatch):
     fc, visited = _descent_stub(monkeypatch, dot_count=9)
     fc._descend_into_subtabs("Bounded", max_subtabs=2)
     assert len(visited) == 2
+
+
+# --- free rewards that are not buttons -------------------------------------
+
+
+def test_a_free_tile_is_claimed_when_the_screen_has_no_green_button(monkeypatch):
+    """Deals' login track hands out rewards as icon tiles under a "Free"
+    column header, with no green button anywhere on the screen.
+
+    The sweep used to visit it, log "No free (green) button found" and move on
+    -- correct by its own lights, there genuinely was no green button. An SR
+    hero was sitting there unclaimed on 2026-09-04. Column header measured
+    live at (19.4%, 34.1%), the Day 1 tile 9.0% below it.
+    """
+    import usecases.free_claims as fc
+    free = _text_at("Free", 19.4, 34.1)
+    screens = [[free], [["Claimed", [0, 0, 1, 1]]], []]
+    monkeypatch.setattr(fc, "req_text",
+                        lambda *a, **k: screens.pop(0) if screens else [])
+    monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+    monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
+    monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+    taps = []
+    monkeypatch.setattr(fc, "tap_screen", lambda pt, *a, **k: taps.append(pt))
+
+    assert fc._claim_here("Deals", descend=False) == 1
+    assert taps, "the tile must actually be tapped"
+    assert abs(taps[0][0] - 19.4) < 1.0, "tapped the wrong column"
+
+
+def test_a_screen_with_neither_button_nor_free_tile_claims_nothing(monkeypatch):
+    """The guard has to stay a guard: no green button and no "Free" label
+    means nothing is pressed, however many other words are on screen."""
+    import usecases.free_claims as fc
+    monkeypatch.setattr(fc, "req_text", lambda *a, **k: [
+        _text_at("Hall of Chiefs", 30.0, 20.0),
+        _text_at("AED 17.99", 60.0, 40.0),
+        _text_at("Claim", 80.0, 50.0),      # a GREY, disabled Claim button
+    ])
+    monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+    monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
+    monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+    taps = []
+    monkeypatch.setattr(fc, "tap_screen", lambda pt, *a, **k: taps.append(pt))
+
+    assert fc._claim_here("Events", descend=False) == 0
+    assert taps == [], "nothing free on screen, so nothing may be tapped"

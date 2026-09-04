@@ -145,44 +145,131 @@ def test_an_empty_or_unreadable_screen_is_treated_as_safe_to_skip():
 
 
 def _shop_stub(monkeypatch, screens):
-    """Drive claim_shop_freebies with canned screens; record every tap."""
+    """Drive claim_shop_freebies with canned screens; record every input."""
     import usecases.free_claims as fc
-    taps = []
+    taps, swipes, text_taps = [], [], []
     seq = list(screens)
 
     monkeypatch.setattr(fc, "recalibrate", lambda *a, **k: None)
-    monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+    monkeypatch.setattr(fc, "tap_on_text",
+                        lambda name, *a, **k: text_taps.append(name) or True)
     monkeypatch.setattr(fc, "tap_screen", lambda pt, *a, **k: taps.append(pt))
+    monkeypatch.setattr(fc, "swipe_screen",
+                        lambda a, b, **k: swipes.append((a, b)))
     monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
     monkeypatch.setattr(fc, "req_text",
                         lambda *a, **k: seq.pop(0) if seq else [])
-    return fc, taps
+    return fc, taps, swipes, text_taps
+
+
+def _tile_taps(fc, taps):
+    """Only the taps aimed at rewards: drop the cart and the tab slots."""
+    return [pt for pt in taps
+            if pt != fc.SHOP_ENTRY and pt[1] != fc.SHOP_TAB_ROW_Y_PCT]
 
 
 def test_claim_shop_freebies_runs_end_to_end(monkeypatch):
     """Catches import and wiring errors the isolated guard tests cannot."""
-    fc, taps = _shop_stub(monkeypatch, [[], []])
+    fc, taps, _swipes, _texts = _shop_stub(monkeypatch, [])
     assert fc.claim_shop_freebies() is True
-    assert taps == [], "no 'Free' label means nothing is tapped"
+    assert _tile_taps(fc, taps) == [], "no Free label means nothing is tapped"
 
 
-def test_it_taps_below_a_free_label_when_no_price_is_near(monkeypatch):
-    free = _text_at("Free", 27.0, 43.0)
-    fc, taps = _shop_stub(monkeypatch, [[free], [["Claimed", [0, 0, 1, 1]]], []])
+def test_the_shop_is_entered_by_the_cart_not_the_bottom_nav(monkeypatch):
+    """Home.Shop is the BOTTOM NAV button, and it opens the VIP/Gem shop --
+    every tile gem-priced or VIP-locked, nothing free anywhere on it. Trying
+    it first with SHOP_ENTRY as the fallback meant the routine reached the
+    right screen only when OCR happened to MISS the bottom-nav text: 200 gems
+    on 2026-09-03 (missed), nothing on 2026-09-04 (hit), no error either time.
+    """
+    fc, taps, _swipes, text_taps = _shop_stub(monkeypatch, [])
     fc.claim_shop_freebies()
-    assert taps, "a clean Free tile must be tapped"
-    tx, ty = taps[0]
+    assert taps and taps[0] == fc.SHOP_ENTRY, "the cart is the only entry"
+    assert "Home.Shop" not in text_taps, "the bottom-nav Shop is a trap"
+
+
+def test_every_tab_is_visited_not_just_the_one_the_shop_opens_on(monkeypatch):
+    """The shop opens on Dawn Market; the daily free chest is on Daily Deals.
+    Without traversal the routine reads one tab and reports success."""
+    fc, taps, swipes, _texts = _shop_stub(monkeypatch, [])
+    fc.claim_shop_freebies()
+    slots = [pt for pt in taps if pt[1] == fc.SHOP_TAB_ROW_Y_PCT]
+    assert len(slots) == len(fc.SHOP_TAB_SLOTS_PCT) * fc.SHOP_TAB_PAGES
+    assert len(swipes) == fc.SHOP_TAB_PAGES - 1, "one swipe between pages"
+
+
+def test_the_upward_offset_is_probed_before_the_downward_one(monkeypatch):
+    free = _text_at("Free", 27.0, 43.0)
+    fc, taps, _s, _t = _shop_stub(
+        monkeypatch, [[free], [["Claimed", [0, 0, 1, 1]]]])
+    fc.claim_shop_freebies()
+    tile = _tile_taps(fc, taps)
+    assert tile, "a clean Free tile must be tapped"
+    tx, ty = tile[0]
     assert abs(tx - 27.0) < 1.0
-    assert ty > 43.0, "the claimable tile sits below its label"
+    assert ty < 43.0, "the first probe sits above the label"
+
+
+def test_a_free_label_below_its_tile_is_still_reached(monkeypatch):
+    """Dawn Fund's "Free" is a COLUMN HEADER with the tile below it, so the
+    downward candidate must survive -- it is only ever second, never dropped.
+    """
+    free = _text_at("Free", 31.3, 43.7)
+    fc, taps, _s, _t = _shop_stub(
+        monkeypatch, [[free], [free], [["Claimed", [0, 0, 1, 1]]]])
+    fc.claim_shop_freebies()
+    tile = _tile_taps(fc, taps)
+    assert len(tile) == 2, "up first, then down"
+    assert tile[0][1] < 43.7 < tile[1][1]
+
+
+def test_a_daily_deals_layout_never_taps_the_purchase_banner(monkeypatch):
+    """The bug this ordering exists for, measured live 2026-09-04.
+
+    The Free chest's caption sits at y=32.1% with the chest ABOVE it, while
+    "Purchase All Discount Packs / AED 17.99" spans y 33.5-40.7%. The old
+    +7.8% offset landed at 39.9% -- inside that banner -- and _price_free_zone
+    did NOT refuse it, because the price TEXT is about 70% of the screen away
+    horizontally. Probing up first claims the chest and ends the target.
+    """
+    free = _text_at("Free", 11.6, 32.1)
+    price = _text_at("AED 17.99", 82.0, 37.4)
+    fc, taps, _s, _t = _shop_stub(
+        monkeypatch, [[free, price], [["Claimed", [0, 0, 1, 1]]]])
+    fc.claim_shop_freebies()
+    tile = _tile_taps(fc, taps)
+    assert len(tile) == 1, "the chest is claimed on the first probe"
+    assert all(ty < 33.5 for _tx, ty in tile), \
+        "no tap may land in the purchase banner"
 
 
 def test_it_refuses_a_free_label_sitting_next_to_a_price(monkeypatch):
-    """The failure mode this whole guard exists for."""
+    """The failure mode the text guard exists for: both candidates blocked."""
     free = _text_at("Free", 27.0, 43.0)
-    price = _text_at("AED 74.99", 27.0, 48.0)
-    fc, taps = _shop_stub(monkeypatch, [[free, price], []])
+    price = _text_at("AED 74.99", 27.0, 45.0)
+    fc, taps, _s, _t = _shop_stub(monkeypatch, [[free, price], []])
     fc.claim_shop_freebies()
-    assert taps == [], "a price within the exclusion radius must block the tap"
+    assert _tile_taps(fc, taps) == [], \
+        "a price within the exclusion radius must block every candidate"
+
+
+def test_claimable_counts_as_a_free_reward(monkeypatch):
+    """Dawn Market's chest says "Claimable", not "Free", and it is free."""
+    claimable = _text_at("Claimable", 86.7, 22.8)
+    fc, taps, _s, _t = _shop_stub(
+        monkeypatch, [[claimable], [["Claimed", [0, 0, 1, 1]]]])
+    fc.claim_shop_freebies()
+    assert _tile_taps(fc, taps), "a Claimable chest must be tapped"
+
+
+def test_a_claimable_label_is_not_itself_proof_of_a_claim(monkeypatch, capsys):
+    """"Claimable" contains "claim". Matching bare "claim" on the read-back --
+    which is what the old success test did -- would count an untouched tile as
+    claimed the moment "Claimable" became a target label."""
+    claimable = _text_at("Claimable", 86.7, 22.8)
+    fc, _taps, _s, _t = _shop_stub(monkeypatch, [[claimable]] * 60)
+    fc.claim_shop_freebies()
+    assert "0 reward(s) claimed" in capsys.readouterr().out
 
 
 # --- sub-tab descent budget ------------------------------------------------

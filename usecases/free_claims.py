@@ -61,7 +61,7 @@ from core.core import (
     tap_on_template,
     tap_on_green_button,
 )
-from cmd_program.screen_action import tap_screen
+from cmd_program.screen_action import swipe_screen, tap_screen
 from core.visual_cues import dot_near
 
 
@@ -108,11 +108,54 @@ PRICE_MARKER = re.compile(
 # How far from a price a tap must stay, as a fraction of screen height/width.
 PRICE_EXCLUSION_PCT = 9.0
 
-# Where the shop lives on the home screen, and how far below a "Free"
-# label its claimable tile sits (measured live 2026-09-03).
+# Where the shop lives on the home screen. This is the TOP-RIGHT cart, which
+# opens the Top-up Center -- the only place the free rewards live. It is NOT
+# the bottom-nav "Shop" button; references/TextArea/Home.json puts that anchor
+# at y 97.8-99.47%, and it opens the VIP/Gem shop, where every tile is
+# gem-priced or "Reach VIP Lv. 2 to unlock" and there is nothing free at all.
 SHOP_ENTRY = (96.0, 8.2)
-SHOP_TILE_OFFSET_PCT = 7.8
-SHOP_MAX_TABS = 4
+
+# How far from a "Free" label its claimable tile sits. A single signed offset
+# cannot serve both layouts observed live, because the label plays a different
+# role on each:
+#
+#   Dawn Fund     "Free" is a COLUMN HEADER and the tile sits BELOW it
+#                 (the Lv-6 tile measures about +6.7%; +7.8% was tuned here).
+#   Daily Deals   "Free" is a CAPTION and the chest sits ABOVE it: label centre
+#                 y=790px, chest centre y=738px of 2460, so -2.1%.
+#
+# The order is a safety property, not a preference. On Daily Deals the +7.8%
+# candidate lands at y~39.9% -- inside the "Purchase All Discount Packs /
+# AED 17.99" banner, which spans y 825-1000px -- and _price_free_zone does NOT
+# refuse it, because the "AED 17.99" text sits about 70% away horizontally,
+# far outside PRICE_EXCLUSION_PCT. Probing UP first means that screen claims
+# its chest and never evaluates the downward candidate at all.
+SHOP_TILE_OFFSETS_PCT = (-2.1, 7.8)
+
+# Labels that mark a free reward. "Claimable" is not a synonym anyone would
+# guess: it is what the Dawn Market chest says, and that chest is free.
+SHOP_CLAIM_LABELS = ("free", "claimable")
+
+# What the reward popup says once a tile has actually paid out. Matching bare
+# "claim" would be wrong now that "Claimable" is a target label -- the tile's
+# own unclaimed caption would read back as proof it had been claimed.
+SHOP_CLAIMED_MARKERS = ("claimed", "tap anywhere to exit")
+
+SHOP_MAX_CLAIMS_PER_TAB = 4
+
+# The Top-up Center's tab row scrolls, and the shop always opens on the first
+# tab. Nine tabs were counted on 2026-09-04 -- Dawn Market, Training, Rise of
+# the City, Daily Deals, Speedy Development Pack, Weekly/Monthly Cards, Dawn
+# Fund, Get Gems, Tundra Supply Station -- with three or four visible at once.
+# Until this existed the routine only ever read Dawn Market, so the daily free
+# chest (100 gems, on Daily Deals) was unreachable no matter how the entry or
+# the offsets were fixed. Three slots x three pages covers nine tabs; the
+# overlap is harmless, a tab visited twice simply has nothing left to claim.
+SHOP_TAB_ROW_Y_PCT = 13.7
+SHOP_TAB_SLOTS_PCT = (18.5, 46.3, 74.1)
+SHOP_TAB_PAGES = 3
+SHOP_TAB_SWIPE_FROM_PCT = 83.3
+SHOP_TAB_SWIPE_TO_PCT = 23.1
 
 # Sub-tab descent budget: enough for every dot on screen plus a little room
 # for ones that appear as others clear, hard-capped so a screen that keeps
@@ -220,37 +263,38 @@ def _key(dot):
     return ((x1 + x2) // 2 // 20, (y1 + y2) // 2 // 20)
 
 
-def claim_shop_freebies():
-    """Claim the free rewards the shop hands out, and nothing else.
+def _enter_shop():
+    """Open the Top-up Center via the top-right cart, and only via that.
 
-    The shop dot never clears -- it advertises the paid packs -- but real free
-    rewards sit behind it: a daily Free chest, and the unlocked Free-column
-    tier of the Dawn Fund furnace track. Observed live 2026-09-03: 200 gems in
-    one visit, none of which the bot had ever collected.
-
-    This is the only routine that navigates a screen carrying real-money
-    buttons ("AED 74.99", "AED 17.99" both observed), so it is guarded twice:
-
-      1. Every candidate is a tile whose own label says "Free". Nothing is
-         tapped on position alone.
-      2. _price_free_zone refuses the tap if anything price-shaped is within
-         PRICE_EXCLUSION_PCT of it. The colour guard cannot help here --
-         req_detect reports zero green buttons on these screens -- so this
-         text check IS the money guard for the shop.
-
-    A layout change therefore makes this claim nothing, never something wrong.
+    Deliberately NOT tap_on_text("Home.Shop"): that anchor is the BOTTOM NAV
+    Shop button, a different screen (VIP/Gem shop) with no free tiles on it.
+    It used to be tried first with SHOP_ENTRY merely as the fallback, so the
+    routine reached the right screen only when OCR happened to MISS the
+    bottom-nav text. That is why it claimed 200 gems on 2026-09-03 (OCR
+    missed) and nothing on 2026-09-04 (OCR hit) -- with no error either time.
     """
-    recalibrate()
-    if not tap_on_text("Home.Shop", wait=2):
-        tap_screen(SHOP_ENTRY)
+    tap_screen(SHOP_ENTRY)
     time.sleep(2)
 
+
+def _swipe_shop_tabs():
+    """Scroll the Top-up Center's tab row one page to the left."""
+    swipe_screen(
+        (SHOP_TAB_SWIPE_FROM_PCT, SHOP_TAB_ROW_Y_PCT),
+        (SHOP_TAB_SWIPE_TO_PCT, SHOP_TAB_ROW_Y_PCT),
+        duration=400,
+    )
+    time.sleep(2)
+
+
+def _claim_free_tiles_here():
+    """Claim every free tile on the tab currently open; returns how many."""
     claimed = 0
-    for _ in range(SHOP_MAX_TABS):
+    for _ in range(SHOP_MAX_CLAIMS_PER_TAB):
         texts = req_text() or []
         targets = [
             (box, text) for text, box in texts
-            if str(text).strip().lower() == "free"
+            if str(text).strip().lower() in SHOP_CLAIM_LABELS
         ]
         if not targets:
             break
@@ -258,26 +302,91 @@ def claim_shop_freebies():
         progressed = False
         for box, _label in targets:
             x1, y1, x2, y2 = box
-            # The claimable tile sits just below its "Free" label.
             tx = (x1 + x2) / 2 / BASE_WIDTH * 100
-            ty = (y1 + y2) / 2 / BASE_HEIGHT * 100 + SHOP_TILE_OFFSET_PCT
-            if not _price_free_zone((tx, ty), texts):
-                continue
-            tap_screen((tx, ty))
-            time.sleep(1.5)
-            after = [t for t, _b in (req_text() or [])]
-            if any("claim" in str(t).lower() for t in after):
+            label_y = (y1 + y2) / 2 / BASE_HEIGHT * 100
+            for offset in SHOP_TILE_OFFSETS_PCT:
+                ty = label_y + offset
+                if not _price_free_zone((tx, ty), texts):
+                    continue
+                tap_screen((tx, ty))
+                time.sleep(1.5)
+                after = [t for t, _b in (req_text() or [])]
+                if not any(marker in str(t).lower()
+                           for t in after for marker in SHOP_CLAIMED_MARKERS):
+                    # A probe that did not pay out may still have navigated
+                    # somewhere. Only try the next offset while a label that
+                    # could justify this target is demonstrably still on
+                    # screen -- otherwise the next tap is a blind one on a
+                    # layout nobody has looked at.
+                    if any(str(t).strip().lower() in SHOP_CLAIM_LABELS
+                           for t in after):
+                        continue
+                    break
                 claimed += 1
                 progressed = True
                 print(f"Claimed a free shop reward at ({tx:.1f}%, {ty:.1f}%).")
+                # Dismiss the popup and stay put. Deliberately NOT
+                # recalibrate() + re-enter: recalibrate walks back to the home
+                # screen, and re-entering the shop reopens the FIRST tab, so a
+                # reward on any later tab could never be reached. Verified live
+                # 2026-09-04: dismissing the popup leaves the same tab open.
                 tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
-                recalibrate()
-                if not tap_on_text("Home.Shop", wait=2):
-                    tap_screen(SHOP_ENTRY)
-                time.sleep(2)
+                time.sleep(1.5)
+                break
+            if progressed:
                 break
         if not progressed:
             break
+    return claimed
+
+
+def claim_shop_freebies():
+    """Claim the free rewards the shop hands out, and nothing else.
+
+    The shop dot never clears -- it advertises the paid packs -- but real free
+    rewards sit behind it: a daily Free chest on Daily Deals (100 gems, taken
+    live 2026-09-04), a Claimable chest on Dawn Market, and the unlocked
+    Free-column tier of the Dawn Fund furnace track.
+
+    Reaching them needs three things that were each wrong or missing, and each
+    of which failed silently -- the routine reported success while claiming
+    nothing:
+
+      * the top-right cart, not the bottom-nav Shop button (see _enter_shop);
+      * every tab, not just the one the shop opens on (see SHOP_TAB_SLOTS_PCT);
+      * an offset that can point UP as well as down (SHOP_TILE_OFFSETS_PCT).
+
+    This is the only routine that navigates a screen carrying real-money
+    buttons ("AED 74.99", "AED 17.99", "AED 184.99" all observed), so it is
+    guarded three ways:
+
+      1. Every candidate is a tile whose own label says "Free" or "Claimable".
+         Nothing is tapped on position alone.
+      2. _price_free_zone refuses the tap if anything price-shaped is within
+         PRICE_EXCLUSION_PCT of it. The colour guard cannot help here --
+         req_detect reports zero green buttons on these screens -- so this
+         text check is the money guard for the shop.
+      3. The upward offset is tried first, so the one screen where the
+         downward offset is known to land on a purchase banner claims its
+         chest and never evaluates the downward candidate.
+
+    Guard 2 has a hole worth naming rather than pretending away: it measures
+    distance to price TEXT, and a wide purchase banner puts its price at one
+    end. On Daily Deals a tap 70% of the screen away from "AED 17.99" is still
+    on that banner. Guard 3 is what actually covers that case, which is why
+    the offset order is load-bearing and not a preference.
+    """
+    recalibrate()
+    _enter_shop()
+
+    claimed = 0
+    for page in range(SHOP_TAB_PAGES):
+        for slot in SHOP_TAB_SLOTS_PCT:
+            tap_screen((slot, SHOP_TAB_ROW_Y_PCT))
+            time.sleep(2)
+            claimed += _claim_free_tiles_here()
+        if page < SHOP_TAB_PAGES - 1:
+            _swipe_shop_tabs()
 
     recalibrate()
     print(f"Shop free-claim sweep done — {claimed} reward(s) claimed.")

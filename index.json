@@ -1,0 +1,446 @@
+{
+  "generated": "2026-09-03T10:49:54Z",
+  "root": "/Users/melsawah1/Developer/wos-bot",
+  "scan_depth": 5,
+  "duration_ms": 11,
+  "total_dirs": 38,
+  "total_files": 231,
+  "total_projects": 14,
+  "error_count": 0,
+  "domains": [
+    {
+      "id": "A",
+      "label": "Live / Published",
+      "project_count": 0,
+      "dir_count": 0
+    },
+    {
+      "id": "B",
+      "label": "Active Development",
+      "project_count": 5,
+      "dir_count": 5
+    },
+    {
+      "id": "C",
+      "label": "Concept / Planning",
+      "project_count": 1,
+      "dir_count": 1
+    },
+    {
+      "id": "D",
+      "label": "Data & Research Pipelines",
+      "project_count": 3,
+      "dir_count": 3
+    },
+    {
+      "id": "E",
+      "label": "Shared Infrastructure",
+      "project_count": 1,
+      "dir_count": 1
+    },
+    {
+      "id": "F",
+      "label": "Content & Creative Assets",
+      "project_count": 2,
+      "dir_count": 2
+    },
+    {
+      "id": "G",
+      "label": "Reference & Archived",
+      "project_count": 2,
+      "dir_count": 2
+    }
+  ],
+  "projects": [
+    {
+      "id": "gstack",
+      "domain": "E",
+      "status": "generated",
+      "role": "qa_report_output",
+      "name": ".gstack",
+      "path": ".gstack",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "main-loop",
+      "domain": "B",
+      "status": "dev",
+      "role": "entry_point_task_runner",
+      "name": "Main",
+      "path": "Main",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "cmd-program",
+      "domain": "B",
+      "status": "dev",
+      "role": "adb_scrcpy_io",
+      "name": "cmd_program",
+      "path": "cmd_program",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "core",
+      "domain": "B",
+      "status": "dev",
+      "role": "device_ocr_vision_capability",
+      "name": "core",
+      "path": "core",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "ocr-backup",
+      "domain": "G",
+      "status": "dormant",
+      "role": "pre_vision_swap_ocr_copies",
+      "name": "backup",
+      "path": "core/backup",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "state-store",
+      "domain": "D",
+      "status": "active",
+      "role": "player_profiles_completion_log",
+      "name": "db",
+      "path": "db",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "port-record",
+      "domain": "C",
+      "status": "reference",
+      "role": "port_decisions_designs_knowledge",
+      "name": "docs",
+      "path": "docs",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "frames",
+      "domain": "F",
+      "status": "scratch",
+      "role": "captured_framebuffer",
+      "name": "frames",
+      "path": "frames",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "burnin-log",
+      "domain": "D",
+      "status": "active",
+      "role": "ocr_shadow_check_jsonl",
+      "name": "logs",
+      "path": "logs",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "screen-assets",
+      "domain": "F",
+      "status": "active",
+      "role": "icon_templates_and_roi_json",
+      "name": "references",
+      "path": "references",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "analysis",
+      "domain": "D",
+      "status": "active",
+      "role": "burnin_and_capability_reports",
+      "name": "scripts",
+      "path": "scripts",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "legacy-scratch",
+      "domain": "G",
+      "status": "dormant",
+      "role": "pre_port_manual_scripts",
+      "name": "test",
+      "path": "test",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "tests",
+      "domain": "B",
+      "status": "dev",
+      "role": "offline_pytest_suite",
+      "name": "tests",
+      "path": "tests",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    },
+    {
+      "id": "usecases",
+      "domain": "B",
+      "status": "dev",
+      "role": "per_task_routines",
+      "name": "usecases",
+      "path": "usecases",
+      "claude_aware": false,
+      "has_git": false,
+      "framework": "",
+      "pkg_name": ""
+    }
+  ],
+  "extension_summary": [
+    {
+      "ext": ".py",
+      "count": 75
+    },
+    {
+      "ext": ".png",
+      "count": 70
+    },
+    {
+      "ext": ".json",
+      "count": 45
+    },
+    {
+      "ext": ".md",
+      "count": 23
+    },
+    {
+      "ext": ".jsonl",
+      "count": 6
+    },
+    {
+      "ext": "",
+      "count": 4
+    },
+    {
+      "ext": ".txt",
+      "count": 3
+    },
+    {
+      "ext": ".log",
+      "count": 1
+    },
+    {
+      "ext": ".backup",
+      "count": 1
+    },
+    {
+      "ext": ".example",
+      "count": 1
+    },
+    {
+      "ext": ".toml",
+      "count": 1
+    },
+    {
+      "ext": ".sh",
+      "count": 1
+    }
+  ],
+  "top_level_dirs": [
+    {
+      "name": ".claude",
+      "path": ".claude",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-29T15:11:48Z",
+      "domain": null
+    },
+    {
+      "name": ".gstack",
+      "path": ".gstack",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-29T16:14:00Z",
+      "domain": "E"
+    },
+    {
+      "name": "Main",
+      "path": "Main",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-09-02T14:09:02Z",
+      "domain": "B"
+    },
+    {
+      "name": "cmd_program",
+      "path": "cmd_program",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-31T08:33:40Z",
+      "domain": "B"
+    },
+    {
+      "name": "core",
+      "path": "core",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-09-02T14:15:22Z",
+      "domain": "B"
+    },
+    {
+      "name": "db",
+      "path": "db",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-30T18:54:33Z",
+      "domain": "D"
+    },
+    {
+      "name": "docs",
+      "path": "docs",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-09-02T14:14:21Z",
+      "domain": "C"
+    },
+    {
+      "name": "frames",
+      "path": "frames",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-28T09:55:27Z",
+      "domain": "F"
+    },
+    {
+      "name": "logs",
+      "path": "logs",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-31T14:36:44Z",
+      "domain": "D"
+    },
+    {
+      "name": "references",
+      "path": "references",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-28T09:55:27Z",
+      "domain": "F"
+    },
+    {
+      "name": "scripts",
+      "path": "scripts",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-09-02T14:18:25Z",
+      "domain": "D"
+    },
+    {
+      "name": "test",
+      "path": "test",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-08-30T07:10:43Z",
+      "domain": "G"
+    },
+    {
+      "name": "tests",
+      "path": "tests",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-09-03T10:44:28Z",
+      "domain": "B"
+    },
+    {
+      "name": "usecases",
+      "path": "usecases",
+      "depth": 0,
+      "claude_aware": false,
+      "has_package_json": false,
+      "has_git": false,
+      "has_pyproject": false,
+      "has_deploy_config": false,
+      "last_modified": "2026-09-03T07:34:42Z",
+      "domain": "B"
+    }
+  ],
+  "claude_aware_dirs": [],
+  "errors": []
+}

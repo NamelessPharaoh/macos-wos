@@ -233,7 +233,10 @@ def tap_on_green_button(text=None, rois=None, wait=None, sleep=0.5, require_red_
             print(f"Pressed green button{f' ({text})' if text else ''} at {coord}")
             if sleep:
                 time.sleep(sleep)
-            return True
+            # The COORD rather than True, so a caller can tell one press from
+            # the next. A non-empty tuple is truthy, so every `if
+            # tap_on_green_button(...)` caller is unaffected.
+            return coord
 
         if time.time() >= deadline:
             print(f"No free (green) button found{f' for {text}' if text else ''}")

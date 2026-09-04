@@ -340,10 +340,13 @@ def test_a_free_tile_is_claimed_when_the_screen_has_no_green_button(monkeypatch)
     """
     import usecases.free_claims as fc
     free = _text_at("Free", 19.4, 34.1)
-    screens = [[free], [["Claimed", [0, 0, 1, 1]]], []]
+    # Three reads: the spend-screen check, the tile scan, then the read-back
+    # that confirms the payout.
+    screens = [[free], [free], [["Claimed", [0, 0, 1, 1]]], []]
     monkeypatch.setattr(fc, "req_text",
                         lambda *a, **k: screens.pop(0) if screens else [])
     monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+    monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
     monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
     monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
     taps = []
@@ -364,6 +367,7 @@ def test_a_screen_with_neither_button_nor_free_tile_claims_nothing(monkeypatch):
         _text_at("Claim", 80.0, 50.0),      # a GREY, disabled Claim button
     ])
     monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+    monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
     monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
     monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
     taps = []

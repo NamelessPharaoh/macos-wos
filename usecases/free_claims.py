@@ -153,6 +153,25 @@ MAX_TILE_CLAIMS_PER_SCREEN = 4
 # loop the moment a button stops being green.
 MAX_GREEN_PRESSES_PER_SCREEN = 8
 
+# Screens where GREEN does not mean FREE.
+#
+# The colour guard reads green as "free action". That holds on claim screens
+# and fails completely on hero screens, where green means "you can afford
+# this". Observed live 2026-09-04: the sweep reached Bahiti's promotion screen
+# two levels into Heroes -- "Promotion Preview", "0-Star (Tier 0)", "Ascend" --
+# and pressed the same green button at (551, 2136) eight times, spending hero
+# shards and taking power from 115,921 to 116,801. Nothing was claimed. The
+# counter said 8.
+#
+# 847e7c1 already knew this ("the green up-arrows on hero cards ... are upgrade
+# affordances, not claims, and pressing them spends resources") and relied on a
+# SIZE filter to stay clear of them. A size filter cannot see intent; a screen
+# that says "Ascend" is telling you exactly what it does.
+SPEND_SCREEN_MARKERS = re.compile(
+    r"\b(ascend|ascension|promotion|promote|upgrade|level\s*up|enhance|"
+    r"awaken|research|construct)\b", re.I
+)
+
 # The Top-up Center's tab row scrolls, and the shop always opens on the first
 # tab. Nine tabs were counted on 2026-09-04 -- Dawn Market, Training, Rise of
 # the City, Daily Deals, Speedy Development Pack, Weekly/Monthly Cards, Dawn
@@ -191,6 +210,20 @@ SUBTAB_HARD_CAP = 10
 # the dot count, and every level is still bounded by its own budget and by
 # `seen`, so this cannot spin.
 SUBTAB_MAX_DEPTH = 2
+
+
+def _is_spend_screen(texts):
+    """The matching text when the screen's own words say it spends, else None.
+
+    The money guard for RESOURCES, the way PRICE_MARKER is the money guard for
+    money. Colour cannot carry this one: green means free on a claim screen and
+    affordable on an upgrade screen, and the pixels are identical.
+    """
+    for text, _box in texts or []:
+        hit = SPEND_SCREEN_MARKERS.search(str(text))
+        if hit:
+            return str(text)
+    return None
 
 
 def _price_free_zone(target_pct, texts):
@@ -283,13 +316,40 @@ def _claim_here(label, max_rounds=None, descend=True):
     """
     claimed = 0
     max_rounds = MAX_GREEN_PRESSES_PER_SCREEN if max_rounds is None else max_rounds
+
+    spend = _is_spend_screen(req_text() or [])
+    if spend:
+        print(f"{label}: {spend!r} — this screen spends, it does not give. "
+              f"Green here means affordable, not free. Left alone.")
+        return 0
+
     for _ in range(max_rounds):
+        # Counted BEFORE the press, but never used to decide whether to press.
+        # tap_on_green_button polls against its own deadline and is the
+        # authoritative read; a bare req_detect here is a single shot that
+        # returns 0 on a frame still settling, and gating the press on it would
+        # reintroduce exactly the miss f16edcf fixed. Zero means "unknown", and
+        # the clears-check below simply sits out that round.
+        before = len(req_detect("green_button") or [])
         if not tap_on_green_button(wait=2):
             break
         claimed += 1
         print(f"Claimed a free reward on {label}.")
         # Reward popups close on a tap-anywhere; recalibrate mops up the rest.
         tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
+
+        # A claim REMOVES its own button; an action leaves it sitting there.
+        # Position cannot tell them apart -- on Trials the next "Log in for N
+        # day(s)" row slides up into the exact coordinates of the one just
+        # taken, so a same-spot rule would have stopped after one row of four
+        # and lost 1,500 gems again. The COUNT is the honest signal: 4 -> 3 ->
+        # 2 on a claim screen, 1 -> 1 -> 1 on Bahiti's Ascend button.
+        if before and len(req_detect("green_button") or []) >= before:
+            claimed -= 1
+            print(f"{label}: the green button did not clear after being "
+                  f"pressed, so it was an action, not a claim. Not counting "
+                  f"it, and not pressing it again.")
+            break
 
     claimed += _claim_free_tiles_here(label)
 

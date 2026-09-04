@@ -120,11 +120,44 @@ class TestSweep:
         )
 
 
+def _arm_green_screen(mp, results, dots=(), clears=True):
+    """req_detect and tap_on_green_button that model a real screen.
+
+    `results` says what each successive press finds. `clears` is the whole
+    point: a CLAIM removes its own button, so the green count falls 4 -> 3 ->
+    2; an ACTION leaves it sitting there, so it reads 1 -> 1 -> 1. Bahiti's
+    "Ascend" is the second kind, and the old stubs -- a bare iterator of
+    booleans -- could not express the difference, which is why nothing caught
+    the sweep pressing it eight times.
+    """
+    seq = list(results)
+    state = {"just_pressed": False}
+
+    def detect(kind="red_dot", *a, **k):
+        if kind != "green_button":
+            return [dict(d) for d in dots]
+        if clears and state["just_pressed"]:
+            state["just_pressed"] = False
+            return []
+        present = 1 if ((seq and seq[0]) or not clears) else 0
+        return [{"box": [0, 0, 200, 60], "area": 12000}] * present
+
+    def press(**k):
+        ok = seq.pop(0) if seq else False
+        if ok:
+            state["just_pressed"] = True
+            return (100, 100)
+        return False
+
+    mp.setattr(fc, "req_detect", detect)
+    mp.setattr(fc, "tap_on_green_button", press)
+
+
 class TestSubtabDescent:
     """One level deep only, bounded, each dot visited once."""
 
     def _arm(self, mp, dots, green_results, drawn=True):
-        mp.setattr(fc, "req_detect", lambda *a, **k: list(dots))
+        _arm_green_screen(mp, green_results, dots=dots)
         # Sub-tabs go through the same settle gate as the entry points.
         mp.setattr(fc, "req_text",
                    lambda *a, **k: [["x", [0, 0, 1, 1]]] if drawn else [])
@@ -132,8 +165,6 @@ class TestSubtabDescent:
         mp.setattr(fc, "tap_screen", lambda c: None)
         mp.setattr(fc, "tap_on_text", lambda *a, **k: True)
         mp.setattr(fc, "tap_on_template", lambda *a, **k: True)
-        it = iter(green_results)
-        mp.setattr(fc, "tap_on_green_button", lambda **k: next(it, False))
 
     def test_descends_when_top_level_offers_nothing(self, monkeypatch):
         dots = [{"box": [10, 10, 30, 30], "area": 400, "kind": "dot"}]
@@ -320,14 +351,13 @@ class TestScreenSettle:
 class TestMultipleRewardsOnOneScreen:
     """One screen, several free buttons. Both live cases were under-claimed."""
 
-    def _arm(self, mp, greens):
+    def _arm(self, mp, greens, dots=(), clears=True):
+        _arm_green_screen(mp, greens, dots=dots, clears=clears)
         mp.setattr(fc, "req_text", lambda *a, **k: [["x", [0, 0, 1, 1]]])
         mp.setattr(fc.time, "sleep", lambda *a, **k: None)
         mp.setattr(fc, "tap_on_text", lambda *a, **k: True)
         mp.setattr(fc, "tap_on_template", lambda *a, **k: True)
         mp.setattr(fc, "tap_screen", lambda *a, **k: None)
-        it = iter(greens)
-        mp.setattr(fc, "tap_on_green_button", lambda **k: next(it, False))
 
     def test_a_screen_with_four_green_buttons_gives_up_four(self, monkeypatch):
         """Trials: "Log in for 2/3/4/5 day(s)", all four at full progress,
@@ -349,9 +379,8 @@ class TestMultipleRewardsOnOneScreen:
         Epic Free at once. A single press per dot took one and left the other.
         """
         dots = [{"box": [10, 10, 30, 30], "area": 400, "kind": "dot"}]
-        monkeypatch.setattr(fc, "req_detect", lambda *a, **k: list(dots))
         # top level offers nothing, the sub-tab offers two
-        self._arm(monkeypatch, [False, True, True, False])
+        self._arm(monkeypatch, [False, True, True, False], dots=dots)
         assert fc._claim_here("Heroes") == 2
 
     def test_the_press_budget_is_capped(self, monkeypatch):
@@ -359,3 +388,79 @@ class TestMultipleRewardsOnOneScreen:
         self._arm(monkeypatch, [True] * 100)
         assert fc._claim_here("Heroes", descend=False) == \
             fc.MAX_GREEN_PRESSES_PER_SCREEN
+
+
+class TestSpendGuards:
+    """Green means FREE on a claim screen and AFFORDABLE on an upgrade screen,
+    and the pixels are identical.
+
+    Live on 2026-09-04 the sweep reached Bahiti's hero promotion screen two
+    levels into Heroes -- "Promotion Preview", "0-Star (Tier 0)", "Ascend" --
+    and pressed the same green button at (551, 2136) eight times, taking power
+    from 115,921 to 116,801. It claimed nothing and reported 8.
+    """
+
+    def test_an_upgrade_screen_is_never_pressed(self, monkeypatch):
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [
+            ["Bahiti", [454, 142, 630, 205]],
+            ["Promotion Preview", [629, 608, 980, 647]],
+            ["0-Star (Tier 0)", [422, 1677, 662, 1713]],
+            ["Ascend", [443, 2281, 633, 2335]],
+        ])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_screen", lambda *a, **k: None)
+        pressed = []
+        monkeypatch.setattr(fc, "tap_on_green_button",
+                            lambda **k: pressed.append(1) or (100, 100))
+
+        assert fc._claim_here("Heroes", descend=False) == 0
+        assert pressed == [], "an Ascend screen must not be pressed at all"
+
+    @pytest.mark.parametrize("word", [
+        "Ascend", "Upgrade", "Level Up", "Promotion Preview", "Enhance",
+        "Promote", "Awaken", "Research",
+    ])
+    def test_the_spending_words_are_recognised(self, word):
+        assert fc._is_spend_screen([[word, [0, 0, 1, 1]]]) == word
+
+    @pytest.mark.parametrize("word", [
+        "Claim", "Free", "Claimable", "Log in for 2 day(s)", "Rewards",
+        "Daily Sign-in", "Recruit once",
+    ])
+    def test_reward_words_are_not_mistaken_for_spending(self, word):
+        assert fc._is_spend_screen([[word, [0, 0, 1, 1]]]) is None
+
+    def test_a_button_that_never_clears_is_pressed_once_and_not_counted(
+            self, monkeypatch, capsys):
+        """Bahiti with the word guard taken away: an upgrade screen that never
+        says so still gets exactly ONE press, not eight, because a claim
+        removes its own button and this one does not."""
+        _arm_green_screen(monkeypatch, [True] * 8, clears=False)
+        inner = fc.tap_on_green_button
+        presses = []
+        monkeypatch.setattr(fc, "tap_on_green_button",
+                            lambda **k: (presses.append(1), inner(**k))[1])
+        monkeypatch.setattr(fc, "req_text",
+                            lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_screen", lambda *a, **k: None)
+
+        assert fc._claim_here("Heroes", descend=False) == 0, \
+            "a press that claimed nothing must not be counted"
+        assert len(presses) == 1, f"pressed {len(presses)} times, must be 1"
+        assert "did not clear" in capsys.readouterr().out
+
+    def test_a_real_claim_screen_still_gives_up_every_reward(self, monkeypatch):
+        """The guard must not cost the 1,500 gems it was written alongside:
+        Trials' four rows DO clear, one press each."""
+        _arm_green_screen(monkeypatch, [True] * 4 + [False], clears=True)
+        monkeypatch.setattr(fc, "req_text",
+                            lambda *a, **k: [["Log in for 2 day(s)", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_screen", lambda *a, **k: None)
+
+        assert fc._claim_here("Trials", descend=False) == 4

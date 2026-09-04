@@ -33,6 +33,7 @@ from usecases.chief_order import activate_chief_order
 from usecases.pet import collect_ally_treasure, start_pet_exploration
 from usecases.labyrinth import labyrinth
 from usecases.gather import gather
+from usecases.heroes import upgrade_hero
 from core import capability
 from core.player_profile import get_gather_flags, load_profile
 
@@ -97,6 +98,11 @@ TASKS = [
     TaskSpec("alliance_triumph", "Alliance Triumph", "Collect triumph rewards.", lambda _player_id: collect_triumph(), gate="alliance"),
     TaskSpec("heal", "Heal", "Run healing workflow.", lambda _player_id: heal(), gate="infirmary"),
     TaskSpec("gather", "World Gather", "Gather resources with the current character rules.", _run_gather, gate="ALWAYS"),
+    # Opt-in, and never part of the free-claims sweep: that sweep refuses hero
+    # screens outright because green there means "affordable", not "free". This
+    # task enters one on purpose and carries its own spend rule -- hero EXP the
+    # account already owns, never gems (see usecases/heroes.py).
+    TaskSpec("hero_upgrade", "Hero Level Up", "Spend owned hero EXP to raise the lead hero's level.", lambda _player_id: upgrade_hero(), gate="ALWAYS"),
     TaskSpec("missions", "Missions Reward", "Collect mission rewards.", lambda _player_id: collect_missions_reward(), gate="daily_missions"),
 ]
 

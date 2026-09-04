@@ -98,5 +98,55 @@
             88.15,
             97.07
         ]
+    },
+    "Home.Heroes.SeventhHeroLevel": {
+        "text": "Lv.80",
+        "score": 0.95,
+        "box": [
+            75.56,
+            41.0,
+            85.37,
+            42.8
+        ]
+    },
+    "Home.Heroes.Detail.Name": {
+        "text": "Bahiti",
+        "score": 0.99,
+        "box": [
+            30.0,
+            5.2,
+            70.0,
+            8.9
+        ]
+    },
+    "Home.Heroes.Detail.Level": {
+        "text": "7",
+        "score": 0.99,
+        "box": [
+            44.0,
+            81.3,
+            56.0,
+            84.5
+        ]
+    },
+    "Home.Heroes.Detail.Upgrade": {
+        "text": "Upgrade",
+        "score": 0.99,
+        "box": [
+            40.0,
+            87.3,
+            60.0,
+            90.3
+        ]
+    },
+    "Home.Heroes.Detail.UpgradeCost": {
+        "text": "205,222/4,200",
+        "score": 0.99,
+        "box": [
+            38.0,
+            89.6,
+            70.0,
+            92.2
+        ]
     }
 }

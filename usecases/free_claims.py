@@ -168,6 +168,20 @@ SCREEN_SETTLE_POLL_S = 0.5
 SUBTAB_BUDGET_SLACK = 2
 SUBTAB_HARD_CAP = 10
 
+# How many levels below an entry point the sweep will follow a dot.
+#
+# It was 1, and level 2 is where real rewards live. Found live 2026-09-04:
+# Events (entry) -> Lucky Wheel (level 1) -> "Lucky Chip Supply" (level 2),
+# behind which sits a "Free Lucky Chip Pack" with an ordinary GREEN Free
+# button -- exactly the shape tap_on_green_button exists to press. The guard
+# would have taken it happily; the sweep simply stopped one level short and
+# never arrived.
+#
+# 2 rather than "unbounded": each extra level multiplies navigation time by
+# the dot count, and every level is still bounded by its own budget and by
+# `seen`, so this cannot spin.
+SUBTAB_MAX_DEPTH = 2
+
 
 def _price_free_zone(target_pct, texts):
     """True when no price-looking text sits within the exclusion radius.
@@ -257,29 +271,49 @@ def _claim_here(label, max_rounds=3, descend=True):
     return _descend_into_subtabs(label)
 
 
-def _descend_into_subtabs(label, max_subtabs=None):
-    """Follow dots one level deeper when the screen itself offers nothing free.
+def _descend_into_subtabs(label, max_subtabs=None, depth=1, seen=None,
+                          budget=None):
+    """Follow dots deeper when the screen itself offers nothing free.
 
     Heroes, Backpack and Events all flag pending work at the top level but keep
     their claimables in sub-tabs, so a home-level-only sweep walks right past
-    them. Strictly one level: tap a dotted element, take anything green, come
-    back, re-read. Bounded by max_subtabs, and each dot is visited once, so a
-    dot that never clears cannot spin.
+    them. Tap a dotted element, take anything green, come back, re-read.
+
+    Descends to SUBTAB_MAX_DEPTH levels. It used to say "strictly one level",
+    and that cost the Free Lucky Chip Pack every run: Events -> Lucky Wheel is
+    level 1, and the supply chest holding the green Free button is level 2.
+
+    `seen` and `budget` are shared down the recursion, deliberately:
+
+      * Shared `seen` means a dot is tapped at most once per entry point, not
+        once per level. Tapping an element usually leaves its own tab strip on
+        screen, so level 2 re-detects the very siblings level 1 is already
+        working through -- and if a tap fails to navigate at all, level 2 sees
+        the identical dot and would tap it again. Genuinely new level-2 content
+        (the supply chest sits in the content area, not the tab strip) has its
+        own coordinates and is unaffected.
+      * A shared `budget` keeps max_subtabs meaning TOTAL taps, as it did
+        before recursion existed. Per-level budgets would have multiplied the
+        bound by the depth without anyone choosing that.
+
+    Each tap adds exactly one entry to `seen`, so len(seen) is the tap count.
     """
     claimed = 0
-    seen = set()
-    # Budget derived from what is actually on screen, not a fixed 4. The Heroes
-    # screen carries FIVE dots and the valuable one is last: "Recruit Hero",
-    # behind which sit "Free Recruitments Today: 5" and a second batch of 1,
-    # with real green buttons. A hardcoded 4 ran out one dot early and left six
-    # free hero recruits unclaimed every run. Each dot is still visited at most
-    # once (`seen`), so this cannot spin.
-    budget = max_subtabs if max_subtabs is not None else min(
-        len([c for c in (req_detect("red_dot") or []) if c.get("kind") == "dot"])
-        + SUBTAB_BUDGET_SLACK,
-        SUBTAB_HARD_CAP,
-    )
-    for _ in range(budget):
+    if seen is None:
+        seen = set()
+    if budget is None:
+        # Budget derived from what is actually on screen, not a fixed 4. The
+        # Heroes screen carries FIVE dots and the valuable one is last:
+        # "Recruit Hero", behind which sit "Free Recruitments Today: 5" and a
+        # second batch of 1, with real green buttons. A hardcoded 4 ran out one
+        # dot early and left six free hero recruits unclaimed every run.
+        budget = max_subtabs if max_subtabs is not None else min(
+            len([c for c in (req_detect("red_dot") or [])
+                 if c.get("kind") == "dot"]) + SUBTAB_BUDGET_SLACK,
+            SUBTAB_HARD_CAP,
+        )
+
+    while len(seen) < budget:
         dots = [c for c in (req_detect("red_dot") or []) if c.get("kind") == "dot"]
         target = next((d for d in dots if _key(d) not in seen), None)
         if target is None:
@@ -293,10 +327,17 @@ def _descend_into_subtabs(label, max_subtabs=None):
         # Same settle gate as the entry points: a sub-tab that has not drawn
         # reads as "no green button" and is indistinguishable from one with
         # nothing free on it.
-        if _wait_for_screen(f"{label} sub-tab") and tap_on_green_button(wait=2):
+        drawn = _wait_for_screen(f"{label} sub-tab (level {depth})")
+        if drawn and tap_on_green_button(wait=2):
             claimed += 1
-            print(f"Claimed a free reward one level into {label}.")
+            print(f"Claimed a free reward {depth} level(s) into {label}.")
             tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
+        elif drawn and depth < SUBTAB_MAX_DEPTH:
+            # Nothing free here, but this screen's own dots may lead to it.
+            # Only when the screen actually drew: descending into a frame
+            # nobody has seen is how blind taps happen.
+            claimed += _descend_into_subtabs(label, max_subtabs, depth + 1,
+                                             seen, budget)
 
         # Back up to the screen we descended from so the next dot is addressable.
         tap_on_template("Global.Back", wait=2)

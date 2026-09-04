@@ -187,6 +187,64 @@ class TestSubtabDescent:
         assert fc._claim_here("stuck", max_rounds=3) == 3
 
 
+    def test_it_reaches_a_reward_two_levels_down(self, monkeypatch):
+        """The live case: Events -> Lucky Wheel -> "Lucky Chip Supply", behind
+        which sits a "Free Lucky Chip Pack" with an ordinary GREEN Free button.
+        tap_on_green_button would take it happily; a one-level descent simply
+        never arrived, so the pack went unclaimed every single run."""
+        level1 = [{"box": [10, 10, 30, 30], "area": 400, "kind": "dot"}]
+        level2 = [{"box": [500, 700, 520, 720], "area": 400, "kind": "dot"}]
+        screens = [level1, level1, level2, level2]
+        monkeypatch.setattr(
+            fc, "req_detect",
+            lambda *a, **k: list(screens.pop(0)) if screens else [])
+        monkeypatch.setattr(fc, "req_text",
+                            lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_screen", lambda c: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+        greens = iter([False, True])   # nothing at level 1, the pack at level 2
+        monkeypatch.setattr(fc, "tap_on_green_button",
+                            lambda **k: next(greens, False))
+
+        assert fc._descend_into_subtabs("Events") == 1
+
+    def test_it_does_not_descend_past_the_depth_limit(self, monkeypatch):
+        """Every extra level multiplies navigation time by the dot count, so
+        the bound is a deliberate choice rather than an accident of the data."""
+        counter = [0]
+
+        def endless_fresh_dots(*a, **k):
+            counter[0] += 1
+            i = counter[0]
+            return [{"box": [i * 40, 10, i * 40 + 20, 30], "area": 400,
+                     "kind": "dot"}]
+
+        monkeypatch.setattr(fc, "req_detect", endless_fresh_dots)
+        monkeypatch.setattr(fc, "req_text",
+                            lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_screen", lambda c: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: False)
+
+        depths = []
+        real = fc._descend_into_subtabs
+
+        def spy(label, max_subtabs=None, depth=1, seen=None, budget=None):
+            depths.append(depth)
+            return real(label, max_subtabs, depth, seen, budget)
+
+        monkeypatch.setattr(fc, "_descend_into_subtabs", spy)
+        spy("Events", max_subtabs=6)
+
+        assert depths, "the descent never ran"
+        assert max(depths) <= fc.SUBTAB_MAX_DEPTH, \
+            f"descended to level {max(depths)}, limit is {fc.SUBTAB_MAX_DEPTH}"
+
+
 class TestScreenSettle:
     """A blank frame is not an empty screen.
 

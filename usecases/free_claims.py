@@ -143,6 +143,16 @@ CLAIMED_MARKERS = ("claimed", "tap anywhere to exit")
 
 MAX_TILE_CLAIMS_PER_SCREEN = 4
 
+# How many green buttons one screen may hand over before the sweep moves on.
+#
+# It was 3, hardcoded as a default argument, and Trials shows FOUR at once:
+# "Log in for 2/3/4/5 day(s)", every one at full progress. Three presses would
+# have left the 5-day row -- 500 gems -- sitting there. 8 is room for a screen
+# denser than any seen so far; the cap exists only so a button that never
+# clears cannot hold the sweep forever, and the colour guard already stops the
+# loop the moment a button stops being green.
+MAX_GREEN_PRESSES_PER_SCREEN = 8
+
 # The Top-up Center's tab row scrolls, and the shop always opens on the first
 # tab. Nine tabs were counted on 2026-09-04 -- Dawn Market, Training, Rise of
 # the City, Daily Deals, Speedy Development Pack, Weekly/Monthly Cards, Dawn
@@ -252,7 +262,7 @@ def _pct_box_to_pixels(box):
             int(box[2] / 100 * BASE_WIDTH), int(box[3] / 100 * BASE_HEIGHT)]
 
 
-def _claim_here(label, max_rounds=3, descend=True):
+def _claim_here(label, max_rounds=None, descend=True):
     """Press every free reward this screen offers, then look one level down.
 
     A free reward comes in two shapes and the screen decides which:
@@ -272,6 +282,7 @@ def _claim_here(label, max_rounds=3, descend=True):
     Returns how many landed.
     """
     claimed = 0
+    max_rounds = MAX_GREEN_PRESSES_PER_SCREEN if max_rounds is None else max_rounds
     for _ in range(max_rounds):
         if not tap_on_green_button(wait=2):
             break
@@ -344,16 +355,27 @@ def _descend_into_subtabs(label, max_subtabs=None, depth=1, seen=None,
         # reads as "no green button" and is indistinguishable from one with
         # nothing free on it.
         drawn = _wait_for_screen(f"{label} sub-tab (level {depth})")
-        if drawn and tap_on_green_button(wait=2):
-            claimed += 1
-            print(f"Claimed a free reward {depth} level(s) into {label}.")
-            tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
-        elif drawn and depth < SUBTAB_MAX_DEPTH:
-            # Nothing free here, but this screen's own dots may lead to it.
-            # Only when the screen actually drew: descending into a frame
-            # nobody has seen is how blind taps happen.
-            claimed += _descend_into_subtabs(label, max_subtabs, depth + 1,
-                                             seen, budget)
+        if drawn:
+            # _claim_here rather than a single tap_on_green_button, because a
+            # sub-tab can carry MORE THAN ONE free reward. Hero Recruitment
+            # shows two green "Recruit once / Free" buttons at the same time
+            # (Advanced and Epic); one press took one of them and left the
+            # other, every run. It also brings the "Free"/"Claimable" tile path
+            # down here, which a bare button press never had.
+            #
+            # The colour guard is what makes repeated pressing safe on that
+            # screen: once the free recruit is spent the button turns ORANGE
+            # ("Recruit once, key x1") and tap_on_green_button stops, so the
+            # loop cannot walk on into a paid one.
+            #
+            # descend=False breaks the mutual recursion -- _claim_here would
+            # otherwise call straight back into this function.
+            got = _claim_here(f"{label} (level {depth})", descend=False)
+            claimed += got
+            if not got and depth < SUBTAB_MAX_DEPTH:
+                # Nothing free here, but this screen's own dots may lead to it.
+                claimed += _descend_into_subtabs(label, max_subtabs, depth + 1,
+                                                 seen, budget)
 
         # Back up to the screen we descended from so the next dot is addressable.
         tap_on_template("Global.Back", wait=2)

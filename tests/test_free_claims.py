@@ -315,3 +315,47 @@ class TestScreenSettle:
         for label, _centre, _box in fc.ENTRY_POINTS:
             assert label in out, f"{label} went unreported"
         assert pressed == [], "an undrawn screen must not be pressed blind"
+
+
+class TestMultipleRewardsOnOneScreen:
+    """One screen, several free buttons. Both live cases were under-claimed."""
+
+    def _arm(self, mp, greens):
+        mp.setattr(fc, "req_text", lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        mp.setattr(fc.time, "sleep", lambda *a, **k: None)
+        mp.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        mp.setattr(fc, "tap_on_template", lambda *a, **k: True)
+        mp.setattr(fc, "tap_screen", lambda *a, **k: None)
+        it = iter(greens)
+        mp.setattr(fc, "tap_on_green_button", lambda **k: next(it, False))
+
+    def test_a_screen_with_four_green_buttons_gives_up_four(self, monkeypatch):
+        """Trials: "Log in for 2/3/4/5 day(s)", all four at full progress,
+        300+300+400+500 gems. The old cap of 3 would have left the 5-day row."""
+        self._arm(monkeypatch, [True] * 4 + [False])
+        assert fc._claim_here("Trials", descend=False) == 4
+
+    def test_pressing_stops_the_moment_a_button_is_no_longer_green(
+            self, monkeypatch):
+        """Hero Recruitment turns the free button ORANGE ("Recruit once, key
+        x1") once the free one is spent. The colour guard is the only thing
+        between a repeated press and a spent key."""
+        self._arm(monkeypatch, [True, True, False, True])
+        assert fc._claim_here("Heroes", descend=False) == 2, \
+            "it must stop at the first non-green, not resume after it"
+
+    def test_a_sub_tab_with_two_free_buttons_gives_up_both(self, monkeypatch):
+        """Hero Recruitment sits one level down and shows Advanced Free and
+        Epic Free at once. A single press per dot took one and left the other.
+        """
+        dots = [{"box": [10, 10, 30, 30], "area": 400, "kind": "dot"}]
+        monkeypatch.setattr(fc, "req_detect", lambda *a, **k: list(dots))
+        # top level offers nothing, the sub-tab offers two
+        self._arm(monkeypatch, [False, True, True, False])
+        assert fc._claim_here("Heroes") == 2
+
+    def test_the_press_budget_is_capped(self, monkeypatch):
+        """A button that never clears must not hold the sweep forever."""
+        self._arm(monkeypatch, [True] * 100)
+        assert fc._claim_here("Heroes", descend=False) == \
+            fc.MAX_GREEN_PRESSES_PER_SCREEN

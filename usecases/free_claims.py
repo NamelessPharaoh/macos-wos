@@ -317,12 +317,25 @@ def _claim_here(label, max_rounds=None, descend=True):
     claimed = 0
     max_rounds = MAX_GREEN_PRESSES_PER_SCREEN if max_rounds is None else max_rounds
 
+    # Refusing to PRESS here, never refusing to LOOK. Heroes' own list screen
+    # says "Upgrade" and the free recruits sit two levels below it, so an early
+    # return would trade one bug for another.
     spend = _is_spend_screen(req_text() or [])
     if spend:
         print(f"{label}: {spend!r} — this screen spends, it does not give. "
-              f"Green here means affordable, not free. Left alone.")
-        return 0
+              f"Green here means affordable, not free. Nothing pressed here.")
+    else:
+        claimed += _press_free_buttons(label, max_rounds)
+        claimed += _claim_free_tiles_here(label)
 
+    if claimed or not descend:
+        return claimed
+    return _descend_into_subtabs(label)
+
+
+def _press_free_buttons(label, max_rounds):
+    """Press green buttons while they keep clearing; returns how many landed."""
+    claimed = 0
     for _ in range(max_rounds):
         # Counted BEFORE the press, but never used to decide whether to press.
         # tap_on_green_button polls against its own deadline and is the
@@ -333,8 +346,6 @@ def _claim_here(label, max_rounds=None, descend=True):
         before = len(req_detect("green_button") or [])
         if not tap_on_green_button(wait=2):
             break
-        claimed += 1
-        print(f"Claimed a free reward on {label}.")
         # Reward popups close on a tap-anywhere; recalibrate mops up the rest.
         tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
 
@@ -345,17 +356,17 @@ def _claim_here(label, max_rounds=None, descend=True):
         # and lost 1,500 gems again. The COUNT is the honest signal: 4 -> 3 ->
         # 2 on a claim screen, 1 -> 1 -> 1 on Bahiti's Ascend button.
         if before and len(req_detect("green_button") or []) >= before:
-            claimed -= 1
             print(f"{label}: the green button did not clear after being "
                   f"pressed, so it was an action, not a claim. Not counting "
                   f"it, and not pressing it again.")
             break
 
-    claimed += _claim_free_tiles_here(label)
-
-    if claimed or not descend:
-        return claimed
-    return _descend_into_subtabs(label)
+        # Announced only once it is confirmed. Counting first and retracting
+        # printed "Claimed a free reward on Exploration." for a press that was
+        # then withdrawn -- the log said one thing and the total another.
+        claimed += 1
+        print(f"Claimed a free reward on {label}.")
+    return claimed
 
 
 def _descend_into_subtabs(label, max_subtabs=None, depth=1, seen=None,

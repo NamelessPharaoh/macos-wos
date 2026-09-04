@@ -464,3 +464,48 @@ class TestSpendGuards:
         monkeypatch.setattr(fc, "tap_screen", lambda *a, **k: None)
 
         assert fc._claim_here("Trials", descend=False) == 4
+
+    def test_a_spend_screen_is_not_pressed_but_is_still_descended_through(
+            self, monkeypatch):
+        """Refusing to PRESS must not become refusing to LOOK.
+
+        Heroes' own list screen says "Upgrade" and the free recruits sit two
+        levels below it, so an early return would have traded the ascension bug
+        for a silent miss of exactly the kind this project keeps finding.
+        """
+        dots = [{"box": [10, 10, 30, 30], "area": 400, "kind": "dot"}]
+        _arm_green_screen(monkeypatch, [True], dots=dots)
+        calls = {"n": 0}
+
+        def texts(*a, **k):
+            calls["n"] += 1
+            # Only the entry screen is an upgrade screen; below it is a normal
+            # one carrying a free reward.
+            return [["Upgrade", [0, 0, 1, 1]]] if calls["n"] == 1 \
+                else [["x", [0, 0, 1, 1]]]
+
+        monkeypatch.setattr(fc, "req_text", texts)
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_screen", lambda *a, **k: None)
+
+        assert fc._claim_here("Heroes") == 1, \
+            "the reward below an upgrade screen must still be reached"
+
+    def test_a_retracted_press_is_never_announced_as_a_claim(
+            self, monkeypatch, capsys):
+        """The log said "Claimed a free reward on Exploration." for a press
+        that was then withdrawn, so the lines and the total disagreed."""
+        _arm_green_screen(monkeypatch, [True] * 4, clears=False)
+        monkeypatch.setattr(fc, "req_text",
+                            lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_screen", lambda *a, **k: None)
+
+        assert fc._claim_here("Exploration", descend=False) == 0
+        out = capsys.readouterr().out
+        assert "Claimed a free reward" not in out, \
+            "nothing was claimed, so nothing may say it was"
+        assert "did not clear" in out

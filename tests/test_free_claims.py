@@ -48,6 +48,10 @@ class TestSweep:
         there meant claiming nothing while reporting success.
         """
         monkeypatch.setattr(fc, "recalibrate", lambda: None)
+        # A drawn screen. Without this the settle gate polls for its
+        # full timeout on every entry point and the suite crawls.
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
         monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
         taps = []
         monkeypatch.setattr(fc, "tap_screen", lambda c: taps.append(c))
@@ -72,6 +76,10 @@ class TestSweep:
         first_box = fc._pct_box_to_pixels(fc.ENTRY_POINTS[0][2])
         dot = {"box": first_box, "area": 400, "kind": "dot"}
         monkeypatch.setattr(fc, "recalibrate", lambda: None)
+        # A drawn screen. Without this the settle gate polls for its
+        # full timeout on every entry point and the suite crawls.
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
         monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [dot])
         taps = []
         monkeypatch.setattr(fc, "tap_screen", lambda c: taps.append(c))
@@ -93,6 +101,10 @@ class TestSweep:
         nothing is claimed when it always says no.
         """
         monkeypatch.setattr(fc, "recalibrate", lambda: None)
+        # A drawn screen. Without this the settle gate polls for its
+        # full timeout on every entry point and the suite crawls.
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [["x", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
         monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
         asked = []
         monkeypatch.setattr(fc, "tap_screen", lambda c: None)
@@ -111,8 +123,12 @@ class TestSweep:
 class TestSubtabDescent:
     """One level deep only, bounded, each dot visited once."""
 
-    def _arm(self, mp, dots, green_results):
+    def _arm(self, mp, dots, green_results, drawn=True):
         mp.setattr(fc, "req_detect", lambda *a, **k: list(dots))
+        # Sub-tabs go through the same settle gate as the entry points.
+        mp.setattr(fc, "req_text",
+                   lambda *a, **k: [["x", [0, 0, 1, 1]]] if drawn else [])
+        mp.setattr(fc.time, "sleep", lambda *a, **k: None)
         mp.setattr(fc, "tap_screen", lambda c: None)
         mp.setattr(fc, "tap_on_text", lambda *a, **k: True)
         mp.setattr(fc, "tap_on_template", lambda *a, **k: True)
@@ -169,3 +185,75 @@ class TestSubtabDescent:
         monkeypatch.setattr(fc, "tap_on_green_button", lambda **k: True)
         monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
         assert fc._claim_here("stuck", max_rounds=3) == 3
+
+
+class TestScreenSettle:
+    """A blank frame is not an empty screen.
+
+    Trials cost 1,500 gems to this distinction on 2026-09-04. The sweep read
+    zero green buttons, zero red dots AND zero OCR lines off a screen carrying
+    four full green Claim buttons ("Log in for 2/3/4/5 day(s)"), then reported
+    a clean sweep. Deals, read moments later, returned red_dot: 1 hit -- the
+    detectors were fine, the frame simply had not drawn.
+    """
+
+    def test_a_drawn_screen_is_accepted_immediately(self, monkeypatch):
+        monkeypatch.setattr(fc, "req_text",
+                            lambda *a, **k: [["Claim", [0, 0, 1, 1]]])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        assert fc._wait_for_screen("Trials") is True
+
+    def test_a_screen_that_draws_late_is_still_read(self, monkeypatch):
+        """Giving up on frame one is exactly the bug: the transition is the
+        first thing you see, never the last."""
+        frames = [[], [], [["Claim", [0, 0, 1, 1]]]]
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: frames.pop(0))
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        assert fc._wait_for_screen("Trials") is True
+        assert frames == [], "it must keep looking past the blank frames"
+
+    def test_a_screen_that_never_draws_says_so(self, monkeypatch, capsys):
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [])
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        assert fc._wait_for_screen("Trials", timeout=0) is False
+        out = capsys.readouterr().out
+        assert "Trials" in out and "NOT read" in out, \
+            "an unread screen must be reported, never silently counted clean"
+
+    def test_a_blank_sub_tab_is_never_pressed(self, monkeypatch):
+        """Pressing green on a frame that has not drawn is a blind tap."""
+        monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [
+            {"box": [10, 10, 30, 30], "area": 400, "kind": "dot"}])
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [])
+        monkeypatch.setattr(fc, "SCREEN_SETTLE_TIMEOUT_S", 0)
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_screen", lambda c: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: True)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+        pressed = []
+        monkeypatch.setattr(fc, "tap_on_green_button",
+                            lambda **k: pressed.append(1) or True)
+        fc._descend_into_subtabs("Heroes", max_subtabs=1)
+        assert pressed == [], "a blank sub-tab must not be pressed blind"
+
+    def test_the_sweep_names_every_screen_it_could_not_read(
+            self, monkeypatch, capsys):
+        """The whole point: turn a silent miss into a loud one."""
+        monkeypatch.setattr(fc, "recalibrate", lambda: None)
+        monkeypatch.setattr(fc, "req_detect", lambda *a, **k: [])
+        monkeypatch.setattr(fc, "req_text", lambda *a, **k: [])
+        monkeypatch.setattr(fc, "SCREEN_SETTLE_TIMEOUT_S", 0)
+        monkeypatch.setattr(fc.time, "sleep", lambda *a, **k: None)
+        monkeypatch.setattr(fc, "tap_screen", lambda c: None)
+        monkeypatch.setattr(fc, "tap_on_text", lambda *a, **k: False)
+        monkeypatch.setattr(fc, "tap_on_template", lambda *a, **k: True)
+        pressed = []
+        monkeypatch.setattr(fc, "tap_on_green_button",
+                            lambda **k: pressed.append(1) or False)
+
+        assert fc.sweep_free_claims() is True
+        out = capsys.readouterr().out
+        assert "never drew" in out
+        for label, _centre, _box in fc.ENTRY_POINTS:
+            assert label in out, f"{label} went unreported"
+        assert pressed == [], "an undrawn screen must not be pressed blind"

@@ -157,6 +157,11 @@ SHOP_TAB_PAGES = 3
 SHOP_TAB_SWIPE_FROM_PCT = 83.3
 SHOP_TAB_SWIPE_TO_PCT = 23.1
 
+# How long to let a screen draw before believing what it shows, and how often
+# to look while waiting.
+SCREEN_SETTLE_TIMEOUT_S = 8.0
+SCREEN_SETTLE_POLL_S = 0.5
+
 # Sub-tab descent budget: enough for every dot on screen plus a little room
 # for ones that appear as others clear, hard-capped so a screen that keeps
 # generating dots cannot hold the sweep forever.
@@ -181,6 +186,45 @@ def _price_free_zone(target_pct, texts):
                   f"{abs(cy - ty):.1f}% away and looks like a price.")
             return False
     return True
+
+
+def _wait_for_screen(label, timeout=None):
+    """Block until the screen has actually drawn. True if it did.
+
+    Trials cost 1,500 gems to this distinction on 2026-09-04. The sweep tapped
+    in and immediately read:
+
+        Visiting Trials...
+        detect green_button: 0 hit(s)
+        detect red_dot:     0 hit(s)
+        No OCR results found.
+
+    That was a screen carrying FOUR large green Claim buttons -- "Log in for
+    2/3/4/5 day(s)", every one at full progress, 300+300+400+500 gems -- and
+    several red badges. Zero of EVERYTHING is the signature of a screen that
+    has not drawn yet, not of an empty one, and tap_on_green_button's own 2s
+    deadline was not long enough to outlast the transition. Deals, read
+    moments later on the same run, returned red_dot: 1 hit -- so the detectors
+    were working fine; the frame was blank.
+
+    This is the c94aa80 lesson one level lower. That commit established that
+    zero dots DETECTED is not zero dots PRESENT. This one: a frame with no
+    text on it at all is not evidence about anything, and must never be the
+    basis for concluding "nothing free here".
+    """
+    # Resolved here rather than as a default argument so the constant stays
+    # patchable -- a default binds once at import and tests could not shrink it.
+    timeout = SCREEN_SETTLE_TIMEOUT_S if timeout is None else timeout
+    deadline = time.time() + timeout
+    while True:
+        if req_text():
+            return True
+        if time.time() >= deadline:
+            break
+        time.sleep(SCREEN_SETTLE_POLL_S)
+    print(f"{label}: still blank after {timeout:.0f}s — NOT read. Nothing was "
+          f"claimed there and nothing was ruled out either.")
+    return False
 
 
 def _home_dots():
@@ -246,7 +290,10 @@ def _descend_into_subtabs(label, max_subtabs=None):
         tap_screen(((x1 + x2) // 2, (y1 + y2) // 2))
         time.sleep(1)
 
-        if tap_on_green_button(wait=2):
+        # Same settle gate as the entry points: a sub-tab that has not drawn
+        # reads as "no green button" and is indistinguishable from one with
+        # nothing free on it.
+        if _wait_for_screen(f"{label} sub-tab") and tap_on_green_button(wait=2):
             claimed += 1
             print(f"Claimed a free reward one level into {label}.")
             tap_on_text("Home.VIP.Claim.TapAnywhereToExit", wait=1)
@@ -421,13 +468,24 @@ def sweep_free_claims():
     # entire class of silent miss is the right way round -- the dot count is now
     # reported for the operator, not used as a gate.
     total = 0
+    unread = []
     for label, (cx, cy), search_box in ENTRY_POINTS:
         flagged = dot_near(dots, _pct_box_to_pixels(search_box), margin=0)
         print(f"Visiting {label}{' (dot)' if flagged else ''}...")
         tap_screen((cx, cy))
-        total += _claim_here(label)
+        if _wait_for_screen(label):
+            total += _claim_here(label)
+        else:
+            unread.append(label)
         recalibrate()
         dots = _home_dots()
 
     print(f"Free-claim sweep done — {total} reward(s) claimed.")
+    if unread:
+        # An unread screen is not a clean screen. Saying so is the whole point:
+        # every miss this project has found was a routine reporting success
+        # over a screen it had not actually looked at.
+        print(f"⚠️  {len(unread)} screen(s) never drew and were NOT read: "
+              f"{', '.join(unread)}. A sweep carrying this warning is not a "
+              f"clean sweep — rerun before trusting it.")
     return True

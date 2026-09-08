@@ -30,3 +30,7 @@ logs/
 # the native/drive.py run lock.
 db/*.sqlite*
 db/.wos-run.lock
+
+# Local-only knowledge cross-checks (whiteoutdata/wiki/wostools terms restrict
+# reproduction, so they never leave this machine; spec D8).
+knowledge/local/

@@ -7,6 +7,7 @@ import os
 import pytest
 
 from native import screen as s
+from knowledge import util as ku
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 GOLDENS = os.path.join(REPO, "tests", "fixtures", "local", "native_goldens.json")
@@ -16,6 +17,16 @@ def _goldens():
     if not os.path.exists(GOLDENS):
         pytest.skip("local goldens not present (gitignored, recorded on the dev Mac)")
     return json.load(open(GOLDENS))["frames"]
+
+
+def test_parsers_are_reexported_from_knowledge_util():
+    """E1/mandatory regression: parse_number, parse_ratio and parse_duration
+    moved to knowledge/util.py; native/screen.py must re-export the exact
+    same function objects, since native/readers/__init__.py:17 and ten
+    reader modules import them from native.screen."""
+    assert s.parse_number is ku.parse_number
+    assert s.parse_ratio is ku.parse_ratio
+    assert s.parse_duration is ku.parse_duration
 
 
 @pytest.mark.parametrize("rel", list(_goldens().keys()) if os.path.exists(GOLDENS) else [])

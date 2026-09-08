@@ -5,13 +5,15 @@ account). Nothing here decides what is worth pressing; callers pass labels and
 this module finds them, taps them through the background driver, and refuses any
 press that lands on a spend control.
 
-    frame() ─▶ OCR items ─▶ find()/close_control()/read_hud()/parse_*()
-                              │
+    frame() ─▶ OCR items ─▶ find()/close_control()/read_hud()
+                              │           parse_* live in knowledge/util.py
+                              │           (re-exported here for the readers)
         guarded press ◀────── spend_label(): NEVER_RE | DANGER_RE | PRICE_RE
         positional tap ◀───── pretap_check(): OCR box around the target
 
 Helpers moved here from ~/.claude/skills/wos-daily-collect/scripts/collect.py on
-2026-09-08; tests/fixtures/local/native_goldens.json pins their outputs.
+2026-09-08; tests/fixtures/local/native_goldens.json pins their outputs (not
+the parsers, which moved on to knowledge/util.py the same day -- E1).
 """
 import json
 import math
@@ -24,6 +26,11 @@ import cv2
 import numpy as np
 
 from native import drive as drv
+# The knowledge base must not depend on native/ (E1), so parse_number,
+# parse_ratio and parse_duration live in knowledge/util.py; re-exported here
+# because native/readers/__init__.py:17 and ten reader modules import them
+# from native.screen and none of them change.
+from knowledge.util import parse_number, parse_ratio, parse_duration
 
 # ----------------------------------------------------------------------------- guards
 # A spend control is a short label that STARTS with a buy verb ("Buy", "Purchase",
@@ -68,77 +75,6 @@ def spend_label(t, extra=()):
         if t.startswith(n):
             return f"never:{n}"
     return None
-
-
-# ----------------------------------------------------------------------------- parsing
-_SUFFIX = {"k": 1_000, "m": 1_000_000, "b": 1_000_000_000}
-
-
-def parse_number(text):
-    """'36.30M' -> (36300000, False); '1,423' -> (1423, True); garbage -> (None, True).
-
-    The second value is `exact`: an abbreviated figure is stored with exact=0 so
-    a later screen that shows the full number can override it. The decimal point
-    is scaled, not stripped (usecases/chief_order.py read 77.3M as 773,000,000)."""
-    if text is None:
-        return None, True
-    t = str(text).strip().replace(" ", "")
-    # The game prints abbreviated figures with a locale decimal: "37,84M" is
-    # 37.84M. A comma is a decimal only with 1-2 digits after it AND a suffix;
-    # "1,423" and "35,020,652" keep their thousands commas.
-    t = re.sub(r"^(\d+),(\d{1,2})([kmb])$", r"\1.\2\3", t, flags=re.IGNORECASE)
-    t = t.replace(",", "")
-    m = re.fullmatch(r"(\d+(?:\.\d+)?)([kmb])?", t, re.IGNORECASE)
-    if not m:
-        return None, True
-    num, suf = m.group(1), m.group(2)
-    if suf:
-        return int(round(float(num) * _SUFFIX[suf.lower()])), False
-    if "." in num:
-        return None, True
-    return int(num), True
-
-
-def parse_ratio(text):
-    """'71/200' -> (71, 200); '36,940/143,010' -> (36940, 143010); else None."""
-    if text is None:
-        return None
-    m = re.fullmatch(r"\s*([\d,.]+\s*[kmb]?)\s*/\s*([\d,.]+\s*[kmb]?)\s*", str(text), re.IGNORECASE)
-    if not m:
-        return None
-    a, _ = parse_number(m.group(1))
-    b, _ = parse_number(m.group(2))
-    if a is None or b is None:
-        return None
-    return a, b
-
-
-def parse_duration(text):
-    """'9d 11:22:32' -> seconds; '04:50' -> 290; '1h 20m' -> 4800; else None."""
-    if text is None:
-        return None
-    t = str(text).strip().lower()
-    total, matched = 0, False
-    m = re.search(r"(\d+)\s*d", t)
-    if m:
-        total += int(m.group(1)) * 86400
-        matched = True
-        t = t[m.end():]
-    m = re.search(r"(\d{1,2}):(\d{2})(?::(\d{2}))?", t)
-    if m:
-        h, mi, s = int(m.group(1)), int(m.group(2)), int(m.group(3) or 0)
-        if m.group(3) is None:
-            # mm:ss when short, hh:mm when a day prefix or 'h' context exists
-            total += h * 60 + mi if not matched else h * 3600 + mi * 60
-        else:
-            total += h * 3600 + mi * 60 + s
-        return total
-    for unit, mult in (("h", 3600), ("m", 60), ("s", 1)):
-        m = re.search(rf"(\d+)\s*{unit}\b", t)
-        if m:
-            total += int(m.group(1)) * mult
-            matched = True
-    return total if matched else None
 
 
 # ----------------------------------------------------------------------------- pixels

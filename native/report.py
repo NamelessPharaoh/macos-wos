@@ -110,8 +110,10 @@ def render_text(data):
     if heroes:
         out.append(f"\nHeroes ({len(heroes)})")
         for key, hv in sorted(heroes.items(), key=lambda kv: -(kv[1].get("power") or 0))[:20]:
-            out.append(f"  {hv.get('name', key):16s} {str(hv.get('rarity', '-')):7s} lv {str(hv.get('level', '-')):>3s} "
-                       f"{str(hv.get('stars', '-'))}* {int(hv.get('power') or 0):>12,}")
+            lv = hv.get("level"); st = hv.get("stars")
+            out.append(f"  {str(hv.get('name', key)):16s} {str(hv.get('rarity', '-')):7s} "
+                       f"lv {('-' if lv is None else str(int(lv))):>3s} {('-' if st is None else str(int(st)))}* "
+                       f"{int(hv.get('power') or 0):>12,}")
     w = data["warnings"]
     out.append("\nWarnings")
     bad = [f"  section {n}: {s}" for n, s in data["sections"].items() if s not in ("ok",)]

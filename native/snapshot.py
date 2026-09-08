@@ -22,7 +22,9 @@ from native import drive as drv
 from native import model
 from native.readers import STATUS_FAILED, STATUS_SKIPPED, ReaderResult
 from native.readers import alliance as r_alliance
+from native.readers import backpack as r_backpack
 from native.readers import buildings as r_buildings
+from native.readers import events as r_events
 from native.readers import gear as r_gear
 from native.readers import heroes as r_heroes
 from native.readers import hud as r_hud
@@ -44,9 +46,14 @@ READERS = {
     "alliance": r_alliance.read,
     "queues": r_queues.read,
     "buildings": r_buildings.read,
-    "heroes": r_heroes.read,   # slowest (one card at a time): last, so the budget cuts it first
+    "events": r_events.read,
+    "heroes": r_heroes.read,     # one card at a time
+    "backpack": r_backpack.read,  # one tile at a time: last, so the budget cuts it first
 }
-ORDER = ("hud", "profile", "gear", "troops", "resources", "alliance", "queues", "buildings", "heroes")
+# backpack is opt-in (--readers backpack): on 2026-09-08 the Backpack kept
+# opening on its last tab (Gear), whose tiles open a Gear Details dialog, and
+# an earlier close gesture consumed a cosmetic item. See TODOS.md.
+ORDER = ("hud", "profile", "gear", "troops", "resources", "alliance", "queues", "buildings", "events", "heroes")
 
 
 class SnapshotStopped(RuntimeError):

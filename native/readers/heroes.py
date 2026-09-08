@@ -36,6 +36,14 @@ def roster_cards(items, h, w):
     return sorted(out, key=lambda c: (c[1], c[0]))
 
 
+def is_hero_card(items, h, w):
+    """A hero detail shows its rarity badge (SSR/SR/R) top-left and a Level
+    caption; a frame without both is some other screen."""
+    has_rarity = any(norm(i["text"]) in RARITY and frac(i, h, w)[1] < 0.2 for i in items)
+    has_level = any(norm(i["text"]) == "level" and 0.7 < frac(i, h, w)[1] < 0.8 for i in items)
+    return has_rarity and has_level
+
+
 def parse_card(res, img, items, path, rarity_hint=None):
     """Read one hero detail frame into res.doc['heroes'][slug]."""
     h, w = img.shape[:2]
@@ -96,6 +104,14 @@ def read(sc, budget_s=None):
             if title_is(citems, ch, cw, "Heroes"):
                 # the tap did not open a card (empty slot / partial card at the bottom)
                 continue
+            if not is_hero_card(citems, ch, cw):
+                # Not a hero card: some other screen opened. Stop here rather
+                # than keep tapping on a page nobody surveyed.
+                res.notes.append(f"tap at ({cx},{cy}) opened an unexpected screen; stopping")
+                res.frames.append(cpath)
+                sc.go_home()
+                res.status = "partial" if read_count else "failed"
+                return res
             key = parse_card(res, cimg, citems, cpath, rarity)
             if key is None:
                 res.notes.append(f"card at ({cx},{cy}) had no title")

@@ -168,12 +168,28 @@ def has_modal_x(img):
     return _is_icy(_rgb(img, 0.868, 0.128))
 
 
+DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257))
+
+
+def _is_dialog_glyph(rgb):
+    r, g, b = rgb
+    return r > 180 and g > 200 and b > 235
+
+
 def has_dialog_x(img):
     """Centred dialogs (Tech contribute, Tips, Daily Rewards) draw their × at
-    ~(0.814, 0.182). It is a bluer white than the page-header glyph —
-    measured rgb(201,219,252) — so the icy test is loosened here."""
-    r, g, b = _rgb(img, 0.814, 0.182)
-    return r > 180 and g > 200 and b > 235
+    ~(0.814, 0.182); taller card dialogs (Gear Details) at ~(0.815, 0.257).
+    It is a bluer white than the page-header glyph — measured rgb(201,219,252)
+    — so the icy test is loosened here."""
+    return _is_dialog_glyph(_rgb(img, *DIALOG_X_SPOTS[0]))
+
+
+def dialog_x_spot(img):
+    """The (fx, fy) of a dialog × on this frame, or None."""
+    for spot in DIALOG_X_SPOTS:
+        if _is_dialog_glyph(_rgb(img, *spot)):
+            return spot
+    return None
 
 
 def green_badges(img, ymin=0.0, ymax=1.0):
@@ -256,13 +272,19 @@ def find(items, label, region=None, h=None):
     return None
 
 
-def items_near(items, fx, fy, h, w, radius=0.06):
-    """OCR items whose box contains the point or sits within `radius` of it."""
+def items_near(items, fx, fy, h, w, radius=0.06, rx=None, ry=None):
+    """OCR items whose box contains the point or sits within the radius of it.
+    A button is much wider than its caption (the Backpack tooltip's Use is
+    ~0.28 wide, 0.06 tall around a 0.04 label), so the default exclusion is
+    0.14 in x and 0.05 in y: the tap that used an avatar frame on 2026-09-08
+    landed 0.10 beside the caption."""
+    rx = radius if rx is None else rx
+    ry = radius if ry is None else ry
     px, py = fx * w, fy * h
     out = []
     for it in items:
         x1, y1, x2, y2 = it["box"]
-        if x1 - radius * w <= px <= x2 + radius * w and y1 - radius * h <= py <= y2 + radius * h:
+        if x1 - rx * w <= px <= x2 + rx * w and y1 - ry * h <= py <= y2 + ry * h:
             out.append(it)
     return out
 
@@ -273,7 +295,7 @@ def pretap_check(items, fx, fy, h, w, extra=()):
     Fixed HUD fractions and tile taps carry no label of their own, so the guard
     looks at what is drawn under and around the target: a spend label there
     means the layout is not the one the fraction was recorded on."""
-    for it in items_near(items, fx, fy, h, w):
+    for it in items_near(items, fx, fy, h, w, rx=0.14, ry=0.05):
         why = spend_label(norm(it["text"]), extra)
         if why:
             return f"{why}:{it['text']}"
@@ -400,9 +422,9 @@ class Screen:
             elif has_modal_x(img):
                 self.log(event="home-exit", via="modal-x")
                 drv.tapf(0.868, 0.128) if not self.dry else None
-            elif has_dialog_x(img):
-                self.log(event="home-exit", via="dialog-x")
-                drv.tapf(0.814, 0.182) if not self.dry else None
+            elif (spot := dialog_x_spot(img)) is not None:
+                self.log(event="home-exit", via="dialog-x", at=spot)
+                drv.tapf(*spot) if not self.dry else None
             elif (ctl := close_control(items, h, w)) is not None:
                 self.log(event="home-exit", via=f"label:{ctl['text']}")
                 self.tap_item(img, ctl)

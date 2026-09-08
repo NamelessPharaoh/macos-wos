@@ -160,3 +160,43 @@ def test_hero_card_and_roster():
     cards = heroes.roster_cards(ritems, h, w)
     assert len(cards) == 12 and all(c[2] == 70 for c in cards)
     assert [rarity_from_hue(rimg, cx - 0.05, cy - 0.07) for cx, cy, _ in cards][:5] == ["mythic"] * 4 + ["epic"]
+
+
+def test_events_page_and_backpack_tooltip_parsers():
+    from native.readers import events, backpack, ReaderResult
+    img, items, path = _frame("events")
+    r = ReaderResult("events")
+    assert events.parse_page(r, "Endless Trial", img, items, path) == "endless_trial"
+    e = r.doc["events"]["endless_trial"]
+    assert e["name"] == "Endless Trial" and e["remaining_s"] == 12 * 3600 + 38 * 60 + 17 and e["attempts_left"] == 30
+    timg, titems, tpath = _frame("backpack_tile")
+    h, w = timg.shape[:2]
+    assert backpack.read_tooltip(titems, h, w) == ("1 Gems", None)
+    bimg, bitems, _ = _frame("backpack")
+    h, w = bimg.shape[:2]
+    tiles = backpack.tile_targets(bitems, h, w)
+    assert len(tiles) >= 30 and tiles[0][0] in backpack.TILE_COLS
+    r2 = ReaderResult("backpack")
+    backpack.fold(r2, "Speedup", "5m Speedup", 220, "220", tpath, 1.0, True)
+    backpack.fold(r2, "Speedup", "Construction Speedup 1h", 3, "3", tpath, 1.0, True)
+    backpack.fold(r2, "Resources", "Fire Crystal", 12, "12", tpath, 1.0, True)
+    assert r2.doc["backpack"]["speedups"]["general"]["5m"] == 220
+    assert r2.doc["backpack"]["speedups"]["construction"]["1h"] == 3
+    assert r2.doc["backpack"]["fire_crystals"] == 12
+    assert r2.doc["backpack"]["items"]["speedup/5m_speedup"] == 220
+
+
+def test_is_hero_card_rejects_other_screens():
+    from native.readers import heroes
+    img, items, path = _frame("hero_card")
+    h, w = img.shape[:2]
+    assert heroes.is_hero_card(items, h, w)
+    bimg, bitems, _ = _frame("backpack")
+    assert not heroes.is_hero_card(bitems, *bimg.shape[:2])
+
+
+def test_backpack_tab_active_by_pixel():
+    from native.readers import backpack as bp
+    img, items, _ = _frame("backpack")
+    active = {i["text"]: bp.tab_active(img, i) for i in items if i["text"] in ("Resources", "Speedup", "Bonus", "Gear", "Other")}
+    assert active == {"Resources": True, "Speedup": False, "Bonus": False, "Gear": False, "Other": False}

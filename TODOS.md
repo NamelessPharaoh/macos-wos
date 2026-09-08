@@ -89,6 +89,68 @@ Deferred work with context. Each entry carries enough reasoning to pick up cold.
 - **Effort:** M (CC ~2-3h with the emulator up). **Priority:** P3 — cosmetic; the
   bot is fully working at 70.
 
+## City-map reader for building levels (wos-chief-state)
+- **What:** Read Embassy, Command Center, Infirmary and the three camp levels
+  by panning the city and opening each building's popup (read only).
+- **Why:** The side panel only exposes Furnace, Storehouse and Research
+  Center rows; camp rows must not be tapped (a tap on the centred camp
+  collects completed training, +32,700 power observed 2026-09-08).
+- **Context:** `native/readers/buildings.py` reads the popup shape
+  ('27' beside 'Research Center', or 'Furnace Lv. 27'); the camera state
+  persists between runs and every popup carries an Upgrade/Train button that
+  the guard must keep off the tap list. Map tags ('26') are too small for OCR.
+- **Effort:** M (CC ~1.5h). **Priority:** P2. **Depends on:** a survey of the
+  camera reset gesture.
+
+## Research per-node levels (wos-chief-state)
+- **What:** Read every node level in the Growth/Economy/Battle trees.
+- **Why:** `research.current` and per-tab totals cover coarse planning only.
+- **Context:** The Research Center popup's Research button opens a pannable
+  canvas (spend surface: every node has a Research button). Same navigation
+  class as the city-map reader; do that first.
+- **Effort:** M (CC ~1.5h). **Priority:** P3.
+
+## Hindsight retain of the chief-sheet summary (wos-chief-state)
+- **What:** After each snapshot, retain a 10-line summary (power, gems,
+  furnace, troops totals, key deltas) in Hindsight from the skill's SKILL.md
+  instructions (not the script).
+- **Why:** Strategy conversations then start with the facts already in memory.
+- **Effort:** S (CC ~10m). **Priority:** P3. **Depends on:** `report.py`.
+
+## Automated tests for collect.py's press loop (wos-daily-collect)
+- **What:** pytest coverage for `_press_loop`, `enter`, `go_home` over
+  recorded frame sequences with a mocked driver.
+- **Why:** The daily runner is verified live only; the goldens from the
+  native/ extraction cover the moved helpers, not the loop.
+- **Context:** Needs a frame-sequence recorder; the runner lives in
+  `~/.claude/skills/wos-daily-collect/scripts/`, so the test adds it to
+  sys.path. Regressions to encode first: the Loot Chest tab miss and the
+  missions-last ordering (2026-09-08).
+- **Effort:** M (CC ~1h). **Priority:** P3. **Depends on:** `native/` (done).
+
+## Hero gear levels and charm levels (wos-chief-state)
+- **What:** Per-hero gear slot levels (the card's Gear tab OCRs 'LV.3',
+  'Lu.2', '+57' fuzzily) and per-slot charm levels (the profile shows charm
+  tiers by colour only).
+- **Why:** Hero gear and charms are SvS scoring inputs.
+- **Effort:** M (CC ~1h). **Priority:** P3.
+
+## Backpack ledger reader: make it safe enough for the default run (wos-chief-state)
+- **What:** `native/readers/backpack.py` reads item names from tile tooltips.
+  It is opt-in (`snapshot.py --readers backpack`) and NOT in the default order
+  or the daily chain.
+- **Why:** On 2026-09-08 the Backpack opened on its last-used tab (Gear), whose
+  tiles open a Gear Details dialog instead of a tooltip; the tab-switch tap was
+  not always honoured; and an earlier close gesture (re-tapping the tile under
+  a bottom-row tooltip) hit the tooltip's Use button and consumed a Primal Vibe
+  Avatar Frame (3 days, cosmetic, no gems). Fixed since: pre-tap exclusion the
+  size of a button, close by a short drag away from the tooltip, per-tap page
+  check, active-tab pixel check, `dialog_x_spot` for the Gear Details ×.
+- **Where to start:** verify the tab switch on a live frame (why `tab_active`
+  reported Resources while Gear content showed), then run
+  `--no-write --readers hud,backpack` until every tab reads without a stop.
+- **Effort:** M (CC ~1h). **Priority:** P2.
+
 ## Completed
 
 - **`core/fsm.py` deleted (2026-09-02).** A 167-line `GameFSM` navigation graph

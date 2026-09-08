@@ -343,3 +343,13 @@ def test_report_surfaces_a_broken_knowledge_base(tmp_path, monkeypatch, capsys):
     out = capsys.readouterr().out
     assert "WARNING" in out and "not found" in out
     assert skipped == [], "a broken knowledge base gates nothing"
+
+
+def test_account_state_reads_state_age_and_command_center():
+    from datetime import date
+    from core.capability import account_state
+    profile = {"state_opened_on": "2025-07-01", "command_center_level": 12, "alliance": {}}
+    st = account_state(profile, today=date(2026, 9, 8))
+    assert st["state_age_days"] == 434 and st["command_center_level"] == 12
+    assert account_state({}, today=date(2026, 9, 8))["state_age_days"] is None
+    assert account_state({"state_opened_on": "garbage", "command_center_level": "x"})["command_center_level"] is None

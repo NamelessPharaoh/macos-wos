@@ -27,6 +27,7 @@ asserting on a return value.
 """
 import json
 import os
+from datetime import date
 
 from core.player_profile import get_furnace_level
 
@@ -111,29 +112,45 @@ def load_table(path=None):
     return result
 
 
-def account_state(profile):
+def account_state(profile, today=None):
     """The facts the gate can read, and the ones it explicitly cannot.
 
-    Keys that are always None are listed on purpose rather than omitted: a
-    condition naming one then resolves to UNKNOWN and fails open, instead of
-    raising KeyError or being silently treated as satisfied. When someone adds
-    the read for state age or Command Center level, only this function changes.
+    Keys that resolve to None fail open (UNKNOWN) instead of raising KeyError
+    or being treated as satisfied. `state_opened_on` (ISO date, an operator
+    input) and `command_center_level` are written by the wos-chief-state
+    snapshot's legacy write-through; `today` is injectable so this stays pure.
     """
     alliance = profile.get("alliance") or {}
     name = alliance.get("name")
     return {
         "furnace_level": get_furnace_level(profile),
-        # Not readable yet. profile["state"] is the state NUMBER (e.g. "4653"),
-        # not its age in days, and nothing computes an age from it.
-        "state_age_days": None,
-        # Never read off screen.
-        "command_center_level": None,
+        "state_age_days": _state_age_days(profile.get("state_opened_on"), today),
+        "command_center_level": _int_or_none(profile.get("command_center_level")),
         # Captured by usecases.alliance.capture_alliance_state during init.
         # Absent until the first successful read, and "xxx" is example.json's
         # seed -- both mean unreadable, so conditions on them fail open.
         "alliance_member_count": alliance.get("member_count"),
         "alliance_name": None if name in (None, "", "xxx") else name,
     }
+
+
+def _state_age_days(opened, today=None):
+    """Days since the state opened, or None when the date is unset or malformed."""
+    if not opened:
+        return None
+    try:
+        opened_date = date.fromisoformat(str(opened)[:10])
+    except ValueError:
+        return None
+    today = today or date.today()
+    return (today - opened_date).days
+
+
+def _int_or_none(value):
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
 
 
 class Verdict:

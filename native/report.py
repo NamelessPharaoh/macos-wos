@@ -151,31 +151,39 @@ def doctor(conn, player_id, runs=3):
 def _spark(points, width=320, height=48):
     vals = [v for _, _, v in points if v is not None]
     if len(vals) < 2:
-        return '<svg width="%d" height="%d"><text x="4" y="30" font-size="12" fill="#888">needs 2+ snapshots</text></svg>' % (width, height)
+        return '<svg width="%d" height="%d"><text x="4" y="30" font-size="12">needs 2+ snapshots</text></svg>' % (width, height)
     lo, hi = min(vals), max(vals)
     span = (hi - lo) or 1
     pts = " ".join(f"{i * (width - 8) / (len(vals) - 1) + 4:.1f},{height - 4 - (v - lo) / span * (height - 8):.1f}"
                    for i, v in enumerate(vals))
     return (f'<svg width="{width}" height="{height}" viewBox="0 0 {width} {height}">'
-            f'<polyline fill="none" stroke="#3b82f6" stroke-width="2" points="{pts}"/></svg>')
+            f'<polyline fill="none" stroke="var(--accent)" stroke-width="2" points="{pts}"/>'
+            f'<circle cx="{pts.split()[-1].split(",")[0]}" cy="{pts.split()[-1].split(",")[1]}" r="3.5" fill="var(--accent)"/></svg>')
 
 
 def render_html(data, title="Chief Sheet"):
     snap = data["snapshot"]
     if snap is None:
         return f"<title>{title}</title><p>No snapshot yet.</p>"
+    # Design: frost-blue accent (the game's HUD glyphs), blue-biased neutrals,
+    # IBM Plex Sans for text and Plex Mono for the figures. Tokens carry both
+    # themes; components only ever read the tokens.
     parts = [f"<title>{html.escape(title)}</title>",
-             "<style>:root{--fg:#111;--bg:#fafafa;--mut:#666;--line:#e5e7eb}"
-             "@media (prefers-color-scheme: dark){:root:not([data-theme=light]){--fg:#eee;--bg:#111;--mut:#aaa;--line:#333}}"
-             ":root[data-theme=dark]{--fg:#eee;--bg:#111;--mut:#aaa;--line:#333}"
-             "body{background:var(--bg);color:var(--fg);font:14px system-ui;margin:0;padding:24px;max-width:960px}"
-             "h1{font-size:20px;margin:0 0 4px}.sub{color:var(--mut);margin-bottom:20px}"
-             "table{border-collapse:collapse;width:100%;margin-bottom:20px}td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left}"
-             "td.n{text-align:right;font-variant-numeric:tabular-nums}.pos{color:#16a34a}.neg{color:#dc2626}"
-             ".warn{background:rgba(220,38,38,.08);padding:12px;border-radius:8px}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}"
-             ".card{border:1px solid var(--line);border-radius:8px;padding:12px}</style>",
+             '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">',
+             "<style>:root{--ground:#f5f8fc;--ink:#14213d;--mut:#5b6b85;--line:#d8e1ee;--panel:#ffffff;--accent:#2f7fd1;--good:#1f9d55;--bad:#c8402f;--warnbg:rgba(200,64,47,.07)}"
+             "@media (prefers-color-scheme: dark){:root:not([data-theme=light]){--ground:#0f1626;--ink:#e6edf7;--mut:#9aa9c0;--line:#26324a;--panel:#141d30;--accent:#6fb1f0;--good:#4cc27e;--bad:#ef7a66;--warnbg:rgba(239,122,102,.10)}}"
+             ":root[data-theme=dark]{--ground:#0f1626;--ink:#e6edf7;--mut:#9aa9c0;--line:#26324a;--panel:#141d30;--accent:#6fb1f0;--good:#4cc27e;--bad:#ef7a66;--warnbg:rgba(239,122,102,.10)}"
+             "body{background:var(--ground);color:var(--ink);font:15px/1.5 'IBM Plex Sans',system-ui,sans-serif;margin:0;padding:32px 24px 64px;max-width:920px;margin-inline:auto}"
+             "h1{font-size:26px;font-weight:600;margin:0;letter-spacing:-.01em;text-wrap:balance}.sub{color:var(--mut);margin:6px 0 28px;font-size:13px}"
+             "h2{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:28px 0 8px}"
+             "table{border-collapse:collapse;width:100%}td{padding:7px 4px;border-bottom:1px solid var(--line)}td.n{text-align:right;font-family:'IBM Plex Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}"
+             ".pos{color:var(--good)}.neg{color:var(--bad)}.tilde{color:var(--mut)}"
+             ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px}"
+             ".card .k{font-size:12px;color:var(--mut);margin-bottom:6px;font-family:'IBM Plex Mono',ui-monospace,monospace}"
+             ".warn{background:var(--warnbg);border-left:3px solid var(--bad);padding:12px 14px;border-radius:4px}svg text{fill:var(--mut)}"
+             "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}</style>",
              f"<h1>{html.escape(title)}</h1>",
-             f"<div class=sub>snapshot {snap['id']} · {snap['taken_at']} · {snap['status']} · gems {snap['gems_before']}→{snap['gems_after']} · power {snap['power_before']:,}→{snap['power_after']:,}</div>"]
+             f"<div class=sub>snapshot {snap['id']} · {snap['taken_at'][:16].replace('T', ' ')} UTC · {snap['status']} · gems {snap['gems_before']:,} → {snap['gems_after']:,} · power {snap['power_before']:,} → {snap['power_after']:,}</div>"]
     for sec, fields in SHEET:
         parts.append(f"<h2>{sec}</h2><table>")
         for path, label in fields:
@@ -189,7 +197,7 @@ def render_html(data, title="Chief Sheet"):
         parts.append("</table>")
     parts.append("<h2>Trends</h2><div class=grid>")
     for path, pts in data["series"].items():
-        parts.append(f"<div class=card><div>{html.escape(path)}</div>{_spark(pts)}</div>")
+        parts.append(f"<div class=card><div class=k>{html.escape(path)}</div>{_spark(pts)}</div>")
     parts.append("</div>")
     w = data["warnings"]
     items = [f"section {n}: {s}" for n, s in data["sections"].items() if s != "ok"]

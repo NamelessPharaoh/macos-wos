@@ -139,3 +139,20 @@ def test_at_home_refuses_hud_with_overlay_close_glyph(tmp_path):
     assert sc.at_home(hud, h, w) is True
     overlay = hud + [_item("X", 1100, 570, 1125, 600)]
     assert sc.at_home(overlay, h, w) is False
+
+
+def test_pretap_check_excludes_a_whole_button_around_a_spend_caption():
+    h, w = 1902, 1284
+    items = [_item("Use", 620, 1240, 660, 1270)]           # caption centre (0.50, 0.66)
+    assert s.pretap_check(items, 0.404, 0.68, h, w) is not None   # 0.10 beside the caption: still the button
+    assert s.pretap_check(items, 0.404, 0.80, h, w) is None       # 0.14 below: clear
+
+
+def test_dialog_x_spot_finds_the_gear_details_close():
+    import cv2
+    p = os.path.join(REPO, "tests", "fixtures", "local", "frames", "native-gear-details-dialog.png")
+    if not os.path.exists(p):
+        pytest.skip("local frame not present")
+    img = cv2.imread(p)
+    assert s.dialog_x_spot(img) == (0.815, 0.257)
+    assert s.has_dialog_x(img) is False

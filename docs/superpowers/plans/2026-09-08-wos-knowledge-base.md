@@ -1925,6 +1925,69 @@ Synthesized from this review. Each derives from a specific finding above.
 
 Order: T1 -> T2 -> T3 (T4 and T6 parallel after T2) -> T5 -> T7 -> T8.
 
+## E. Engineering review decisions (2026-09-08; binding, override A/B/C/D where they conflict)
+
+**Milestones.** The plan ships as two gated units. **M1 = Tasks 1-3** (fetch, util, normalise, refresh, four required tables, calculators): the planner is unblocked here and the suite must be green before M2 starts. **M2 = Tasks 4-8** (cross-check report, unlock absorption, speed-bonus reader, item catalogue, optional tables). Each milestone gets its own eng-review pass.
+
+**E1 (finding 1, layering).** `parse_number`, `parse_ratio` and `parse_duration` move OUT of `native/screen.py` into `knowledge/util.py`. `native/screen.py` imports and re-exports them (`from knowledge.util import parse_number, parse_ratio, parse_duration  # re-exported: native/readers/__init__.py:17 and ten readers import them from here`), so no reader changes. Amendment A4 is superseded: `knowledge/local_sources.py` imports from `knowledge.util`, never from `native.screen`, and `knowledge/` depends on nothing outside the standard library.
+
+- **REGRESSION TEST (mandatory, iron rule).** `native/readers/__init__.py:17` reads `from native.screen import centre, norm, parse_number, parse_ratio, parse_duration` and ten reader modules use those names. After the move: `tests/test_native_screen.py` keeps its three parser table tests unchanged and gains `assert native.screen.parse_number is knowledge.util.parse_number` (same for the other two); `uv run pytest tests/ -q` must report at least 628 passing. `~/.claude/skills/wos-daily-collect/scripts/collect.py:40-41` imports no parsers, so the daily runner is untouched.
+
+**E2 (finding 5, diagram).** In the same task, `native/screen.py`'s module docstring diagram changes from `frame() ─▶ OCR items ─▶ find()/close_control()/read_hud()/parse_*()` to name the parsers' new home:
+
+```
+    frame() ─▶ OCR items ─▶ find()/close_control()/read_hud()
+                              │           parse_* live in knowledge/util.py
+                              │           (re-exported here for the readers)
+        guarded press ◀────── spend_label(): NEVER_RE | DANGER_RE | PRICE_RE
+        positional tap ◀───── pretap_check(): OCR box around the target
+```
+
+**E3 (finding 4, absent is not zero).** `knowledge/normalise.py` gains `_int(v, required=False)`: with `required=True` an ABSENT key raises `ValueError(f"{context}: missing {key}")`; a present `0` is legal (furnace level 0 rows are genuinely zero). `buildings()` requires `meat, wood, coal, iron, seconds` on every row; `troops()` requires `meat, wood, coal, iron, seconds, points`; `research()` requires `cost` and `research-time-seconds` on every level. A dropped upstream field becomes `NORMALISE FAILED ValueError: furnace L28: missing meat`, never a cheaper plan. Tests: a fixture row with `meat` deleted raises and names the building and level; a level-0 row of zeros normalises fine.
+
+**E4 (finding 2, the gate must not fail silently).** Task 6 gains: `test_load_table_finds_the_shipped_file` — `core.capability.load_table()` with NO argument returns a features table with at least one entry and an empty warnings list. `core/capability.py:79-100` treats a missing file as an empty table that fails every gate open, so the tmp_path tests cannot catch a half-finished move.
+
+**E5 (finding 3, the placeholder specified).** `knowledge/unlocks_check.py` is a post-move consistency check, not a second reporter: `check_gates(table=None, tasks=None) -> list[str]` returns one line per task gate whose feature key is absent from `knowledge/unlocks.json`, reading the gate keys from the same place `Main/task_menu.py:246` does. Task 6 runs it once after the move and asserts an empty result; `scripts/capability_report.py` keeps its own job (reporting gate verdicts for a profile) and is not touched.
+
+**E6 (finding 6, integration test).** `tests/test_knowledge_integration.py`: a fake opener serves the five real source files from `tests/fixtures/local/knowledge/sources/` (gitignored; copied from the cached fetch of 2026-09-08), `refresh.main(["--write"])` runs into a `tmp_path` knowledge dir, then `kb.load(tmp)` answers `building_cost("furnace", 27, 28)`, `research_path("tooling_up_i", 2, {})` and `training_cost("infantry", 9, 100)` with the values the unit tests pin. Skips when the fixtures are absent. This is the only test that proves `SOURCES`, `NORMALISERS` and `TABLES` agree.
+
+**E7 (finding 7, the optional contract).** `tests/test_refresh_knowledge.py` gains three assertions: the default `main([])` fetches exactly the four required tables (assert on the fake opener's URL list); an optional table whose fetch raises prints its FAILED line and leaves the exit code 0 while a required one exits 1; `kb.load` with an optional file absent returns the required tables and prints one line naming the missing file. Plus a registry test: `set(SOURCES) | set(OPTIONAL_SOURCES) == set(NORMALISERS)` and every `TABLES` key resolves to a file one of them writes.
+
+**E8 (finding 8, the cache is read-only).** `native/kb.py`'s module docstring states that every dict returned by `load`, `building_row`, `research_node` and `latest`-style lookups is owned by the cache and must not be mutated; consumers copy what they annotate. Test: mutate a row returned by `building_row`, then assert a fresh `load` of the same directory (after `_CACHE.clear()`) returns the original value, so a future caller that caches a mutated table fails loudly here.
+
+### Failure modes added by these decisions
+
+| codepath | failure mode | rescued | test | user sees | logged |
+|---|---|---|---|---|---|
+| parser move | a reader imports a name that moved | N/A (import error at collection) | Y (E1 regression) | pytest collection error, immediately | pytest |
+| normaliser required keys | upstream drops a cost field | Y (raises) | Y (E3) | `NORMALISE FAILED ... missing meat`, exit 1 | stdout |
+| unlock move | file moved, path not updated | Y (E4 test) | Y | test failure naming the default path | pytest |
+| optional table | an optional source 404s | Y | Y (E7) | its FAILED line, exit code still 0 | stdout |
+| registry drift | a table key exists in one registry only | Y (E6, E7) | Y | test failure before the first live refresh | pytest |
+| kb cache | a consumer mutates a returned row | N (contract) | Y (E8) | test failure when the contract breaks | pytest |
+
+No row is unrescued, untested and silent.
+
+### Worktree parallelization
+
+| Step | Modules touched | Depends on |
+|---|---|---|
+| T1 fetch, util, refresh, parser move | `knowledge/`, `scripts/`, `native/screen.py`, `tests/` | — |
+| T2 normalisers, vendored tables | `knowledge/`, `tests/` | T1 |
+| T3 calculators | `native/kb.py`, `tests/` | T1 (util), T2 (tables) |
+| T4 cross-check, overlay | `knowledge/`, `tests/` | T2 |
+| T6 unlock absorption | `core/`, `Main/`, `usecases/`, `knowledge/`, docs | T1 (util for write_table) |
+| T5 marks, freshness, report | `native/kb.py`, `native/report.py` | T3 |
+| T7 speed-bonus reader | `native/readers/`, `native/schema.py`, `native/snapshot.py` | — (independent of the knowledge base) |
+| T8 item catalogue | `native/readers/backpack.py`, `native/kb.py` | T3 |
+
+- **Lane A (M1):** T1 → T2 → T3, sequential; they share `knowledge/`.
+- **Lane B (M2):** T6, independent of Lane A after T1 lands (it needs only `write_table`). Touches `core/`, `Main/`, `usecases/`, which no other lane touches.
+- **Lane C (M2):** T7, fully independent: it touches only the readers and the schema, no knowledge module at all. It can run in parallel with M1 from the start.
+- **Lane D (M2):** T4 after T2; T5 and T8 after T3.
+- **Conflict flags:** Lanes A and D both write `knowledge/` and `tests/` — run D after A merges. T5 and T8 both edit `native/kb.py`; sequence them. T7 edits `native/schema.py`, which no other lane touches, so it is the safest parallel worktree.
+- **Execution:** launch Lane A and Lane C in parallel worktrees now; merge A, then Lane B and Lane D.
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |

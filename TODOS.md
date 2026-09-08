@@ -151,6 +151,21 @@ Deferred work with context. Each entry carries enough reasoning to pick up cold.
   `--no-write --readers hud,backpack` until every tab reads without a stop.
 - **Effort:** M (CC ~1h). **Priority:** P2.
 
+## Scheduled knowledge-freshness check (first CI in this repo)
+- **What:** A weekly job that runs `scripts/refresh_knowledge.py` as a dry run
+  and `uv run pytest tests/ -q`, reporting when an upstream game table changed
+  or the suite broke.
+- **Why:** the knowledge base is the first thing here that goes stale on its
+  own. Today a game patch is invisible until someone reads a report's
+  freshness line, and a broken suite is invisible until someone runs it.
+- **Context:** `ls .github/workflows` returns nothing, so this is the repo's
+  first CI. The freshness line from the knowledge-base plan (A9) covers the
+  read path only. A private repo needs a decision about where the job runs.
+- **Where to start:** `.github/workflows/knowledge.yml` on a weekly cron plus
+  workflow_dispatch; the dry run already exits non-zero when a table fails.
+- **Effort:** S (CC ~25min). **Priority:** P3. **Depends on:** M1 of the
+  knowledge-base plan landing so there are tables to check.
+
 ## Completed
 
 - **`core/fsm.py` deleted (2026-09-02).** A 167-line `GameFSM` navigation graph

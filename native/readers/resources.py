@@ -12,27 +12,60 @@ ORDER = ("meat", "wood", "coal", "iron")
 EXPECTED = [f"economy.resources.{r}" for r in ORDER]
 
 
+ROW_Y = (0.42, 0.51, 0.59, 0.68)     # meat, wood, coal, iron
+PROTECTED_DY = 0.025
+TOL = 0.012
+
+
+def _row_of(y):
+    """(index, kind) for a figure at fraction y: owned sits on the row line,
+    protected 0.025 below it. Assigning by position, not by order, is what
+    survives a dropped bullet: on 2026-09-08 '• 7.0M' OCR'd as '97.0M' and an
+    order-based reader filed it as iron owned (97M instead of 1.9M)."""
+    for i, ry in enumerate(ROW_Y):
+        if abs(y - ry) <= TOL:
+            return i, "owned"
+        if abs(y - (ry + PROTECTED_DY)) <= TOL:
+            return i, "protected"
+    return None, None
+
+
 def parse(res, img, items, path):
     h, w = img.shape[:2]
-    owned = sorted((i for i in items if 0.60 < frac(i, h, w)[0] < 0.72 and 0.38 < frac(i, h, w)[1] < 0.72
-                    and not i["text"].strip().startswith("•") and parse_number(i["text"])[0] is not None),
-                   key=lambda i: frac(i, h, w)[1])
-    protected = sorted((i for i in items if 0.60 < frac(i, h, w)[0] < 0.72 and 0.38 < frac(i, h, w)[1] < 0.72
-                        and i["text"].strip().startswith("•")), key=lambda i: frac(i, h, w)[1])
-    output = sorted((i for i in items if 0.36 < frac(i, h, w)[0] < 0.52 and 0.40 < frac(i, h, w)[1] < 0.72
-                     and "/" in i["text"]), key=lambda i: frac(i, h, w)[1])
-    for name, it in zip(ORDER, owned):
-        v, exact = parse_number(it["text"])
-        res.put(f"economy.resources.{name}", v, raw=it["text"], frame=path, score=it["score"], exact=exact)
-    for name, it in zip(ORDER, protected):
-        v, exact = parse_number(it["text"].strip("• ").strip())
-        if v is not None:
-            res.put(f"economy.protected.{name}", v, raw=it["text"], frame=path, score=it["score"], exact=exact)
-    for name, it in zip(ORDER, output):
-        num = it["text"].split("/")[0]
-        v, exact = parse_number(num)
-        if v is not None:
-            res.put(f"economy.output.{name}", v, raw=it["text"], frame=path, score=it["score"], exact=exact)
+    for it in items:
+        x, y = frac(it, h, w)
+        if not (0.60 < x < 0.72 and 0.38 < y < 0.72):
+            continue
+        idx, kind = _row_of(y)
+        if idx is None:
+            continue
+        name = ORDER[idx]
+        text = it["text"].strip()
+        bullet = text.startswith("•")
+        if kind == "owned" and bullet:
+            continue
+        v, exact = parse_number(text.lstrip("• ").strip())
+        if v is None:
+            continue
+        if kind == "owned":
+            res.put(f"economy.resources.{name}", v, raw=text, frame=path, score=it["score"], exact=exact)
+        else:
+            if not bullet and len(text) > 4 and text[0] == "9":
+                # a dropped bullet reads as a leading 9 ('• 7.0M' -> '97.0M'); the
+                # figure without it is the protected amount
+                v, exact = parse_number(text[1:])
+                if v is None:
+                    continue
+            res.put(f"economy.protected.{name}", v, raw=text, frame=path, score=it["score"], exact=exact)
+    for it in items:
+        x, y = frac(it, h, w)
+        if 0.36 < x < 0.52 and 0.40 < y < 0.72 and "/" in it["text"]:
+            idx, kind = _row_of(y - 0.013)
+            if idx is None:
+                continue
+            v, exact = parse_number(it["text"].split("/")[0])
+            if v is not None:
+                res.put(f"economy.output.{ORDER[idx]}", v, raw=it["text"], frame=path, score=it["score"], exact=exact)
     return res
 
 

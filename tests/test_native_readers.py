@@ -200,3 +200,19 @@ def test_backpack_tab_active_by_pixel():
     img, items, _ = _frame("backpack")
     active = {i["text"]: bp.tab_active(img, i) for i in items if i["text"] in ("Resources", "Speedup", "Bonus", "Gear", "Other")}
     assert active == {"Resources": True, "Speedup": False, "Bonus": False, "Gear": False, "Other": False}
+
+
+def test_resources_assigns_by_row_so_a_dropped_bullet_cannot_become_iron():
+    import cv2
+    from core.vision_engine import VisionEngine
+    from native.readers import resources, ReaderResult
+    p = os.path.join(REPO, "tests", "fixtures", "local", "frames", "reader-resources-bullet-misread.png")
+    if not os.path.exists(p):
+        pytest.skip("local frame not present")
+    img = cv2.imread(p)
+    items = VisionEngine().recognize(img)
+    r = resources.parse(ReaderResult("resources"), img, items, p)
+    d = r.doc["economy"]
+    assert d["resources"] == {"meat": 39_300_000, "wood": 34_000_000, "coal": 9_100_000, "iron": 1_900_000}
+    assert d["protected"] == {"meat": 30_000_000, "wood": 23_000_000, "coal": 7_000_000, "iron": 1_300_000}
+    assert r.settle(resources.EXPECTED).status == "ok"

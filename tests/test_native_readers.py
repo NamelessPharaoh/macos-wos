@@ -1,0 +1,112 @@
+"""Reader parse functions against survey frames of the main account (local,
+gitignored fixture: the frames carry the player id and alliance chat)."""
+import json
+import os
+
+import pytest
+
+REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+FIX = os.path.join(REPO, "tests", "fixtures", "local", "reader_frames.json")
+
+
+def _frame(reader):
+    if not os.path.exists(FIX):
+        pytest.skip("local reader frames not present")
+    import cv2
+    rec = json.load(open(FIX))[reader]
+    img = cv2.imread(os.path.join(REPO, rec["frame"]))
+    return img, rec["items"], rec["frame"]
+
+
+def test_hud_reads_power_gems_coal_survivors_vip_and_timer():
+    from native.readers import hud, ReaderResult
+    img, items, path = _frame("hud")
+    r = hud.parse(ReaderResult("hud"), img, items, path)
+    d = r.doc
+    assert d["progress"]["power"] == 35_020_652
+    assert d["economy"]["gems"] == 1423
+    assert d["economy"]["resources"]["coal"] == 8_900_000
+    assert r.provenance["economy.resources.coal"]["exact"] == 0
+    assert d["city"]["survivors"] == {"value": 32, "cap": 32}
+    assert d["progress"]["vip"]["level"] == 7
+    assert d["progress"]["furnace"]["upgrading"]["remaining_s"] == 9 * 86400 + 9 * 3600 + 37 * 60 + 27
+    assert r.settle(hud.EXPECTED).status == "ok"
+
+
+def test_profile_reads_identity_furnace_kills_stamina_alliance():
+    from native.readers import profile, ReaderResult
+    img, items, path = _frame("profile")
+    r = profile.parse(ReaderResult("profile"), img, items, path)
+    d = r.doc
+    assert d["identity"]["id"] == "821103058"
+    assert d["identity"]["name"] == "NamelessPharaoh"
+    assert d["identity"]["state"] == 4562
+    assert d["progress"]["furnace"]["level"] == 27
+    assert d["progress"]["kills"] == 671_553
+    assert d["economy"]["stamina"] == {"value": 700, "cap": 200}
+    assert d["alliance"]["tag"] == "ACE"
+    assert r.settle(profile.EXPECTED).status == "ok"
+
+
+def test_troops_reads_totals_queue_injured_and_per_type():
+    from native.readers import troops, ReaderResult
+    img, items, path = _frame("troops")
+    r = troops.parse(ReaderResult("troops"), img, items, path)
+    d = r.doc
+    assert d["troops"]["total"] == {"value": 231_300, "cap": 231_300}
+    assert d["troops"]["march_queue"] == {"used": 6, "cap": 6}
+    assert d["troops"]["wounded"] == {"value": 0, "cap": 89_300}
+    assert d["troops"]["by_tier"]["infantry"]["t9"] == 76_227
+    assert d["troops"]["by_tier"]["lancer"]["t9"] == 77_849
+    assert d["troops"]["by_tier"]["marksman"]["t9"] == 77_232
+    assert d["troops"]["totals"] == {"infantry": 76_227, "lancer": 77_849, "marksman": 77_232}
+    assert d["troops"]["by_tier"]["infantry"]["t8"] == 0 and d["troops"]["by_tier"]["marksman"]["t10"] == 0
+    assert r.provenance["troops.by_tier.infantry.t8"]["method"] == "absent"
+    assert r.settle(troops.EXPECTED).status == "ok"
+
+
+def test_resources_reads_owned_output_protected_in_order():
+    from native.readers import resources, ReaderResult
+    img, items, path = _frame("resources")
+    r = resources.parse(ReaderResult("resources"), img, items, path)
+    d = r.doc["economy"]
+    assert d["resources"] == {"meat": 37_800_000, "wood": 33_000_000, "coal": 8_900_000, "iron": 1_900_000}
+    assert d["protected"] == {"meat": 28_400_000, "wood": 22_000_000, "coal": 6_800_000, "iron": 1_300_000}
+    assert d["output"] == {"meat": 90_200, "wood": 29_500, "coal": 4_800, "iron": 671}
+    assert all(r.provenance[f"economy.resources.{k}"]["exact"] == 0 for k in ("meat", "wood", "coal", "iron"))
+    assert r.settle(resources.EXPECTED).status == "ok"
+
+
+def test_alliance_reads_name_tag_power_rank_members_level():
+    from native.readers import alliance, ReaderResult
+    img, items, path = _frame("alliance")
+    r = alliance.parse(ReaderResult("alliance"), img, items, path)
+    d = r.doc["alliance"]
+    assert d["tag"] == "ACE" and d["name"] == "ArabChampEmpire"
+    assert d["power"] == 1_846_641_461
+    assert d["state_rank"] == 3
+    assert d["members"] == 99 and d["cap"] == 100
+    assert d["level"] == 11
+    assert r.settle(alliance.EXPECTED).status == "ok"
+
+
+def test_reader_result_put_and_settle():
+    from native.readers import ReaderResult
+    r = ReaderResult("x")
+    r.put("a.b.c", 1, raw="1", frame="/tmp/f/001-x.png")
+    assert r.doc == {"a": {"b": {"c": 1}}}
+    assert r.provenance["a.b.c"]["frame"] == "001-x.png"
+    assert r.settle(["a.b.c", "a.b.d"]).status == "partial"
+    assert r.settle(["a.b.c"]).status == "ok"
+    assert ReaderResult("y").settle(["p"]).status == "failed"
+
+
+def test_derive_furnace_fills_fc_sub_ordinal():
+    from native.snapshot import derive_furnace, deep_merge
+    doc = {"progress": {"furnace": {"level": 27}}}
+    prov = {"progress.furnace.level": {"raw": "# Lv. 27", "frame": "002-profile.png", "score": 1.0, "method": "ocr", "exact": 1}}
+    derive_furnace(doc, prov)
+    assert doc["progress"]["furnace"] == {"level": 27, "fc": 0, "sub": 0, "ordinal": 27}
+    assert prov["progress.furnace.ordinal"]["method"] == "derived"
+    assert deep_merge({"a": {"b": 1}}, {"a": {"c": 2}}) == {"a": {"b": 1, "c": 2}}
+    derive_furnace({"progress": {}}, {})  # no level: no-op

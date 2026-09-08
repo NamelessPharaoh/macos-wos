@@ -167,3 +167,12 @@ def test_gather_flags_default_to_todays_else_branch():
 def test_gather_flags_read_from_the_profile():
     profile = {"gather": {"remove_hero": True, "equalize": False}}
     assert pp.get_gather_flags(profile) == (True, False)
+
+
+def test_validate_furnace_read_max_step_default_is_one_and_override_scales(players_dir):
+    import core.player_profile as pp
+    profile = {"id": "1", "furnace_level": 7}
+    assert pp.validate_furnace_read(profile, "9") == (None, "jumped: 7 -> 9, more than 1 level")
+    assert pp.validate_furnace_read(profile, "9", max_step=3) == (9, "ok")
+    assert pp.validate_furnace_read(profile, "11", max_step=3) == (None, "jumped: 7 -> 11, more than 3 level")
+    assert pp.validate_furnace_read(profile, "6", max_step=3) == (None, "decreased: 7 -> 6, furnace levels never drop")

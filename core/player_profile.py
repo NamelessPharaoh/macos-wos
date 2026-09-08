@@ -69,8 +69,12 @@ def get_furnace_level(profile):
     return level if FURNACE_MIN <= level <= FURNACE_MAX else None
 
 
-def validate_furnace_read(profile, raw):
+def validate_furnace_read(profile, raw, max_step=FURNACE_MAX_STEP):
     """Decide whether an OCR'd furnace level may be persisted.
+
+    `max_step` is the climb allowed since the stored value: 1 per run for the
+    bot (its default), or the day-scaled allowance the wos-chief-state snapshot
+    passes so both validators apply one rule (eng review 2026-09-08).
 
     The capability gate reads this number, so a misread is a silent behaviour
     change rather than an error: 7 read as 17 marks Pets, Arena and Storehouse
@@ -102,8 +106,8 @@ def validate_furnace_read(profile, raw):
         return level, "unconfirmed-first-read"
     if level < stored:
         return None, f"decreased: {stored} -> {level}, furnace levels never drop"
-    if level - stored > FURNACE_MAX_STEP:
-        return None, f"jumped: {stored} -> {level}, more than {FURNACE_MAX_STEP} level"
+    if level - stored > max_step:
+        return None, f"jumped: {stored} -> {level}, more than {max_step} level"
     return level, "ok"
 
 

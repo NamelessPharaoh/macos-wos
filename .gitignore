@@ -25,3 +25,8 @@ db/completion_log.txt
 tests/fixtures/local/
 logs/
 .gstack/
+
+# wos-chief-state SQLite model (local history/provenance, not repo data) and
+# the native/drive.py run lock.
+db/*.sqlite*
+db/.wos-run.lock

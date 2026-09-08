@@ -486,6 +486,7 @@ def write_operator(conn, *, player_id, path, value, taken_at, snapshot_id):
 
 
 # -- readers ------------------------------------------------------------------
+    return snapshot_id
 
 
 def latest(conn, player_id):

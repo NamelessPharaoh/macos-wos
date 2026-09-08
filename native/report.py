@@ -39,6 +39,10 @@ SHEET = [
 SPARKS = ["progress.power", "economy.gems", "troops.total.value", "economy.resources.coal", "progress.kills"]
 
 
+def _n(v):
+    return "-" if v is None else f"{int(v):,}"
+
+
 def _fmt(row):
     if row is None:
         return "-"
@@ -54,8 +58,11 @@ def build(conn, player_id, snapshot_id=None):
     """Everything the terminal and HTML renderers need, as plain data."""
     snap = None
     if snapshot_id is None:
+        # The header describes a RUN; operator rows (--set) are not runs and
+        # carry no gems/power, so the newest native/emulator snapshot is shown
+        # while latest_static still honours operator values.
         snap = conn.execute("SELECT * FROM snapshots WHERE player_id = ? AND status != 'aborted' "
-                            "ORDER BY id DESC LIMIT 1", (player_id,)).fetchone()
+                            "AND source != 'operator' ORDER BY id DESC LIMIT 1", (player_id,)).fetchone()
         snapshot_id = snap["id"] if snap else None
     else:
         snap = conn.execute("SELECT * FROM snapshots WHERE id = ?", (snapshot_id,)).fetchone()
@@ -95,7 +102,7 @@ def render_text(data):
     if snap is None:
         return "no snapshot yet: run snapshot.py first"
     out.append(f"Chief sheet — snapshot {snap['id']} ({snap['taken_at']}) status={snap['status']} source={snap['source']}")
-    out.append(f"gems {snap['gems_before']} -> {snap['gems_after']}   power {snap['power_before']:,} -> {snap['power_after']:,}"
+    out.append(f"gems {_n(snap['gems_before'])} -> {_n(snap['gems_after'])}   power {_n(snap['power_before'])} -> {_n(snap['power_after'])}"
                + ("   POWER ROSE" if snap["power_rose"] else "") + f"   {snap['duration_s'] or 0}s")
     for title, fields in SHEET:
         out.append(f"\n{title}")
@@ -187,7 +194,7 @@ def render_html(data, title="Chief Sheet"):
              ".warn{background:var(--warnbg);border-left:3px solid var(--bad);padding:12px 14px;border-radius:4px}svg text{fill:var(--mut)}"
              "@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}</style>",
              f"<h1>{html.escape(title)}</h1>",
-             f"<div class=sub>snapshot {snap['id']} · {snap['taken_at'][:16].replace('T', ' ')} UTC · {snap['status']} · gems {snap['gems_before']:,} → {snap['gems_after']:,} · power {snap['power_before']:,} → {snap['power_after']:,}</div>"]
+             f"<div class=sub>snapshot {snap['id']} · {snap['taken_at'][:16].replace('T', ' ')} UTC · {snap['status']} · gems {_n(snap['gems_before'])} → {_n(snap['gems_after'])} · power {_n(snap['power_before'])} → {_n(snap['power_after'])}</div>"]
     for sec, fields in SHEET:
         parts.append(f"<h2>{sec}</h2><table>")
         for path, label in fields:

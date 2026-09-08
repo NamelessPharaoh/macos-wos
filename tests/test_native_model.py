@@ -447,5 +447,6 @@ def test_new_snapshot_id_is_strictly_increasing_within_a_second():
     from datetime import datetime, timezone
     from native import model
     t = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
+    model._LAST_ID["value"] = None   # earlier tests in this process issued real-clock ids
     a, b, c = model.new_snapshot_id(t), model.new_snapshot_id(t), model.new_snapshot_id(t)
     assert (a, b, c) == ("20260908T120000Z", "20260908T120001Z", "20260908T120002Z")

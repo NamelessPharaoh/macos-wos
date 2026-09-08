@@ -80,6 +80,26 @@ def test_troop_stats_rows():
     assert s["name"] == "Supreme" and s["power"] == 50 and s["lethality"] == 9 and s["load"] == 330
 
 
+def test_troop_stats_missing_power_raises_naming_troop_type_and_tier():
+    # E3: power feeds native/kb.py's troop_power and power_gain("training")
+    # directly -- a dropped upstream field must not become a silent 0.
+    raw = copy.deepcopy(_load("troop_stats_excerpt.json"))
+    del raw["troop-stats"]["infantry"][1]["power"]  # the "9-fc0" row
+    with pytest.raises(ValueError) as exc:
+        n.troop_stats(raw)
+    assert "infantry" in str(exc.value) and "9-fc0" in str(exc.value) and "power" in str(exc.value)
+
+
+def test_troop_stats_zero_power_is_legal():
+    # E3: a present 0 is legal, not "missing" -- mirrors the buildings L0 case.
+    raw = {"troop-stats": {"infantry": [
+        {"Troop Type": "infantry", "Troop Level": 1, "troop level name": "Rookie", "FC level": 0,
+         "power": 0, "defense": 4, "lethality": 1, "load": 108, "attack": 1, "health": 6, "speed": 11}],
+        "lancer": [], "marksman": []}}
+    doc = n.troop_stats(raw)
+    assert doc["stats"]["infantry"]["1-fc0"]["power"] == 0
+
+
 def test_research_nodes_levels_and_requirements():
     doc = n.research(_load("research_excerpt.json"))
     node = doc["research"]["tooling_up_i"]

@@ -4,9 +4,9 @@ Source keys differ per file ("Hunter's Hut", "research-center-lv", "Troop
 Level"); every normaliser maps them onto the repo's slugs so the planner and
 the readers speak one vocabulary. Values are ints (costs), seconds (times)
 and None for unknowns; nothing is invented. A field the schema promises
-(E3: costs, training figures, research cost/time) must be present upstream
-or the row is a loud failure -- `_int(..., required=True)` -- never a
-silently cheaper plan.
+(E3: costs, training figures, research cost/time, troop power) must be
+present upstream or the row is a loud failure -- `_int(..., required=True)`
+-- never a silently cheaper plan or a silently zeroed power.
 
 Standard library only (no `native/` import): this module sits below the
 vision layer (native/screen.py pulls in OpenCV and a macOS driver).
@@ -99,9 +99,10 @@ def troop_stats(raw):
         rows = {}
         for r in raw.get("troop-stats", {}).get(ttype, []):
             key = f"{_int(r.get('Troop Level'))}-fc{_int(r.get('FC level'))}"
+            ctx = f"{ttype} {key}"
             rows[key] = {
                 "name": r.get("troop level name"),
-                "power": _int(r.get("power")),
+                "power": _int(r.get("power"), required=True, context=ctx, key="power"),
                 "attack": _int(r.get("attack")),
                 "defense": _int(r.get("defense")),
                 "lethality": _int(r.get("lethality")),

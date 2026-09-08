@@ -426,3 +426,26 @@ def test_prune_runs_keeps_current_and_recent_removes_old_both_styles(tmp_path):
 
 def test_prune_runs_missing_root_returns_empty(tmp_path):
     assert model.prune_runs(str(tmp_path / "does-not-exist")) == []
+
+
+def test_manual_paths_carry_forward_across_snapshots(tmp_path):
+    from native import model
+    conn = model.connect(str(tmp_path / "t.sqlite"))
+    conn.execute("INSERT INTO players (id, is_main, first_seen, last_seen) VALUES ('p', 1, 't', 't')")
+    model.write_operator(conn, player_id="p", path="manual.hero_generation", value="2",
+                         taken_at="2026-09-08T12:00:00Z", snapshot_id="20260908T120000Z")
+    model.write_snapshot(conn, player={"id": "p"}, snapshot_id="20260909T120000Z", taken_at="2026-09-09T12:00:00Z",
+                         source="native-app", run_dir="r", status="ok", sections={"hud": "ok"}, duration_s=1,
+                         gems_before=1, gems_after=1, power_before=1, power_after=1, power_rose=0,
+                         doc={"progress": {"power": 1}}, provenance={"progress.power": {"raw": "1"}})
+    row = conn.execute("SELECT status, value_num FROM fields WHERE snapshot_id='20260909T120000Z' AND path='manual.hero_generation'").fetchone()
+    assert (row["status"], row["value_num"]) == ("carried", 2)
+    assert model.latest(conn, "p")["manual.hero_generation"]["value_num"] == 2
+
+
+def test_new_snapshot_id_is_strictly_increasing_within_a_second():
+    from datetime import datetime, timezone
+    from native import model
+    t = datetime(2026, 9, 8, 12, 0, 0, tzinfo=timezone.utc)
+    a, b, c = model.new_snapshot_id(t), model.new_snapshot_id(t), model.new_snapshot_id(t)
+    assert (a, b, c) == ("20260908T120000Z", "20260908T120001Z", "20260908T120002Z")

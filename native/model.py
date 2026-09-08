@@ -228,8 +228,22 @@ def _split_value(path, value):
     return float(value), None
 
 
+_LAST_ID = {"value": None}
+
+
 def new_snapshot_id(now=None):
-    return (now or datetime.now(timezone.utc)).strftime("%Y%m%dT%H%M%SZ")
+    """UTC second stamp, strictly increasing within a process: three `--set`
+    writes in one second collided on the primary key (2026-09-08), so a stamp
+    equal to or below the last one issued is advanced by a second."""
+    stamp = now or datetime.now(timezone.utc)
+    sid = stamp.strftime("%Y%m%dT%H%M%SZ")
+    last = _LAST_ID["value"]
+    if last is not None and sid <= last:
+        from datetime import timedelta
+        nxt = datetime.strptime(last, "%Y%m%dT%H%M%SZ") + timedelta(seconds=1)
+        sid = nxt.strftime("%Y%m%dT%H%M%SZ")
+    _LAST_ID["value"] = sid
+    return sid
 
 
 def utc_now_iso():

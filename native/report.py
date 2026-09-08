@@ -31,6 +31,8 @@ SHEET = [
     ("Chief gear (stars)", [("gear.chief.helmet.stars", "helmet"), ("gear.chief.watch.stars", "watch"),
                             ("gear.chief.jacket.stars", "jacket"), ("gear.chief.pants.stars", "pants"),
                             ("gear.chief.ring.stars", "ring"), ("gear.chief.cane.stars", "cane")]),
+    ("Manual facts", [("manual.pet_slots_unlocked", "pet slots unlocked"), ("manual.hero_generation", "hero generation"),
+                      ("manual.castle_battle_at", "castle battle (UTC)")]),
     ("Alliance", [("alliance.name", "alliance"), ("alliance.tag", "tag"), ("alliance.members", "members"),
                   ("alliance.state_rank", "state rank"), ("alliance.level", "level")]),
 ]

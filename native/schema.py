@@ -122,6 +122,11 @@ _add("alliance.leader", "volatile", "text")
 _add("alliance.power", "volatile", "int")
 _add("alliance.state_rank", "volatile", "int")
 _add("alliance.level", "monotonic", "int")
+# Operator facts no reader can see (set with `snapshot.py --set`); the
+# 'manual' section never runs, so they carry forward until set again.
+_add("manual.pet_slots_unlocked", "monotonic", "int")
+_add("manual.hero_generation", "monotonic", "int")
+_add("manual.castle_battle_at", "volatile", "text")     # ISO 8601 UTC
 _add("alliance.name", "volatile", "text")
 _add("alliance.members", "volatile", "int")
 _add("alliance.cap", "volatile", "int")
@@ -179,6 +184,7 @@ SECTION_OF_PATH_TABLE = (
     ("backpack.", "backpack"),
     ("events.", "events"),
     ("alliance.", "alliance"),
+    ("manual.", "manual"),
 )
 
 ALL_READERS = tuple(sorted({reader for _, reader in SECTION_OF_PATH_TABLE}))

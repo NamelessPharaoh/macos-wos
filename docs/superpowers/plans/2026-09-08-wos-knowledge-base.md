@@ -1988,17 +1988,83 @@ No row is unrescued, untested and silent.
 - **Conflict flags:** Lanes A and D both write `knowledge/` and `tests/` — run D after A merges. T5 and T8 both edit `native/kb.py`; sequence them. T7 edits `native/schema.py`, which no other lane touches, so it is the safest parallel worktree.
 - **Execution:** launch Lane A and Lane C in parallel worktrees now; merge A, then Lane B and Lane D.
 
+## F. Outside-voice decisions (2026-09-08; binding, override A-E where they conflict)
+
+Every finding below was verified against the repo or the cached source files before it was raised.
+
+**F-a (M1 contract: real times, not base times).** The source files ship the calculator author's own buffs (`construction.json settings.constructionSpeed: 0.918`, `troops.json settings.trainingSpeed: 1.8`), which are NOT this account's, so nothing in the vendored data can supply a speed bonus. Task 7 (the stats reader) moves into **M1**, making it four tasks: T1, T2, T3, T7. `native/kb.py` gains
+
+```python
+def speed_bonus_from_sheet(sheet, kind):
+    """kind is construction | research | training. The sheet stores the game's
+    own percentage (128 means +128%); the calculators want a multiplier delta.
+    Returns 0.0 when the stats reader has not run, and the caller is expected
+    to say so rather than present a base time as an ETA."""
+    pct = sheet.get(f"progress.bonus.{kind}_speed")
+    return (float(pct) / 100.0) if pct is not None else 0.0
+```
+
+and `building_time`/`training_time` keep their `speed_bonus` parameter. Every consumer that prints an ETA states whether a bonus was applied. Test: `128 -> 1.28`, absent -> `0.0`. M1's contract now reads: costs, unmet prerequisites, research paths, training figures, and times that reflect the account's real buffs. Power for buildings stays `None` outside the M2 overlay (no open source carries it; verified across all 14 buildings in `construction.json`).
+
+**F-b (calendar leaves M1).** `calendar-data.json` holds five events, every one with `available-after-age: "unknown"`, and D-T4 already makes your observed dates win for the only one that matters. The calendar source entry, its normaliser, its fixture, `next_occurrences`, the `"observed" | "table"` tuple element and C3's tests all move to **M2**, next to the events reader that would consume them. M1's required tables are **buildings, troops, research** (three, not four). `TABLES` in `native/kb.py` lists `events` as optional from the start.
+
+**F-c (the unlock consistency check already exists).** `scripts/capability_report.py:32` imports `from Main.task_menu import TASKS` and walks every gate through `capability.evaluate`; `core/capability.py:255` already emits `feature ... missing from the knowledge base`. A new module in `knowledge/` would duplicate that AND import the task tree, which pulls `usecases` and `core.core`'s import-time `init_database()` into a package this plan declares dependency-free. Decision 3B is superseded: **no `knowledge/unlocks_check.py`**. Instead `scripts/capability_report.py` gains `--check-table`, which prints two lists and exits non-zero when either is non-empty:
+
+- gates referenced by a task but absent from `knowledge/unlocks.json` (zero today, verified),
+- features in the table that no task references (the drift that actually exists today: `alliance_mobilization`, `embassy`).
+
+Task 6 runs `--check-table` after the move and asserts a clean first list.
+
+**F-d (integration fixtures stay gitignored; regeneration documented).** Decision: the five raw source files live in `tests/fixtures/local/knowledge/sources/` and are NOT committed, so `tests/test_knowledge_integration.py` skips on a fresh clone the same way the screen goldens do. To keep that recoverable, `knowledge/README.md` carries the exact regeneration command and the test's skip message names it:
+
+```bash
+mkdir -p tests/fixtures/local/knowledge/sources && cd $_ && \
+for u in \
+  https://raw.githubusercontent.com/wosnerdwarriors/website-index/main/calculator/data/construction.json \
+  https://raw.githubusercontent.com/wosnerdwarriors/website-index/main/calculator/data/troops.json \
+  https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/research-upgrades.json \
+  https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/troop-stats.json \
+  https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/calendar-data.json ; \
+do curl -sSLO "$u"; done
+```
+
+Accepted limitation: the only test that proves `SOURCES`, `NORMALISERS` and `TABLES` agree does not run on a clean checkout.
+
+**F-e (two corrections to binding text).**
+
+1. **The gate test could not fail.** `core/capability.py:62` holds a module-level `_cache` that `load_table()` short-circuits when called with no argument, and line 97 keeps only `features`. Decision 2A's test becomes:
+
+```python
+def test_load_table_finds_the_shipped_unlock_file():
+    """A move that lands without the path change fails open silently
+    (core/capability.py:79-112), so the tmp_path tests cannot catch it."""
+    capability._reset_cache()
+    table, warnings = capability.load_table()
+    assert warnings == []
+    assert table["features"], "the shipped knowledge base is empty or missing"
+```
+
+and A6 Step 1's `_meta` / `_schema` / `_unverified_gates` assertions read the file with a plain `json.load`, since `load_table` discards those keys.
+
+2. **A4 is superseded in its own body.** The code block in A4 that reads `from native.screen import parse_number, parse_duration` gets the line `SUPERSEDED by E1: import from knowledge.util; knowledge/ imports nothing from native/` directly above it, so an implementer reading A4 alone does not undo the layering fix.
+
+### Task list after the outside voice
+
+**M1 (gated, suite green before M2):** T1 fetch/util/refresh/parser move -> T2 normalisers for buildings, troops, research -> T3 calculators incl. `speed_bonus_from_sheet` -> T7 stats reader (parallel lane from the start).
+
+**M2:** T4 cross-check report and overlay -> T5 marks, freshness, report line -> T6 unlock absorption plus `capability_report --check-table` -> calendar table and `next_occurrences` -> optional tables -> T8 item catalogue.
+
 ## GSTACK REVIEW REPORT
 
 | Review | Trigger | Why | Runs | Status | Findings |
 |--------|---------|-----|------|--------|----------|
-| CEO Review | `/plan-ceo-review` | Scope & strategy | 3 | CLEAR (2026-09-08) | 5 proposals, 5 accepted, 0 deferred; 2 adversarial passes (34 issues, all folded); 4 cross-model tensions decided |
-| Codex Review | `/codex review` | Independent 2nd opinion | 4 | ISSUES FOUND (Claude subagent; Codex model pin unusable) | 8 problems, every checkable one verified true; 4 became user decisions, 4 became plan fixes |
-| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (2026-09-08, chief-state plan) | STALE for this plan: it graded the chief-state plan, not the knowledge base |
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 3 | CLEAR (2026-09-08) | 5 proposals, 5 accepted, 0 deferred; 2 adversarial passes, 4 cross-model tensions |
+| Codex Review | `/codex review` | Independent 2nd opinion | 5 | ISSUES FOUND (Claude subagent; Codex pinned to an unusable model) | 6 problems this pass, every checkable one verified true; 5 became decisions |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 2 | CLEAR (2026-09-08) | 14 issues: 3 architecture, 2 quality, 3 test gaps + 1 mandatory regression, 1 performance, 5 outside-voice tensions; 0 critical gaps |
 | Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run (no UI in this plan) |
 | DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | not run |
 
-- **CROSS-MODEL:** the outside voice contradicted the review on four points and won each on evidence: the sheet and the cost table share only 8 of 14 buildings (storehouse, the building upgrading today, has no open cost source), the shipped SvS anchor misses this state by two days, Task 4's cross-check yielded nothing at the account's current level, and five extra tables were unexamined shapes. The user resolved all four: assume-met plus popup costs, observed-date anchors, a report-only cross-check scoped to level 26 and up, and optional tables.
-- **VERDICT:** CEO CLEARED — eng review recommended before implementation (the existing one predates this plan).
+- **CROSS-MODEL:** the outside voice contradicted this review on five points and was right on all five, each verified before it was raised: `native/screen.py` imports cv2 and the driver, so amendment A4 would have made the data layer depend on the vision layer; the vendored speed settings belong to the calculator's author, so every M1 time was a base time; `scripts/capability_report.py:32` already walks every gate, so the new check module was duplication that would have imported the task tree into a dependency-free package; the calendar table carries five rows whose only useful anchor is already overridden by observed dates; and the gate test could not fail because `core/capability.py:62` caches the no-argument call. All five resolved: stats reader pulled into M1, calendar deferred to M2, `--check-table` flag instead of a module, corrected gate test, A4 marked superseded in its own body.
+- **VERDICT:** CEO + ENG CLEARED — ready to implement M1 (tasks 1, 2, 3, 7).
 
 NO UNRESOLVED DECISIONS

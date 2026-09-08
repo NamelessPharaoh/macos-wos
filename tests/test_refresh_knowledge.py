@@ -2,6 +2,8 @@
 failure isolation (A2) and the required/optional split (R3, F-b, E7)."""
 import json
 import os
+import subprocess
+import sys
 
 import pytest
 
@@ -146,6 +148,35 @@ def test_fetch_text_stays_a_patchable_module_level_name():
 
 
 # ----------------------------------------------------------------------------- main / refresh
+def test_script_runs_as_a_command_from_the_repo_root():
+    """tests/conftest.py puts the repo root on sys.path, so an in-process
+    import cannot catch a broken script entry point. The documented command
+    is `uv run python scripts/refresh_knowledge.py`, which resolves imports
+    from scripts/, not the repo root -- a bare `from knowledge.fetch import
+    ...` at module scope raises ModuleNotFoundError there without the
+    sys.path.insert(0, REPO) A1 requires above those imports."""
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    result = subprocess.run(
+        [sys.executable, os.path.join(repo, "scripts", "refresh_knowledge.py"), "--help"],
+        capture_output=True, text=True, cwd=repo, timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--write" in result.stdout
+
+
+def test_script_runs_as_a_command_from_a_different_cwd(tmp_path):
+    """A1's wording ('so the script also runs from another cwd') is about
+    the invocation directory, not just the repo root -- run it from tmp_path
+    to prove sys.path.insert(0, REPO) does not depend on cwd."""
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    result = subprocess.run(
+        [sys.executable, os.path.join(repo, "scripts", "refresh_knowledge.py"), "--help"],
+        capture_output=True, text=True, cwd=str(tmp_path), timeout=60,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "--write" in result.stdout
+
+
 def test_main_dry_run_prints_diff_and_does_not_write(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
     monkeypatch.setattr(rk, "NORMALISERS", {"demo": lambda raw: {"row": {"1": {"v": raw["v"]}}}})

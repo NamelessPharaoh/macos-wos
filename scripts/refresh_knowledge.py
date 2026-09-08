@@ -29,12 +29,19 @@ import sys
 from collections import namedtuple
 from datetime import datetime, timezone
 
+# Run by path ("uv run python scripts/refresh_knowledge.py"), sys.path[0] is
+# scripts/, not the repo root, so `knowledge` is not importable without this
+# (A1). tests/conftest.py already puts the repo root on sys.path, which is
+# why an in-process import of this module can hide the bug -- the regression
+# test below invokes the script as a subprocess to catch it for real.
+REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, REPO)
+
 # fetch_text isn't called directly here, but R2 keeps it imported so
 # `rk.fetch_text` stays a valid monkeypatch.setattr(rk, ...) target.
-from knowledge.fetch import FetchError, fetch_json, fetch_text  # noqa: F401
-from knowledge.util import write_table
+from knowledge.fetch import FetchError, fetch_json, fetch_text  # noqa: E402,F401
+from knowledge.util import write_table  # noqa: E402
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KNOWLEDGE_DIR = os.path.join(REPO, "knowledge")
 LOCAL_DIR = os.path.join(KNOWLEDGE_DIR, "local")
 NORMALISER_VERSION = 1

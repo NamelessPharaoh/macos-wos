@@ -33,21 +33,16 @@ guarded, prints its own failure line (`FETCH FAILED` / `NORMALISE FAILED`)
 and the run moves on. `verified_in_game` marks carried over from a previous
 fetch survive a refresh whenever the row's own costs did not change.
 
-## Regenerating the integration fixtures
+## The registry/table linkage is tested, not just documented
 
-`tests/test_knowledge_integration.py` proves `SOURCES`, `NORMALISERS` and
-`native/kb.py`'s `TABLES` agree by running the refresh against real cached
-copies of the five source files. Those copies live in
-`tests/fixtures/local/knowledge/sources/` (gitignored, so the test skips on
-a fresh clone); to regenerate them:
-
-```bash
-mkdir -p tests/fixtures/local/knowledge/sources && cd $_ && \
-for u in \
-  https://raw.githubusercontent.com/wosnerdwarriors/website-index/main/calculator/data/construction.json \
-  https://raw.githubusercontent.com/wosnerdwarriors/website-index/main/calculator/data/troops.json \
-  https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/research-upgrades.json \
-  https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/troop-stats.json \
-  https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/calendar-data.json ; \
-do curl -sSLO "$u"; done
-```
+The chain is: a normaliser's output key (`knowledge/normalise.py`) becomes a
+committed `<table>.json`'s top-level key (`scripts/refresh_knowledge.py`
+writes it), which becomes a `native/kb.py` `TABLES` key that `native/kb.py`
+reads back as `doc[key]`. Two tests together prove the whole chain holds:
+`tests/test_refresh_knowledge.py::test_registry_shape_holds_now_and_after_task2`
+proves `SOURCES | OPTIONAL_SOURCES == NORMALISERS`; `tests/test_knowledge_integration.py`
+proves that every `native/kb.py` `TABLES` key matches the single non-`_meta`
+top-level key of its committed file. Neither test needs fixtures -- the four
+required tables are committed in this repo, and the optional `events`
+(`calendar.json`, not shipped in M1) is skipped rather than failed when its
+file is absent.

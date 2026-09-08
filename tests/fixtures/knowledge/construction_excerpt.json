@@ -1,0 +1,9 @@
+{"version": "3.1c-rev2", "lastUpdatedDate": "2026-05-01", "settings": {}, "buildingLevels": {
+  "Furnace": [
+    {"level": 0, "meat": 0, "wood": 0, "coal": 0, "iron": 0, "fireCrystals": 0, "refinedFireCrystals": 0, "seconds": 0, "prerequisites": {}},
+    {"level": 27, "meat": 140000000, "wood": 140000000, "coal": 24000000, "iron": 7400000, "fireCrystals": 0, "refinedFireCrystals": 0, "seconds": 2187780,
+     "prerequisites": {"Command Center": 1, "Coal Mine": 3, "Embassy": 26, "Hunter's Hut": 6, "Infantry Camp": 24, "Infirmary": 1, "Iron Mine": 5, "Lancer Camp": 26, "Marksman Camp": 25, "Research Center": 23, "Sawmill": 1, "Shelter": 3}},
+    {"level": 30, "meat": 300000000, "wood": 300000000, "coal": 60000000, "iron": 15000000, "fireCrystals": 0, "refinedFireCrystals": 0, "seconds": 3472020,
+     "prerequisites": {"Command Center": 1, "Coal Mine": 3, "Embassy": 29, "Hunter's Hut": 6, "Infantry Camp": 28, "Infirmary": 1, "Iron Mine": 5, "Lancer Camp": 26, "Marksman Camp": 29, "Research Center": 27, "Sawmill": 1, "Shelter": 3}}],
+  "Hunter's Hut": [{"level": 0, "meat": 0, "wood": 0, "coal": 0, "iron": 0, "fireCrystals": 0, "refinedFireCrystals": 0, "seconds": 0, "prerequisites": {}}]
+}}

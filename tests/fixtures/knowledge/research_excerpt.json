@@ -1,0 +1,4 @@
+{"Growth": {"tooling-up-i": {"row": 1, "name": "Tooling Up I", "stat": "construction-speed", "troop-type": null, "levels": {
+  "1": {"stat-addition": 0.4, "power": 2000, "cost": {"meat": 2700, "wood": 2700, "coal": 540, "iron": 130, "steel": 160}, "research-time-seconds": 2, "requirements": {"research-items": {}, "buildings": {"research-center": 1}}},
+  "2": {"stat-addition": 0.4, "power": 2000, "cost": {"meat": 3700, "wood": 3700, "coal": 750, "iron": 180, "steel": 220}, "research-time-seconds": 40, "requirements": {"research-items": {"tooling-up-i": 1}, "buildings": {"research-center": 2}}}}}},
+ "Economy": {}, "Battle": {}}

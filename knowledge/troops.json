@@ -1,0 +1,305 @@
+{
+  "_meta": {
+    "source_url": "https://raw.githubusercontent.com/wosnerdwarriors/website-index/main/calculator/data/troops.json",
+    "source_commit": "f1defd3d7d80",
+    "fetched_at": "2026-09-08T15:01:57Z",
+    "licence": "wosnerds.com: 'All data is free to copy and use'; no LICENSE file in the repo; treated as revocable, attribution kept in _meta",
+    "normaliser_version": 1
+  },
+  "training": {
+    "infantry": {
+      "1": {
+        "points": 3,
+        "seconds": 12,
+        "meat": 36,
+        "wood": 27,
+        "coal": 7,
+        "iron": 2
+      },
+      "2": {
+        "points": 4,
+        "seconds": 17,
+        "meat": 58,
+        "wood": 44,
+        "coal": 10,
+        "iron": 3
+      },
+      "3": {
+        "points": 5,
+        "seconds": 24,
+        "meat": 92,
+        "wood": 69,
+        "coal": 17,
+        "iron": 4
+      },
+      "4": {
+        "points": 8,
+        "seconds": 32,
+        "meat": 120,
+        "wood": 90,
+        "coal": 21,
+        "iron": 5
+      },
+      "5": {
+        "points": 12,
+        "seconds": 44,
+        "meat": 156,
+        "wood": 117,
+        "coal": 27,
+        "iron": 6
+      },
+      "6": {
+        "points": 18,
+        "seconds": 60,
+        "meat": 186,
+        "wood": 140,
+        "coal": 33,
+        "iron": 7
+      },
+      "7": {
+        "points": 25,
+        "seconds": 83,
+        "meat": 279,
+        "wood": 210,
+        "coal": 49,
+        "iron": 11
+      },
+      "8": {
+        "points": 35,
+        "seconds": 113,
+        "meat": 558,
+        "wood": 419,
+        "coal": 98,
+        "iron": 21
+      },
+      "9": {
+        "points": 45,
+        "seconds": 131,
+        "meat": 1394,
+        "wood": 1046,
+        "coal": 244,
+        "iron": 51
+      },
+      "10": {
+        "points": 60,
+        "seconds": 152,
+        "meat": 2788,
+        "wood": 2091,
+        "coal": 488,
+        "iron": 102
+      },
+      "11": {
+        "points": 75,
+        "seconds": 180,
+        "meat": 6970,
+        "wood": 5228,
+        "coal": 1220,
+        "iron": 253
+      },
+      "12": {
+        "points": 90,
+        "seconds": 215,
+        "meat": 6970,
+        "wood": 5228,
+        "coal": 1220,
+        "iron": 254
+      }
+    },
+    "lancer": {
+      "1": {
+        "points": 3,
+        "seconds": 12,
+        "meat": 32,
+        "wood": 30,
+        "coal": 7,
+        "iron": 2
+      },
+      "2": {
+        "points": 4,
+        "seconds": 17,
+        "meat": 51,
+        "wood": 48,
+        "coal": 10,
+        "iron": 3
+      },
+      "3": {
+        "points": 5,
+        "seconds": 24,
+        "meat": 81,
+        "wood": 76,
+        "coal": 16,
+        "iron": 4
+      },
+      "4": {
+        "points": 8,
+        "seconds": 32,
+        "meat": 105,
+        "wood": 99,
+        "coal": 21,
+        "iron": 5
+      },
+      "5": {
+        "points": 12,
+        "seconds": 44,
+        "meat": 136,
+        "wood": 129,
+        "coal": 27,
+        "iron": 7
+      },
+      "6": {
+        "points": 18,
+        "seconds": 60,
+        "meat": 163,
+        "wood": 154,
+        "coal": 32,
+        "iron": 8
+      },
+      "7": {
+        "points": 25,
+        "seconds": 83,
+        "meat": 244,
+        "wood": 231,
+        "coal": 48,
+        "iron": 11
+      },
+      "8": {
+        "points": 35,
+        "seconds": 113,
+        "meat": 488,
+        "wood": 461,
+        "coal": 95,
+        "iron": 22
+      },
+      "9": {
+        "points": 45,
+        "seconds": 131,
+        "meat": 1220,
+        "wood": 1151,
+        "coal": 237,
+        "iron": 55
+      },
+      "10": {
+        "points": 60,
+        "seconds": 152,
+        "meat": 2440,
+        "wood": 2301,
+        "coal": 474,
+        "iron": 109
+      },
+      "11": {
+        "points": 75,
+        "seconds": 180,
+        "meat": 6099,
+        "wood": 5751,
+        "coal": 1185,
+        "iron": 271
+      },
+      "12": {
+        "points": 90,
+        "seconds": 215,
+        "meat": 6099,
+        "wood": 5751,
+        "coal": 1186,
+        "iron": 271
+      }
+    },
+    "marksman": {
+      "1": {
+        "points": 3,
+        "seconds": 12,
+        "meat": 23,
+        "wood": 34,
+        "coal": 6,
+        "iron": 2
+      },
+      "2": {
+        "points": 4,
+        "seconds": 17,
+        "meat": 36,
+        "wood": 54,
+        "coal": 9,
+        "iron": 4
+      },
+      "3": {
+        "points": 5,
+        "seconds": 24,
+        "meat": 58,
+        "wood": 86,
+        "coal": 15,
+        "iron": 5
+      },
+      "4": {
+        "points": 8,
+        "seconds": 32,
+        "meat": 75,
+        "wood": 111,
+        "coal": 19,
+        "iron": 6
+      },
+      "5": {
+        "points": 12,
+        "seconds": 44,
+        "meat": 97,
+        "wood": 144,
+        "coal": 24,
+        "iron": 8
+      },
+      "6": {
+        "points": 18,
+        "seconds": 60,
+        "meat": 117,
+        "wood": 173,
+        "coal": 29,
+        "iron": 10
+      },
+      "7": {
+        "points": 25,
+        "seconds": 83,
+        "meat": 175,
+        "wood": 258,
+        "coal": 44,
+        "iron": 14
+      },
+      "8": {
+        "points": 35,
+        "seconds": 113,
+        "meat": 349,
+        "wood": 516,
+        "coal": 87,
+        "iron": 28
+      },
+      "9": {
+        "points": 45,
+        "seconds": 131,
+        "meat": 872,
+        "wood": 1290,
+        "coal": 217,
+        "iron": 70
+      },
+      "10": {
+        "points": 60,
+        "seconds": 152,
+        "meat": 1743,
+        "wood": 2579,
+        "coal": 433,
+        "iron": 140
+      },
+      "11": {
+        "points": 75,
+        "seconds": 180,
+        "meat": 4357,
+        "wood": 6448,
+        "coal": 1081,
+        "iron": 349
+      },
+      "12": {
+        "points": 90,
+        "seconds": 215,
+        "meat": 4357,
+        "wood": 6447,
+        "coal": 1081,
+        "iron": 349
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+{"events": {"svs-castle": {"category": "svs", "entry-name": "SVS Castle Battle", "repeat-every-days": 28, "same-time-in-every-state": true, "event-length-hours": 6, "global-start-time-anchor": "2024-10-12T12:00:00Z", "available-after-age": "unknown"}},
+ "events-template": {}, "packs": {}}

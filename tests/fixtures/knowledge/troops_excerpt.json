@@ -1,0 +1,6 @@
+{"variables": [], "settings": {"trainingCapacity": 1581, "trainingSpeed": 1.8, "highestTier": 11, "baseTier": 10}, "troopCosts": {
+  "infantry": [{"tier": 1, "points": 3, "baseSeconds": 12, "adjustedSeconds": 4.28, "meat": 36, "wood": 27, "coal": 7, "iron": 2},
+               {"tier": 9, "points": 45, "baseSeconds": 131, "adjustedSeconds": 46.78, "meat": 1394, "wood": 1046, "coal": 244, "iron": 51}],
+  "lancer": [{"tier": 9, "points": 45, "baseSeconds": 131, "adjustedSeconds": 46.78, "meat": 1394, "wood": 1046, "coal": 244, "iron": 51}],
+  "marksman": [{"tier": 9, "points": 45, "baseSeconds": 131, "adjustedSeconds": 46.78, "meat": 1394, "wood": 1046, "coal": 244, "iron": 51}]},
+ "upgradePlans": []}

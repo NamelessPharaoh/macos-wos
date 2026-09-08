@@ -1,0 +1,4 @@
+{"troop-stats": {"infantry": [
+  {"Troop Type": "infantry", "Troop Level": 1, "troop level name": "Rookie", "FC level": 0, "power": 3, "defense": 4, "lethality": 1, "load": 108, "attack": 1, "health": 6, "speed": 11},
+  {"Troop Type": "infantry", "Troop Level": 9, "troop level name": "Supreme", "FC level": 0, "power": 50, "defense": 12, "lethality": 9, "load": 330, "attack": 9, "health": 14, "speed": 11}],
+ "lancer": [], "marksman": []}}

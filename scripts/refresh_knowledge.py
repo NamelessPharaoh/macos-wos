@@ -41,6 +41,7 @@ sys.path.insert(0, REPO)
 # `rk.fetch_text` stays a valid monkeypatch.setattr(rk, ...) target.
 from knowledge.fetch import FetchError, fetch_json, fetch_text  # noqa: E402,F401
 from knowledge.util import write_table  # noqa: E402
+from knowledge.normalise import NORMALISERS  # noqa: E402  (Task 2)
 
 KNOWLEDGE_DIR = os.path.join(REPO, "knowledge")
 LOCAL_DIR = os.path.join(KNOWLEDGE_DIR, "local")
@@ -68,7 +69,6 @@ SOURCES = {
 OPTIONAL_SOURCES = {
     "calendar": _raw("wosnerdwarriors/wos-data", "data/calendar-data.json"),
 }
-NORMALISERS = {}   # table -> callable(raw) -> doc without _meta; filled by knowledge.normalise (Task 2)
 LOCAL = {}         # name -> callable(opener) -> (relative path, doc); filled by knowledge.local_sources (Task 4)
 
 

@@ -29,7 +29,9 @@ import sys
 from collections import namedtuple
 from datetime import datetime, timezone
 
-from knowledge.fetch import FetchError, fetch_json, fetch_text  # noqa: F401 (R2: rk.fetch_text stays importable/patchable even though this module only calls fetch_json)
+# fetch_text isn't called directly here, but R2 keeps it imported so
+# `rk.fetch_text` stays a valid monkeypatch.setattr(rk, ...) target.
+from knowledge.fetch import FetchError, fetch_json, fetch_text  # noqa: F401
 from knowledge.util import write_table
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

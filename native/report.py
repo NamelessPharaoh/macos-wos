@@ -24,6 +24,13 @@ SHEET = [
                 ("troops.totals.lancer", "lancer"), ("troops.totals.marksman", "marksman"),
                 ("troops.wounded.value", "injured"), ("troops.march_queue.used", "marches used"),
                 ("troops.march_queue.cap", "marches")]),
+    ("City", [("city.buildings.furnace", "furnace"), ("city.buildings.storehouse", "storehouse"),
+              ("city.buildings.research_center", "research center"), ("city.buildings.infantry_camp", "infantry camp"),
+              ("city.buildings.lancer_camp", "lancer camp"), ("city.buildings.marksman_camp", "marksman camp"),
+              ("research.current.name", "research now")]),
+    ("Chief gear (stars)", [("gear.chief.helmet.stars", "helmet"), ("gear.chief.watch.stars", "watch"),
+                            ("gear.chief.jacket.stars", "jacket"), ("gear.chief.pants.stars", "pants"),
+                            ("gear.chief.ring.stars", "ring"), ("gear.chief.cane.stars", "cane")]),
     ("Alliance", [("alliance.name", "alliance"), ("alliance.tag", "tag"), ("alliance.members", "members"),
                   ("alliance.state_rank", "state rank"), ("alliance.level", "level")]),
 ]
@@ -71,8 +78,13 @@ def build(conn, player_id, snapshot_id=None):
         elif st == "carried":
             warnings["carried"] += 1
     series = {p: model.series(conn, player_id, p) for p in SPARKS}
+    heroes = defaultdict(dict)
+    for path, row in model.latest_dynamic(conn, player_id, "heroes").items():
+        parts = path.split(".")
+        if len(parts) == 3 and parts[0] == "heroes":
+            heroes[parts[1]][parts[2]] = row["value_num"] if row["value_num"] is not None else row["value_text"]
     return {"snapshot": dict(snap) if snap else None, "latest": latest, "deltas": deltas,
-            "warnings": warnings, "sections": sections, "series": series}
+            "warnings": warnings, "sections": sections, "series": series, "heroes": dict(heroes)}
 
 
 def render_text(data):
@@ -94,6 +106,12 @@ def render_text(data):
             elif d and d[0] is None:
                 change = "  (n/a)"
             out.append(f"  {label:26s} {_fmt(row):>16s}{change}")
+    heroes = data.get("heroes") or {}
+    if heroes:
+        out.append(f"\nHeroes ({len(heroes)})")
+        for key, hv in sorted(heroes.items(), key=lambda kv: -(kv[1].get("power") or 0))[:20]:
+            out.append(f"  {hv.get('name', key):16s} {str(hv.get('rarity', '-')):7s} lv {str(hv.get('level', '-')):>3s} "
+                       f"{str(hv.get('stars', '-'))}* {int(hv.get('power') or 0):>12,}")
     w = data["warnings"]
     out.append("\nWarnings")
     bad = [f"  section {n}: {s}" for n, s in data["sections"].items() if s not in ("ok",)]

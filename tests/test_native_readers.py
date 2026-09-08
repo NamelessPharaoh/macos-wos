@@ -110,3 +110,53 @@ def test_derive_furnace_fills_fc_sub_ordinal():
     assert prov["progress.furnace.ordinal"]["method"] == "derived"
     assert deep_merge({"a": {"b": 1}}, {"a": {"c": 2}}) == {"a": {"b": 1, "c": 2}}
     derive_furnace({"progress": {}}, {})  # no level: no-op
+
+
+def test_queues_reads_build_training_and_research():
+    from native.readers import queues, ReaderResult
+    img, items, path = _frame("queues")
+    r = queues.parse(ReaderResult("queues"), img, items, path)
+    d = r.doc
+    assert d["city"]["queues"]["1"] == {"building": "furnace", "remaining_s": 9 * 86400 + 9 * 3600 + 23 * 60 + 44}
+    assert d["city"]["queues"]["2"]["building"] == "storehouse"
+    assert d["troops"]["training"]["infantry"] == {"state": "completed", "remaining_s": 0}
+    assert d["research"]["current"] == {"name": "idle", "remaining_s": 0}
+    assert r.settle(queues.EXPECTED).status == "ok"
+
+
+def test_building_popup_level():
+    from native.readers import buildings
+    img, items, path = _frame("building_popup")
+    h, w = img.shape[:2]
+    got = buildings.popup_level(items, h, w)
+    assert got is not None and got[0] == "research_center" and got[1] == 27
+
+
+def test_gear_slots_tier_stars_charms():
+    from native.readers import gear, ReaderResult
+    img, items, path = _frame("profile")
+    r = gear.parse(ReaderResult("gear"), img, items, path)
+    chief = r.doc["gear"]["chief"]
+    assert {k: v["stars"] for k, v in chief.items()} == {"helmet": 1, "watch": 1, "jacket": 0, "pants": 3, "ring": 3, "cane": 2}
+    assert chief["jacket"]["tier"] == "purple" and chief["jacket"]["rank"] == 2
+    assert chief["helmet"]["tier"] == "blue" and chief["helmet"]["rank"] == 1
+    assert len(r.doc["gear"]["charms"]["ring"]) == 3
+    assert r.settle(gear.EXPECTED).status == "ok"
+
+
+def test_hero_card_and_roster():
+    from native.readers import heroes, ReaderResult
+    from native.readers.imgcues import hero_card_stars, rarity_from_hue
+    img, items, path = _frame("hero_card")
+    r = ReaderResult("heroes")
+    assert heroes.parse_card(r, img, items, path, "mythic") == "molly"
+    m = r.doc["heroes"]["molly"]
+    assert m["name"] == "Molly" and m["rarity"] == "mythic" and m["level"] == 70
+    assert m["power"] == 1_034_920 and m["troops_capacity"] == 13_070 and m["escorts"] == 10
+    assert (m["exp"], m["exp_next"]) == (177_269, 870_000) and m["stars"] == 4
+    assert hero_card_stars(img) == (4, True)
+    rimg, ritems, _ = _frame("heroes_roster")
+    h, w = rimg.shape[:2]
+    cards = heroes.roster_cards(ritems, h, w)
+    assert len(cards) == 12 and all(c[2] == 70 for c in cards)
+    assert [rarity_from_hue(rimg, cx - 0.05, cy - 0.07) for cx, cy, _ in cards][:5] == ["mythic"] * 4 + ["epic"]

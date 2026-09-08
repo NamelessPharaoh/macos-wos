@@ -496,7 +496,9 @@ TROOP_TYPES = ("infantry", "lancer", "marksman")
 
 
 def slug(name):
-    return re.sub(r"[^a-z0-9]+", "_", str(name).lower()).strip("_")
+    """'Hunter's Hut' -> 'hunters_hut' (apostrophes dropped, not turned into
+    separators), 'research-center' -> 'research_center'."""
+    return re.sub(r"[^a-z0-9]+", "_", re.sub(r"['’]", "", str(name).lower())).strip("_")
 
 
 def _int(v):
@@ -659,10 +661,11 @@ def test_load_reads_every_table(k):
 
 def test_building_cost_and_time(k):
     c = kb.building_cost("furnace", 27, 28, kb=k)
-    assert c["meat"] == 190_000_000 and c["iron"] == 9_900_000 and c["fire_crystals"] == 0
+    assert c["meat"] == 190_000_000 and c["iron"] == 9_900_000
+    assert c.get("fire_crystals", 0) == 0
     assert kb.building_cost("furnace", 27, 27, kb=k) == {}
-    assert kb.building_time("furnace", 27, 28, kb=k) == 2_522_820
-    assert kb.building_time("furnace", 27, 28, speed_bonus=1.0, kb=k) == 1_261_410
+    assert kb.building_time("furnace", 27, 28, kb=k) == 2_515_920
+    assert kb.building_time("furnace", 27, 28, speed_bonus=1.0, kb=k) == 1_257_960
     with pytest.raises(KeyError):
         kb.building_cost("furnace", 27, 99, kb=k)
 
@@ -706,7 +709,7 @@ def test_furnace_ordinal():
     assert [kb.furnace_ordinal(x) for x in ("27", "30-3", "FC1", "FC 10", "FC9-4")] == [27, 33, 35, 80, 79]
 ```
 
-And the fixture directory `tests/fixtures/knowledge/kbdir/` with five files built from the excerpts of Task 2 plus furnace level 28 (`meat 190000000, wood 190000000, coal 39000000, iron 9900000, seconds 2522820, prerequisites {"embassy": 27, "research_center": 27, ...same others as 27}`): generate them once with
+And the fixture directory `tests/fixtures/knowledge/kbdir/` with five files built from the excerpts of Task 2 plus furnace level 28 (`meat 190000000, wood 190000000, coal 39000000, iron 9900000, seconds 2515920, prerequisites {"embassy": 27, "research_center": 27, ...same others as 27}`): generate them once with
 ```bash
 uv run python - <<'EOF'
 import json, os
@@ -714,7 +717,7 @@ from knowledge import normalise as n
 FIX = "tests/fixtures/knowledge"; OUT = os.path.join(FIX, "kbdir"); os.makedirs(OUT, exist_ok=True)
 raw = json.load(open(f"{FIX}/construction_excerpt.json"))
 r27 = next(l for l in raw["buildingLevels"]["Furnace"] if l["level"] == 27)
-raw["buildingLevels"]["Furnace"].append({**r27, "level": 28, "meat": 190000000, "wood": 190000000, "coal": 39000000, "iron": 9900000, "seconds": 2522820,
+raw["buildingLevels"]["Furnace"].append({**r27, "level": 28, "meat": 190000000, "wood": 190000000, "coal": 39000000, "iron": 9900000, "seconds": 2515920,
     "prerequisites": {**r27["prerequisites"], "Embassy": 27, "Research Center": 27}})
 meta = {"_meta": {"source_url": "fixture", "source_commit": "fixture", "fetched_at": "2026-09-08T00:00:00Z", "licence": "fixture", "normaliser_version": 1}}
 for name, fn, src in (("buildings", n.buildings, raw), ("troops", n.troops, json.load(open(f"{FIX}/troops_excerpt.json"))),
@@ -982,7 +985,7 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 `tests/fixtures/knowledge/wostools_chunk_excerpt.js` (the shape of the Next.js data literal, minified):
 ```js
-var a=1;let b={name:"Furnace",levels:[{level:27,meat:14e7,wood:14e7,coal:24e6,iron:74e5,fireCrystal:0,refined:0,time:2187780},{level:28,meat:19e7,wood:19e7,coal:39e6,iron:99e5,fireCrystal:0,refined:0,time:2522820}]},c={name:"Embassy",levels:[{level:1,meat:0,wood:0,coal:0,iron:0,fireCrystal:0,refined:0,time:0}]};export{b,c};
+var a=1;let b={name:"Furnace",levels:[{level:27,meat:14e7,wood:14e7,coal:24e6,iron:74e5,fireCrystal:0,refined:0,time:2187780},{level:28,meat:19e7,wood:19e7,coal:39e6,iron:99e5,fireCrystal:0,refined:0,time:2515920}]},c={name:"Embassy",levels:[{level:1,meat:0,wood:0,coal:0,iron:0,fireCrystal:0,refined:0,time:0}]};export{b,c};
 ```
 
 - [ ] **Step 2: Write the failing tests**
@@ -1026,17 +1029,17 @@ def test_wiki_furnace_row():
 
 def test_wostools_buildings_from_chunk():
     doc = ls.wostools_buildings(_read("wostools_chunk_excerpt.js"))
-    assert doc["buildings"]["furnace"]["28"]["meat"] == 190_000_000 and doc["buildings"]["furnace"]["28"]["seconds"] == 2_522_820
+    assert doc["buildings"]["furnace"]["28"]["meat"] == 190_000_000 and doc["buildings"]["furnace"]["28"]["seconds"] == 2_515_920
     assert "embassy" in doc["buildings"]
     assert ls.wostools_buildings("var x = 1;") == {}
 
 
 def test_crosscheck_marks_disputed_and_appends_fc_rows():
     committed = {"furnace": {"28": {"meat": 190_000_000, "wood": 190_000_000, "coal": 39_000_000, "iron": 9_900_000,
-                                    "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_522_820,
+                                    "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920,
                                     "prerequisites": {}, "verified_in_game": None}}}
     wd = {"furnace": {"28": {"label": "28", "meat": 190_000_000, "wood": 190_000_000, "coal": 40_000_000, "iron": 9_900_000,
-                             "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_522_820, "power": 1_213_100, "prerequisites": {}},
+                             "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920, "power": 1_213_100, "prerequisites": {}},
                       "31": {"label": "30-1", "meat": 67_000_000, "wood": 67_000_000, "coal": 13_000_000, "iron": 3_300_000,
                              "fire_crystals": 132, "refined_fire_crystals": 0, "seconds": 604_800, "power": 1_580_900, "prerequisites": {}}}}
     out, lines = ls.crosscheck(committed, {"whiteoutdata": wd})
@@ -1068,7 +1071,7 @@ import json
 import re
 
 from knowledge.normalise import slug
-from native.kb import furnace_ordinal
+from knowledge.util import furnace_ordinal  # (B9)
 
 WHITEOUTDATA_FURNACE = "https://whiteoutdata.com/buildings/furnace/"
 WIKI_FURNACE = "https://www.whiteoutsurvival.wiki/buildings/furnace/"
@@ -1210,17 +1213,17 @@ def wostools_buildings(js):
 
 
 def _fetch_whiteoutdata(opener):
-    from scripts.refresh_knowledge import fetch_text
+    from knowledge.fetch import fetch_text  # (A1)
     return "whiteoutdata-furnace.json", whiteoutdata_furnace(fetch_text(WHITEOUTDATA_FURNACE, opener))
 
 
 def _fetch_wiki(opener):
-    from scripts.refresh_knowledge import fetch_text
+    from knowledge.fetch import fetch_text  # (A1)
     return "wiki-furnace.json", wiki_furnace(fetch_text(WIKI_FURNACE, opener))
 
 
 def _fetch_wostools(opener):
-    from scripts.refresh_knowledge import fetch_text
+    from knowledge.fetch import fetch_text  # (A1)
     page = fetch_text(WOSTOOLS_BUILDINGS, opener)
     m = re.search(r'src="([^"]*_next/static/chunks/app/building-calculator/page-[^"]+\.js)"', page)
     if not m:
@@ -1367,7 +1370,7 @@ def next_level_label(ordinal):
 def mark_verified(table, key, level, snapshot_id, directory=None):
     """Record that a screen read agreed with a row; the planner trusts
     verified rows first and the briefing lists unverified ones it relies on."""
-    from scripts.refresh_knowledge import write_table
+    from knowledge.util import write_table  # (B9)
     directory = directory or KNOWLEDGE_DIR
     fname = {"buildings": "buildings.json", "research": "research.json"}[table]
     path = os.path.join(directory, fname)
@@ -1409,8 +1412,530 @@ Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>"
 
 ---
 
+---
+
+## CEO review amendments (2026-09-08, all approved; binding over the tasks above)
+
+### A1. `knowledge/fetch.py` replaces the fetch helpers in Task 1 (decision 1A)
+
+Create `knowledge/fetch.py`; `scripts/refresh_knowledge.py` and `knowledge/local_sources.py` import from it. Delete `_open`, `fetch_json`, `fetch_text` from the script (keep `source_commit` there, calling `fetch.fetch_json`). Remove the function-scope imports in `local_sources._fetch_*`.
+
+```python
+# knowledge/fetch.py
+"""One HTTP path for every knowledge source: a browser-like User-Agent, a
+60 s timeout, one request per call, no retries (the refresh prints the
+failure and moves on; the user re-runs)."""
+import json
+import urllib.request
+
+USER_AGENT = "Mozilla/5.0 (Macintosh) wos-bot knowledge refresh (one request per table)"
+
+
+class FetchError(RuntimeError):
+    """Named wrapper so the refresh can print `FetchError: <url>: <cause>`."""
+
+
+def open_url(url, headers=None):
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
+    return urllib.request.urlopen(req, timeout=60)
+
+
+def fetch_text(url, opener=None):
+    try:
+        with (opener or open_url)(url) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise FetchError(f"{url}: {exc.__class__.__name__}: {exc}") from exc
+
+
+def fetch_json(url, opener=None):
+    text = fetch_text(url, opener)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise FetchError(f"{url}: not JSON ({exc.msg} at char {exc.pos}); first bytes: {text[:80]!r}") from exc
+```
+(`import urllib.error` alongside `urllib.request`.) Tests in `tests/test_refresh_knowledge.py` that exercised `rk.fetch_json` move to `tests/test_knowledge_fetch.py` and add: a fake opener raising `urllib.error.HTTPError(url, 429, "rate", {}, None)` yields `FetchError` whose message contains `429`; a body of `<html>` yields `FetchError` containing `not JSON`.
+
+### A2. Per-table failures in the refresh (decision 2A)
+
+In `scripts/refresh_knowledge.py`:
+
+```python
+def source_commit(repo, opener=None):
+    """Short SHA of main; 'unknown' when GitHub's API is unreachable or rate
+    limited (60/h unauthenticated), so a table still refreshes with its date."""
+    try:
+        data = fetch_json(f"https://api.github.com/repos/{repo}/commits/main", opener=opener)
+        return str(data["sha"])[:12]
+    except (FetchError, KeyError, TypeError) as exc:
+        print(f"  commit lookup failed for {repo}: {exc}; recording 'unknown'")
+        return "unknown"
+
+
+def refresh(table, write, opener=None):
+    """Returns the diff lines, or None when the table failed (printed, named)."""
+    source = SOURCES[table]
+    try:
+        raw = fetch_json(source.url, opener=opener)
+    except FetchError as exc:
+        print(f"== {table}: FETCH FAILED {exc}")
+        return None
+    try:
+        doc = NORMALISERS[table](raw)
+    except (KeyError, TypeError, ValueError) as exc:
+        print(f"== {table}: NORMALISE FAILED {exc.__class__.__name__}: {exc} (upstream shape changed?)")
+        return None
+    ...  # unchanged from here: _meta, diff, print, write
+```
+`main` counts `None` results and ends with `sys.exit(1)` after printing `N table(s) failed` when any did; `refresh_local` gets the same two `except` blocks. Tests: a table whose fetch raises `FetchError` prints `FETCH FAILED`, the next table still refreshes, `main` raises `SystemExit(1)`; a normaliser raising `KeyError` prints `NORMALISE FAILED`; `source_commit` returns `"unknown"` on a 403.
+
+### A3. Duplicate research node ids are an error (decision 3A)
+
+In `knowledge/normalise.py::research`, before `out[slug(node_id)] = ...`:
+```python
+            key = slug(node_id)
+            if key in out:
+                raise ValueError(f"research node id {key!r} appears in both {out[key]['tree']} and {slug(tree)}")
+```
+Test: a fixture with `tooling-up-i` under both Growth and Economy raises `ValueError` naming both trees.
+
+### A4. Reuse the screen parsers (decision 4A)
+
+`knowledge/local_sources.py` drops `parse_amount`/`parse_time` bodies for:
+```python
+from native.screen import parse_number, parse_duration
+
+
+def parse_amount(text):
+    """Web tables print '140M', '1,213,100', '–'; the screen parser already
+    handles every one of those shapes."""
+    v, _exact = parse_number(str(text).replace("–", "").replace("—", "").strip())
+    return v or 0
+
+
+def parse_time(text):
+    return parse_duration(text) or 0
+```
+The Task 4 `test_parse_amount_and_time` cases stay as they are (they pass through the shared parsers; `parse_duration("7d")` returns 604800 and `parse_duration("")` returns None, mapped to 0).
+
+### A5. Local overlay, never a merged commit (decision D4, spec D8)
+
+Task 4 step 4's `crosscheck()` no longer edits the committed table. It writes `knowledge/local/overlay.json`:
+```json
+{"_meta": {"built_at": "...", "sources": ["whiteoutdata", "wiki", "wostools"]},
+ "buildings": {"furnace": {"28": {"power": 1213100, "disputed": {"whiteoutdata": {"coal": 40000000}}},
+                           "31": {"source": "whiteoutdata", "label": "30-1", "meat": 67000000, "...": "full row"}}}}
+```
+Signature becomes `crosscheck(committed_buildings, local_docs, tolerance=0.02) -> (overlay, lines)` where `overlay["buildings"][name][level]` holds only the fields to add (`power`, `disputed`) for committed levels and full rows (with `"source"`) for levels the committed table lacks. `--crosscheck --write` writes `knowledge/local/overlay.json`; `knowledge/buildings.json` is never modified by cross-checks. The Task 4 test `test_crosscheck_marks_disputed_and_appends_fc_rows` asserts on the overlay instead: `overlay["buildings"]["furnace"]["28"] == {"power": 1_213_100, "disputed": {"whiteoutdata": {"coal": 40_000_000}}}` and `overlay["buildings"]["furnace"]["31"]["source"] == "whiteoutdata"`.
+
+`native/kb.py::load` merges it when present:
+```python
+OVERLAY = os.path.join(KNOWLEDGE_DIR, "local", "overlay.json")
+
+
+def _apply_overlay(kb, path):
+    """Terms-restricted cross-check data stays on this machine (spec D8):
+    committed tables are wosnerds-only and the overlay adds FC rows, power and
+    disputes at load time. Without it, power_gain('building') is None."""
+    if not os.path.exists(path):
+        kb["_overlay"] = None
+        return
+    with open(path) as f:
+        ov = json.load(f)
+    for name, levels in (ov.get("buildings") or {}).items():
+        table = kb["buildings"].setdefault(name, {})
+        for level, patch in levels.items():
+            if level in table:
+                table[level].update(patch)
+            else:
+                table[level] = {"verified_in_game": None, **patch}
+    kb["_overlay"] = ov.get("_meta")
+```
+called at the end of `load()` with `os.path.join(directory, "local", "overlay.json")`. `power_gain("building", ...)` returns `None` when any level in the range has no `power` (planner treats None as unknown, never 0). Tests: `kb.load` on the fixture dir without an overlay gives `power_gain("building", name="furnace", from_level=27, to_level=28) is None` and no level `"31"`; with a fixture overlay it gives `1_213_100` and `building_row("furnace", "30-1")["meat"] == 67_000_000`.
+
+### A6. New Task 6: absorb `docs/knowledge/feature-unlocks.json` (decision D1, approach C)
+
+**Files:** move `docs/knowledge/feature-unlocks.json` -> `knowledge/unlocks.json` (`git mv`), modify `core/capability.py:41` (path), `knowledge/README.md`, `tests/test_capability.py`, add `knowledge/unlocks_check.py`.
+
+- [ ] Step 1: failing test in `tests/test_capability.py`: `load_table()` default path ends with `knowledge/unlocks.json`; the file's top level has `_meta` with `source_url`, `fetched_at`, `licence` (values: the design doc's community sources, `2026-09-01`, `"community guides; per-entry source and confidence kept"`) and the existing `_schema`, `features`, `_unverified_gates` keys unchanged.
+- [ ] Step 2: run, expect FAIL on the path assertion.
+- [ ] Step 3: `git mv docs/knowledge/feature-unlocks.json knowledge/unlocks.json`; in `core/capability.py` replace the `docs/knowledge` path with `os.path.join(_HERE, os.pardir, "knowledge", "unlocks.json")`; prepend the `_meta` object to the file (keep every other key byte-identical; `write_table` from Task 1 re-indents, which is fine); update the ASCII diagram at `core/capability.py:25` to name `knowledge/unlocks.json`; README row: `unlocks.json | community guides, seeded 2026-09-01 (see docs/designs/adaptive-automation.md) | hand-maintained; observation overrides`.
+- [ ] Step 4: `uv run pytest tests/ -q` green.
+- [ ] Step 5: commit `refactor: unlock gates live in the knowledge base with the same provenance format`.
+
+### A7. Task 2 gains five more tables (decision D3.1)
+
+Add to `SOURCES`: `heroes`, `chief_gear` (`calculator/data/chief-gear-charms.json`), `hero_gear` (`hero-gear.json`), `pets` (`pets.json`), `dawn_academy` (`dawn-academy.json`), all from `wosnerdwarriors/website-index`. Before writing normalisers, fetch each once (`uv run python -c "from knowledge.fetch import fetch_json; import json; print(json.dumps(fetch_json('<url>'))[:1500])"`) and record the observed top-level shape in a comment above the normaliser; each normaliser follows `troops()`: iterate the source's list or dict, `slug` the names, `_int` the numbers, keep unknown fields under `"extra"` rather than dropping them. Fixtures: one real record per table saved to `tests/fixtures/knowledge/<table>_excerpt.json`; tests assert one known value per table (choose the first record's cost/stat and assert it verbatim). Output files: `knowledge/heroes.json` (`{"heroes": {slug: {...}}}`), `knowledge/chief_gear.json` (`{"chief_gear": {...}, "charms": {...}}`), `knowledge/hero_gear.json`, `knowledge/pets.json`, `knowledge/dawn_academy.json`; `native/kb.py::TABLES` gains them under the same keys, `load()` tolerates their absence with a printed line (they are not required by the phase-1 calculators).
+
+### A8. `kb.next_occurrences` (decision D3.2)
+
+Add to `native/kb.py`:
+```python
+def next_occurrences(event_id, now, count=3, kb=None):
+    """Upcoming (start, end) datetimes of a recurring event from its anchor and
+    period. Verified against this state: Castle Battle (svs_castle, anchor
+    2024-10-12T12:00Z, every 28 days) was announced for 2026-09-14 ~11:30 UTC."""
+    from datetime import datetime, timedelta, timezone
+    e = _kb(kb)["events"][event_id]
+    anchor = datetime.fromisoformat(e["anchor"].replace("Z", "+00:00"))
+    period = timedelta(days=e["repeat_every_days"])
+    if period.total_seconds() <= 0:
+        return []
+    k = max(0, math.ceil((now - anchor) / period))
+    start = anchor + k * period
+    out = []
+    for _ in range(count):
+        out.append((start, start + timedelta(hours=e["length_hours"])))
+        start += period
+    return out
+```
+Test: with `now = 2026-09-08T12:00Z` the first `svs_castle` occurrence starts on `2026-09-14` (date only; the in-game timer showed 11:32 UTC against the anchor's 12:00, so assert `abs(start - datetime(2026, 9, 14, 12, tzinfo=utc)) <= timedelta(hours=1)`), the second 28 days later; `count=1` returns one pair; an event with `repeat_every_days=0` returns `[]`.
+
+### A9. Knowledge freshness in the report (decision D3.3)
+
+`native/kb.py`:
+```python
+def freshness(kb=None, now=None, stale_days=30):
+    """[(table, age_days, stale)] from each table's _meta.fetched_at."""
+    from datetime import datetime, timezone
+    now = now or datetime.now(timezone.utc)
+    out = []
+    for key in TABLES:
+        m = _kb(kb).get(f"_meta_{key}")
+        if not m or not m.get("fetched_at"):
+            continue
+        age = (now - datetime.fromisoformat(m["fetched_at"].replace("Z", "+00:00"))).days
+        out.append((key, age, age > stale_days))
+    return out
+```
+`native/report.py::render_text` appends under Warnings: `knowledge: buildings 12 d, research 12 d` and, for any stale table, `  knowledge table <name> is <n> days old: uv run python scripts/refresh_knowledge.py --table <name>`; `doctor()` adds the same hint. Tests: fixture `_meta.fetched_at` 40 days before an injected `now` flags stale; 5 days does not; the report line appears.
+
+### B. Spec-review fixes (2026-09-08, verified against the real source files; binding)
+
+B1. **Slug and apostrophes.** `slug()` above now drops `'` and `’` before splitting (`hunters_hut`). `_prereqs` in Task 4 uses the name class `[A-Za-z'’ ]+?`. Add `assert n.slug("Hunter’s Hut") == "hunters_hut"` to `test_slug`.
+
+B2. **Furnace 28 time.** The real value in `construction.json` and whiteoutdata ("29d 2h 52m") is `2_515_920` s; every occurrence in this plan is corrected. The Task 3 smoke check prints `29 days`.
+
+B3. **`diff_rows` is recursive.** Replace the Task 1 implementation with:
+```python
+def diff_rows(old, new, _path=""):
+    """Leaf-level diff of two nested dict documents; `_meta` ignored at the
+    top. A first fetch prints one `added` line per ROW (buildings.furnace.27),
+    a changed cost prints `buildings.furnace.28: meat 1 -> 2`."""
+    lines = []
+    keys = sorted((set(old) | set(new)) - ({"_meta"} if not _path else set()), key=str)
+    for key in keys:
+        path = f"{_path}.{key}" if _path else str(key)
+        if key not in old:
+            lines.append(f"{path}: added")
+        elif key not in new:
+            lines.append(f"{path}: removed")
+        else:
+            a, b = old[key], new[key]
+            if isinstance(a, dict) and isinstance(b, dict) and (
+                    any(isinstance(v, dict) for v in a.values()) or any(isinstance(v, dict) for v in b.values())):
+                lines.extend(diff_rows(a, b, path))
+            elif isinstance(a, dict) and isinstance(b, dict):
+                for f in sorted(set(a) | set(b)):
+                    if a.get(f) != b.get(f):
+                        lines.append(f"{path}: {f} {a.get(f)} -> {b.get(f)}")
+            elif a != b:
+                lines.append(f"{path}: {a} -> {b}")
+    return lines
+```
+The Task 1 test becomes three-level: `old = {"_meta": {...}, "buildings": {"furnace": {"27": {"meat": 1}, "28": {"meat": 2}}}, "gone": {"x": {"1": {"v": 1}}}}`, `new = {"_meta": {...}, "buildings": {"furnace": {"27": {"meat": 1}, "28": {"meat": 3}, "29": {"meat": 4}}}}`; expect `buildings.furnace.28: meat 2 -> 3`, `buildings.furnace.29: added`, `gone: removed`. Add a research-shaped case: a change in `research.tooling_up_i.levels.2.seconds` prints exactly `research.tooling_up_i.levels.2: seconds 40 -> 41`.
+
+B4. **Refresh keeps in-game marks.** In `refresh()`, after normalising and before diffing:
+```python
+    doc = carry_marks(load_table(path), doc)
+```
+```python
+def carry_marks(old, new):
+    """`verified_in_game` is evidence from the screen, not upstream data; a
+    refresh must not erase it. Carried only when the row's costs are unchanged."""
+    for table, rows in new.items():
+        if table == "_meta" or not isinstance(rows, dict):
+            continue
+        for key, levels in rows.items():
+            old_levels = (old.get(table) or {}).get(key) or {}
+            if not isinstance(levels, dict):
+                continue
+            for lv, row in levels.items():
+                orow = old_levels.get(lv) if isinstance(old_levels, dict) else None
+                if isinstance(row, dict) and isinstance(orow, dict) and orow.get("verified_in_game"):
+                    same = all(row.get(f) == orow.get(f) for f in ("meat", "wood", "coal", "iron", "seconds", "cost"))
+                    row["verified_in_game"] = orow["verified_in_game"] if same else None
+    return new
+```
+Test: an old table with `verified_in_game: "s1"` on furnace 28 and identical costs keeps it; with a changed `meat` it becomes `None` (and the diff prints the change).
+
+B5. **Restricted fixtures stay local.** `whiteoutdata_furnace_excerpt.html`, `wiki_furnace_excerpt.html` and `wostools_chunk_excerpt.js` live in `tests/fixtures/local/knowledge/` (gitignored); their tests `pytest.skip` when absent. The committed `tests/fixtures/knowledge/` holds only wosnerds excerpts and the synthetic `kbdir`.
+
+B6. **Ordinal convention.** Every building level in the knowledge base is an ordinal (`level + 5*fc + sub`, same rule for Embassy, camps and the furnace: `"Embassy FC 9"` is 75). The sheet stores plain ints today (all buildings are below 30); `prerequisites()` compares ints to ordinals directly, which is correct while the account is pre-FC, and `native/readers/buildings.py` must start storing ordinals when it first reads an `FC` label (a note goes into TODOS.md "City-map reader" entry). Global constraint line updated: slugs are `slug()` of the wosnerds names; `native/schema.py` `BUILDINGS` is a subset plus `storehouse`, `warehouse`, `war_academy`, which wosnerds lacks (they stay unread in the knowledge base).
+
+B7. **`furnace_ordinal` is strict.** The `N-sub` form is accepted only with `N == 30` and `sub` in 1..4; `FCn-sub` only with `sub` in 1..4 and `n` in 1..10; anything else raises `ValueError`. Tests: `"27-3"` and `"FC1-5"` raise.
+
+B8. **`research_path` cycle guard.** `visit` keeps a `visiting` set; re-entering a `(node, level)` already in it raises `ValueError(f"research prerequisite cycle at {nid}@{lv}")`. Test with a two-node fixture that requires each other.
+
+B9. **Layering.** `knowledge/util.py` holds `furnace_ordinal`, `next_level_label`, `write_table`; `native/kb.py`, `knowledge/local_sources.py` and `scripts/refresh_knowledge.py` import them from there (no `native.kb` import inside `knowledge/`, no lazy `scripts` import inside `native/`).
+
+B10. **Overlay rules (with A5).** `crosscheck` copies `power` only from `whiteoutdata` (the wiki and wostools `power` fields are ignored); `disputed` in the overlay carries the values; the overlay is rebuilt from scratch on every `--crosscheck --write`, so a changed local row is always re-diffed (the refresh prints the overlay diff like any table). Add `test_crosscheck_without_local_dir`: `--crosscheck` with no `knowledge/local/` prints `0 finding(s)` and writes nothing.
+
+B11. **Wording.** `_fetch_wostools` makes two requests (page, then its chunk); the constraint reads "at most two requests per source, no crawling". `wostools_buildings` compiles its regexes with `re.S`.
+
+B12. **`power_gain("building")`** returns `None` unless every level in the range carries `power` from the overlay (A5); the docstring says so.
+
+### A10. Speed bonuses read from the game (user: build now)
+
+**Files:** `native/readers/stats.py`, `native/schema.py` (paths `progress.bonus.construction_speed`, `progress.bonus.research_speed`, `progress.bonus.training_speed`, volatile int, section `stats`), `native/snapshot.py` (register after `profile`), `references/screen-map.md`, `tests/test_native_readers.py`.
+
+- [ ] Step 1 (survey, no writes): from home, `uv run python ~/.claude/skills/wos-chief-state/scripts/survey.py tap 0.148 0.071 profile`, then `survey.py tap 0.57 0.79 power-details` (the magnifier beside the power figure). Record every label containing "Speed" with its fraction. If none, try `survey.py label Settings` and then the first row containing "Stats"/"Bonus"; record the path that shows `Construction Speed +NN%`, `Research Speed +NN%`, `Training Speed +NN%`. Write the path into `references/screen-map.md` (entry, arrival tell, labels, exit). Stop and report if no screen shows all three.
+- [ ] Step 2: failing test on the recorded frame (added to `tests/fixtures/local/reader_frames.json` as `stats`): `stats.parse(...)` yields the three percentages as ints (e.g. `{"construction_speed": 128, ...}` for "+128%").
+- [ ] Step 3: `native/readers/stats.py` with `EXPECTED` = the three paths, `parse` using `label_value(items, h, w, "Construction Speed")` and `re.search(r"\+?(\d+(?:\.\d+)?)%", value)`, `read(sc)` following the surveyed path and leaving via `sc.go_home()`.
+- [ ] Step 4: `native/kb.py` gains `speed_bonus_from_sheet(sheet, kind) -> float` returning `sheet.get(f"progress.bonus.{kind}_speed") / 100.0` or `0.0`; `building_time`/`training_time` callers in the planner pass it. Test: 128 -> 1.28.
+- [ ] Step 5: live `snapshot.py --readers hud,profile,stats --no-write` shows the three values; commit `feat: read construction, research and training speed bonuses`.
+
+### A11. Item catalogue from the game (user: build now; source changed from the wiki)
+
+The wiki items index has no tables, only 421 item pages, and fetching them all is the crawling the constraints forbid. The tooltips the backpack reader already opens carry the item name and its effect text, an in-game source with no terms problem, so the catalogue is built from there.
+
+**Files:** `knowledge/items.json` (committed: in-game source), `native/readers/backpack.py` (`read_tooltip` also returns the description line), `native/kb.py` (`items()`, `record_item(name, tab, description, snapshot_id)`), tests.
+
+- [ ] Step 1: failing test: `read_tooltip` on the `backpack_tile` fixture returns `("1 Gems", None, <description text>)` where the description is the text line between the name and the Use button (the fixture's "Use to obtain 1 Gem" style line; assert it is a non-empty string not equal to the name).
+- [ ] Step 2: `record_item` upserts `{"name", "slug", "tab", "description", "kind": "speedup"|"resource_box"|"fire_crystal"|"other" (from the same SPEEDUP_RE/keyword rules as `fold`), "first_seen": snapshot_id, "last_seen": snapshot_id}` into `knowledge/items.json` (`_meta.source = "in-game backpack tooltips"`), never overwriting `first_seen`; the backpack reader calls it for every tooltip it reads.
+- [ ] Step 3: `kb.items()` returns the catalogue; `fold` consults `kb.items()` first (exact slug match) before regex parsing.
+- [ ] Step 4: tests for upsert semantics and the `fold` lookup; commit `feat: item catalogue grown from backpack tooltips`.
+
+### Task list after amendments
+
+T1 (fetch.py, util.py, refresh with per-table failures, recursive diff, carry_marks) -> T2 (nine normalisers, real tables committed) -> T3 (calculators incl. next_occurrences, strict ordinal, cycle guard) -> T4 (local sources, overlay) -> T5 (verification marks, freshness, overlay merge) -> T6 (unlocks absorbed) -> A10 (speed bonuses reader) -> A11 (item catalogue). Verification stays: `uv run pytest tests/ -q` green after each task; `git status` never shows `knowledge/local/`.
+
 ## Self-review
 
 - **Spec coverage.** Sources and licence note: Task 1-2. Layout and `_meta`: Task 1-2. Local-only cross-checks with `disputed` and FC rows: Task 4. `refresh_knowledge.py` diff-before-write and `--local`: Task 1, 4. Calculators listed in the spec (`building_cost`, `building_time`, `prerequisites`, `research_path`, `training_cost`, `training_time`, `power_gain`, `days_to`, `verify`): Task 3. `verified_in_game` marking: Task 5. Tests per spec (schema, known values, prerequisite resolution, refresh diff, missing `knowledge/local/`): Tasks 1-4 (`load_table` returns `{}` for a missing local file, exercised by `--crosscheck` with no local docs).
 - **Placeholders.** None; the `_prereqs` scaffold loop is explicitly removed in Task 4 step 4.
 - **Type consistency.** `Row` keys (`meat, wood, coal, iron, fire_crystals, refined_fire_crystals, seconds, prerequisites, verified_in_game`) are the same in Task 2 normaliser, Task 3 calculators and Task 4 cross-check; `furnace_ordinal` defined in Task 3 is imported by Task 4; `write_table` from Task 1 is reused by Task 5; `ResearchStep` fields are `node level cost seconds` throughout.
+
+## C. Second-pass fixes (verified against the real sources; binding, override A/B where they conflict)
+
+C1. **`diff_rows` recursion rule.** B3's function recurses one level too far (a research level row contains `cost`, so a change prints `research.node.levels.2.seconds`, and a first fetch of the real `construction.json` prints one line: `buildings: added`). Define the rule explicitly:
+
+```python
+def _is_table(v):
+    """A container of rows: a non-empty dict whose every value is a dict."""
+    return isinstance(v, dict) and bool(v) and all(isinstance(x, dict) for x in v.values())
+
+
+def diff_rows(old, new, _path=""):
+    """Row-level diff. Recurse while both sides are TABLES; at a row, compare
+    fields, recursing into a field that is itself a table (`levels`). An added
+    or removed table recurses against {} so every row is named."""
+    lines, keys = [], sorted((set(old) | set(new)) - ({"_meta"} if not _path else set()), key=str)
+    for key in keys:
+        path = f"{_path}.{key}" if _path else str(key)
+        a, b = old.get(key), new.get(key)
+        if key not in old and _is_table(b):
+            lines.extend(diff_rows({}, b, path)); continue
+        if key not in new and _is_table(a):
+            lines.extend(diff_rows(a, {}, path)); continue
+        if key not in old:
+            lines.append(f"{path}: added"); continue
+        if key not in new:
+            lines.append(f"{path}: removed"); continue
+        if a == b:
+            continue
+        if _is_table(a) and _is_table(b):
+            lines.extend(diff_rows(a, b, path))
+        elif isinstance(a, dict) and isinstance(b, dict):
+            for f in sorted(set(a) | set(b)):
+                if a.get(f) == b.get(f):
+                    continue
+                if _is_table(a.get(f)) and _is_table(b.get(f)):
+                    lines.extend(diff_rows(a[f], b[f], f"{path}.{f}"))
+                else:
+                    lines.append(f"{path}: {f} {a.get(f)} -> {b.get(f)}")
+        else:
+            lines.append(f"{path}: {a} -> {b}")
+    return lines
+```
+
+Tests (replacing B3's): a first fetch of the buildings fixture prints one `added` line per LEVEL (`buildings.furnace.27: added`), a cost change prints `buildings.furnace.28: meat 2 -> 3`, a research change prints `research.tooling_up_i.levels.2: seconds 40 -> 41`, a removed table prints `gone.x.1: removed`.
+
+C2. **Stale halved value.** `building_time("furnace", 27, 28, speed_bonus=1.0)` is `1_257_960` (2,515,920 / 2); corrected throughout this plan.
+
+C3. **A8 test asserts the table's own contract, not the game.** `next_occurrences("svs_castle", 2026-09-08T12:00Z)` returns `2026-09-12T12:00Z` from the shipped anchor; one test asserts exactly that, a second asserts the observed-anchor path of D-T4 returns `2026-09-14T11:32Z`. `knowledge/README.md` records the two-day disagreement.
+
+C4. **Research verification marks live on level rows.** `normalise.research` puts `verified_in_game: None` inside each `levels[n]` row, not on the node; `mark_verified("research", node, level, sid)` already writes there; `carry_marks` walks recursively and carries the mark wherever a dict holds that key, comparing that row's own cost fields.
+
+C5. **`research-center-lv` alias.** The real source uses that key in two rows (`coal_mining_iii` L3, `marksman_armor_iii` L4). `normalise.research` maps building keys through `BUILDING_ALIASES = {"research_center_lv": "research_center"}` before storing; test both rows.
+
+C6. **Expected disputes.** Levels 11 and 17 disagree between whiteoutdata and wosnerds (coal 260,000 vs 20,000; iron 460,000 vs 480,000). Both sit below the D-T2 scope floor of level 26, so Task 4's expectation is "0 findings in scope, 2 known disagreements below the floor recorded in the README".
+
+C7. **A10 wiring.** Insert `("progress.bonus.", "stats")` ABOVE `("progress.", "profile")` in `native/schema.py::SECTION_OF_PATH_TABLE`; `label_value` returns the OCR item, so the reader runs its percentage regex on `item["text"]`.
+
+C8. **Unknown vs unmet.** `prerequisites()` returns `have=None` when the sheet has no key for that building (see D-T1); the `("infirmary", 1, 0)` case in the Task 3 test becomes `("infirmary", 1, None)`.
+
+C9. **A11 description band.** Before writing `read_tooltip`'s third return value, survey the `backpack_tile` frame already in `tests/fixtures/local/reader_frames.json` and record the description's y-band; the current name band (`uy-0.24 .. uy-0.15`) sits above it. The three-tuple return is safe: the only caller uses `got[0]`.
+
+C10. **Superseded text.** Task 4 step 6 (`len(furnace)==81`, `git add knowledge/buildings.json`) and Task 5's `local_sources`/`scripts` imports are superseded by A5, B9 and D-T2; each carries a `SUPERSEDED by <id>` line so an executor reading one task alone is not misled.
+
+C11. **`chief_gear.json` splits.** It carries two top-level tables and `kb.load`'s `doc[key]` would drop one; normalise into `knowledge/chief_gear.json` and `knowledge/charms.json`.
+
+C12. **`mark_verified` and overlay rows.** It opens the committed file only, so overlay levels above 30 always return `False`. Documented; irrelevant until the furnace passes 30.
+
+## D. Cross-model decisions (user, after the outside voice)
+
+**D-T1 (buildings vocabulary).** The sheet reads 11 buildings, wosnerds ships 14, 8 overlap.
+
+- `prerequisites()` returns `have=None` for a building the sheet does not track. `native/kb.py` gains `UNTRACKED_ASSUMED_MET = ("coal_mine", "iron_mine", "sawmill", "hunters_hut", "shelter", "barricade")`, and the signature becomes `prerequisites(name, level, sheet, kb=None, assume_untracked_met=True) -> (unmet, assumed)`: those six leave the unmet list and appear in `assumed`, so the planner prints one line (`assumed met (not tracked): coal_mine 3, hunters_hut 6, iron_mine 5, sawmill 1, shelter 3`) instead of five permanent unmet rows.
+- `storehouse`, `warehouse` and `war_academy` are absent upstream: `building_cost` raises `KeyError` naming the building and saying "read from the popup", and the planner's candidates for those three carry `cost=None, source="popup"` (the executor reads the cost off the Upgrade popup before pressing anyway). Test: `building_cost("storehouse", 26, 27)` raises with that message.
+
+**D-T2 (cross-checks: report only, from level 26 up).** Task 4 shrinks:
+
+- Scope floor: only furnace levels with ordinal >= 26 are parsed and compared (the account is upgrading 26 -> 27), which is also why the two known sub-26 disagreements (C6) are out of scope.
+- Output: `knowledge/local/crosscheck.json` (gitignored) with, per level >= 26, each source's costs and times and a `disagrees` list; the refresh prints the disagreements. No `disputed` writes into the committed table, no `power` copy, and no prerequisite parsing at all (the requirement text is the part that breaks on the live page: "Command Centre", "Lvl.", and only 2 of 12 prerequisites listed per row).
+- FC rows (ordinal 31-80) are kept in `knowledge/local/overlay.json` exactly as A5 defines, with `prerequisites: {}` and a `"source": "whiteoutdata"` marker. `kb.building_row` returns them so long-range cost questions work, and `prerequisites()` on an overlay row returns `([], ["unknown: overlay row"])` so the planner never reads an empty prerequisite list as satisfied.
+- `local_sources` keeps `whiteoutdata_furnace`, `wiki_furnace` and `wostools_buildings` as parsers; `_prereqs` is deleted.
+
+**D-T3 (extra tables optional).** `heroes`, `chief_gear`, `charms`, `hero_gear`, `pets` and `dawn_academy` move to `OPTIONAL_SOURCES`: the default refresh does not fetch them, `--table <name>` does, and a failure among them never changes the exit code. `native/kb.py::TABLES` marks them optional and `load()` skips a missing one with a single printed line.
+
+**D-T4 (calendar anchored on observation).** `next_occurrences(event_id, now, count=3, observed=None, kb=None)`: with `observed` (a datetime) the occurrences are `observed + k * period`; otherwise the shipped anchor is used. Each returned tuple gains a third element, `"observed"` or `"table"`, so the briefing can say which it used. `report.py` passes `manual.castle_battle_at` as `observed` for `svs_castle`. `knowledge/README.md` records that the shipped SvS anchor is two days off for state #4562 because SvS is staggered per state group.
+
+## NOT in scope
+
+- Building `power` values for anything but the furnace: no open source carries them (verified against `construction.json`), so `power_gain("building", ...)` returns `None` outside the overlay's furnace rows.
+- Prerequisite text from the cross-check sources (broken on the live page, incomplete by construction).
+- Readers for the six untracked buildings (assumed met; the city-map spike in TODOS.md covers them).
+- The wiki item index (421 item pages; crawling them is out, and A11 grows the catalogue from in-game tooltips instead).
+- Any game access or database write from `knowledge/` or `native/kb.py`.
+
+## What already exists (reused, not rebuilt)
+
+| need | exists | reused how |
+|---|---|---|
+| number and duration parsing | `native/screen.py` `parse_number`, `parse_duration` | A4 wraps them |
+| atomic JSON write | `native/model.py::write_table` shape | B9: one copy in `knowledge/util.py` |
+| furnace ordinal maths | `native/snapshot.py::derive_furnace` | `furnace_ordinal` mirrors it; B7 makes it strict |
+| unlock gates with confidence and provenance | `docs/knowledge/feature-unlocks.json` + `core/capability.py` | A6 moves it into `knowledge/`, same `_meta` format |
+| state-age milestones | `native/timeline.py` (observed days override the table) | the calendar complements it; D-T4 uses the same observation-wins rule |
+| the sheet the calculators answer against | `db/wos.sqlite` `latest_static`, `deltas` | planner input; the knowledge base never reads it |
+| verification pattern | `native/model.py` field provenance | same idea, one `verified_in_game` field per row |
+
+## Dream state delta
+
+After this plan: one knowledge store with provenance, four required tables and six optional, calculators for cost, time, prerequisites, research paths, training, power, event dates and freshness, all pure and tested, plus in-game verification marks and a local-only disagreement report. Remaining to the twelve-month ideal: the planner and executor that consume it, speed bonuses beyond the three A10 reads, per-node research levels, and building power values no public source carries.
+
+## Error and rescue registry
+
+| codepath | failure | exception | rescued | action / user sees |
+|---|---|---|---|---|
+| `fetch.fetch_text` | DNS, timeout, 404, 429 | `FetchError` (wraps `URLError`, `HTTPError`, `OSError`, `TimeoutError`) | Y | `== <table>: FETCH FAILED <url>: HTTPError 429`; other tables continue |
+| `fetch.fetch_json` | HTML error page instead of JSON | `FetchError` (wraps `JSONDecodeError`) | Y | `not JSON ... first bytes: '<!DOCTYPE h'` |
+| `source_commit` | GitHub API rate limit (60/h) | `FetchError`, `KeyError` | Y | `commit lookup failed ...; recording 'unknown'`; the table still writes |
+| `NORMALISERS[table]` | upstream renamed a key | `KeyError`, `TypeError`, `ValueError` | Y | `NORMALISE FAILED KeyError: 'buildingLevels' (upstream shape changed?)`; exit 1 at the end |
+| `normalise.research` | duplicate node id across trees | `ValueError` | N (deliberate) | that table stops, both trees named |
+| `write_table` | disk full, read-only directory | `OSError` | N | traceback with the path; nothing half-written (atomic replace) |
+| `kb.load` | required table missing | `FileNotFoundError` | N | names the file and the refresh command |
+| `kb.load` | optional table missing | none | Y | one printed line; that table's calculators unavailable |
+| `kb._apply_overlay` | overlay absent | none | Y | `power_gain("building")` returns `None`, FC rows absent |
+| `kb.building_cost` | building or level not in the table | `KeyError` | N (deliberate) | names it; for the three the sheet tracks, says "read from the popup" |
+| `kb.research_path` | prerequisite cycle | `ValueError` | N | names the node and level |
+| `kb.next_occurrences` | `repeat_every_days` 0 or missing | none | Y | returns `[]` |
+| `kb.freshness` | `_meta.fetched_at` missing | none | Y | that table omitted from the freshness line |
+| `mark_verified` | row not in the committed file | none | Y | returns `False`; the caller logs it |
+| `local_sources.*` | page shape changed | none | Y | prints "nothing recognised", writes `{}` |
+
+## Failure modes registry
+
+| codepath | failure mode | rescued | test | user sees | logged |
+|---|---|---|---|---|---|
+| refresh, one table | upstream 404 or rename | Y | Y | FETCH/NORMALISE FAILED line, exit 1 | stdout |
+| refresh, all | game patch changes costs | Y | Y | per-row diff, nothing written without `--write` | stdout |
+| refresh, marks | verified marks erased | Y (`carry_marks`) | Y | mark kept when costs unchanged, cleared when not | diff line |
+| calculators | building the sheet tracks, table lacks | Y (`KeyError` naming it) | Y | planner line reads `cost from popup` | plan line |
+| calculators | prerequisite the sheet never reads | Y (`assumed`) | Y | one `assumed met` line, not five unmet rows | plan line |
+| calculators | stale table after a patch | Y (`freshness`) | Y | `knowledge table buildings is 41 days old: <command>` | report |
+| overlay | absent on a fresh clone | Y | Y | `power_gain` None, FC rows absent, no crash | none |
+| cross-check | live page reshaped | Y | Y | "nothing recognised", `{}` written | stdout |
+| calendar | anchor wrong for this state | Y (D-T4) | Y | occurrences marked `table` or `observed` | report |
+
+No row is unrescued, untested and silent.
+
+## Diagrams
+
+Data flow with shadow paths:
+
+```
+ upstream JSON ─fetch─▶ raw ─normalise─▶ doc ─carry_marks─▶ diff ─(--write)─▶ knowledge/<t>.json
+   │ FetchError: line, next table  │ KeyError: line, exit 1     │ no --write: printed only
+   │                               │ duplicate id: ValueError   │
+ local pages ─parse─▶ crosscheck.json + overlay.json (gitignored) ─┐
+                                                                   ▼
+ sheet (db/wos.sqlite) ─────────────────────────────▶ native/kb.py ─▶ costs, times, (unmet, assumed),
+                                                      load+overlay     research paths, event dates,
+                                                                       freshness, verify
+```
+
+Knowledge row lifecycle:
+
+```
+ absent ─refresh─▶ ok(unverified) ─screen agrees─▶ verified(snapshot_id)
+                        │                                │ costs change upstream
+                        │ a local source disagrees       ▼
+                        └───────────────────────▶ ok(unverified) + crosscheck.json entry
+```
+
+## Implementation tasks
+
+Synthesized from this review. Each derives from a specific finding above.
+
+- [ ] **T1 (P1, human ~1d / CC ~45m)** — knowledge/fetch.py, util.py, refresh — named per-table failures, recursive `diff_rows`, `carry_marks`, provenance
+  - Surfaced by: A1, A2, B3, B4, B9, C1
+  - Files: `knowledge/fetch.py`, `knowledge/util.py`, `scripts/refresh_knowledge.py`, `knowledge/README.md`, `tests/test_knowledge_fetch.py`, `tests/test_refresh_knowledge.py`, `.gitignore`
+  - Verify: `uv run pytest tests/test_knowledge_fetch.py tests/test_refresh_knowledge.py -q`
+- [ ] **T2 (P1, human ~1d / CC ~1h)** — normalisers for the four required tables plus the real vendored files
+  - Surfaced by: Task 2, A3, A7 (now optional per D-T3), B1, C5, C11
+  - Files: `knowledge/normalise.py`, `knowledge/*.json`, `tests/fixtures/knowledge/*`, `tests/test_knowledge_normalise.py`
+  - Verify: `uv run python scripts/refresh_knowledge.py` dry run, then `--write`; `uv run pytest tests/test_knowledge_normalise.py -q`
+- [ ] **T3 (P1, human ~1d / CC ~1h)** — `native/kb.py` calculators, strict ordinal, cycle guard, `next_occurrences`, assumed-met prerequisites
+  - Surfaced by: Task 3, A8, B7, B8, C2, C3, C8, D-T1, D-T4
+  - Files: `native/kb.py`, `tests/test_native_kb.py`, `tests/fixtures/knowledge/kbdir/*`
+  - Verify: `uv run pytest tests/test_native_kb.py -q`
+- [ ] **T4 (P2, human ~0.5d / CC ~40m)** — cross-check report from level 26 up, FC rows to the local overlay
+  - Surfaced by: Task 4, A5, B5, B10, C6, D-T2
+  - Files: `knowledge/local_sources.py`, `scripts/refresh_knowledge.py`, `tests/fixtures/local/knowledge/*`, `tests/test_knowledge_local.py`
+  - Verify: `--local --write`, `--crosscheck`; `git status` shows nothing under `knowledge/local/`
+- [ ] **T5 (P2, human ~0.5d / CC ~30m)** — verification marks, overlay merge, freshness in the report
+  - Surfaced by: Task 5, A5, A9, C12
+  - Files: `native/kb.py`, `native/report.py`, `knowledge/README.md`, `tests/test_native_kb.py`
+  - Verify: `uv run pytest tests/ -q`; `report.py` prints the knowledge line
+- [ ] **T6 (P2, human ~2h / CC ~20m)** — absorb the unlock table and update every reference
+  - Surfaced by: A6, outside voice 8
+  - Files: `knowledge/unlocks.json` (git mv), `core/capability.py`, `Main/task_menu.py`, `usecases/alliance.py`, `tests/test_alliance_capture.py`, `DIRECTORY_MAP.md`, `docs/designs/adaptive-automation.md`
+  - Verify: `uv run pytest tests/ -q`; `grep -r "docs/knowledge" --include=*.py --include=*.md .` returns nothing outside `docs/superpowers/`
+- [ ] **T7 (P2, human ~4h / CC ~30m)** — speed-bonus reader
+  - Surfaced by: A10, C7
+  - Files: `native/readers/stats.py`, `native/schema.py`, `native/snapshot.py`, `references/screen-map.md`, `tests/test_native_readers.py`
+  - Verify: `snapshot.py --readers hud,profile,stats --no-write` shows three percentages
+- [ ] **T8 (P3, human ~4h / CC ~30m)** — item catalogue from tooltips
+  - Surfaced by: A11, C9
+  - Files: `native/readers/backpack.py`, `native/kb.py`, `knowledge/items.json`, tests
+  - Verify: a backpack run writes catalogue entries; `fold` prefers the catalogue
+
+Order: T1 -> T2 -> T3 (T4 and T6 parallel after T2) -> T5 -> T7 -> T8.
+
+## GSTACK REVIEW REPORT
+
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | `/plan-ceo-review` | Scope & strategy | 3 | CLEAR (2026-09-08) | 5 proposals, 5 accepted, 0 deferred; 2 adversarial passes (34 issues, all folded); 4 cross-model tensions decided |
+| Codex Review | `/codex review` | Independent 2nd opinion | 4 | ISSUES FOUND (Claude subagent; Codex model pin unusable) | 8 problems, every checkable one verified true; 4 became user decisions, 4 became plan fixes |
+| Eng Review | `/plan-eng-review` | Architecture & tests (required) | 1 | CLEAR (2026-09-08, chief-state plan) | STALE for this plan: it graded the chief-state plan, not the knowledge base |
+| Design Review | `/plan-design-review` | UI/UX gaps | 0 | — | not run (no UI in this plan) |
+| DX Review | `/plan-devex-review` | Developer experience gaps | 0 | — | not run |
+
+- **CROSS-MODEL:** the outside voice contradicted the review on four points and won each on evidence: the sheet and the cost table share only 8 of 14 buildings (storehouse, the building upgrading today, has no open cost source), the shipped SvS anchor misses this state by two days, Task 4's cross-check yielded nothing at the account's current level, and five extra tables were unexamined shapes. The user resolved all four: assume-met plus popup costs, observed-date anchors, a report-only cross-check scoped to level 26 and up, and optional tables.
+- **VERDICT:** CEO CLEARED — eng review recommended before implementation (the existing one predates this plan).
+
+NO UNRESOLVED DECISIONS

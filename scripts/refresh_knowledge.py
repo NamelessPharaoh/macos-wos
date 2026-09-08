@@ -3,7 +3,7 @@
 
     SOURCES/OPTIONAL_SOURCES ─fetch_json─▶ raw ─NORMALISERS[table]─▶ doc
         │ FetchError: FETCH FAILED, next table
-        │ KeyError/TypeError/ValueError: NORMALISE FAILED, next table
+        │ KeyError/TypeError/ValueError/AttributeError: NORMALISE FAILED, next table
         ▼
     doc ─carry_marks─▶ diff_rows(old, new) ─printed─▶ (--write) knowledge/<table>.json (+ _meta)
         any REQUIRED table failed ─▶ exit 1 after every table is attempted
@@ -191,7 +191,7 @@ def refresh(table, write, opener=None):
         return None
     try:
         doc = NORMALISERS[table](raw)
-    except (KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
         print(f"== {table}: NORMALISE FAILED {exc.__class__.__name__}: {exc} (upstream shape changed?)")
         return None
     doc = {"_meta": meta(source, source_commit(source.repo, opener=opener), utc_now()), **doc}
@@ -218,7 +218,7 @@ def refresh_local(name, write, opener=None):
     except FetchError as exc:
         print(f"== local {name}: FETCH FAILED {exc}")
         return None
-    except (KeyError, TypeError, ValueError) as exc:
+    except (KeyError, TypeError, ValueError, AttributeError) as exc:
         print(f"== local {name}: NORMALISE FAILED {exc.__class__.__name__}: {exc}")
         return None
     path = os.path.join(LOCAL_DIR, rel)

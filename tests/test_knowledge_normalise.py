@@ -116,6 +116,27 @@ def test_research_missing_time_raises():
     assert "tooling_up_i" in str(exc.value) and "1" in str(exc.value) and "research-time-seconds" in str(exc.value)
 
 
+def test_research_null_cost_raises_attribute_error():
+    # scripts/refresh_knowledge.py's per-table guard must catch this: `cost`
+    # is present (so the "missing cost" ValueError check doesn't fire) but
+    # reshaped to null upstream, so `lv["cost"].items()` raises
+    # AttributeError, not ValueError/KeyError/TypeError.
+    raw = copy.deepcopy(_load("research_excerpt.json"))
+    raw["Growth"]["tooling-up-i"]["levels"]["2"]["cost"] = None
+    with pytest.raises(AttributeError):
+        n.research(raw)
+
+
+def test_buildings_reshaped_building_levels_raises_attribute_error():
+    # Same reshape class at the other end of the chain: `buildingLevels`
+    # turning into a list (or any non-dict) breaks `raw["buildingLevels"]
+    # .items()` with AttributeError, which the refresh guard must also catch.
+    raw = copy.deepcopy(_load("construction_excerpt.json"))
+    raw["buildingLevels"] = list(raw["buildingLevels"].values())
+    with pytest.raises(AttributeError):
+        n.buildings(raw)
+
+
 def test_research_center_lv_alias_maps_to_research_center():
     # C5: the real source spells "research-center-lv" in two rows
     # (coal_mining_iii L3, marksman_armor_iii L4); both must resolve to the

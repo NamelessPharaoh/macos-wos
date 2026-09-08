@@ -242,6 +242,25 @@ def test_normalise_failure_prints_a_line_and_fails_that_table(tmp_path, monkeypa
     assert "buildings: NORMALISE FAILED KeyError" in out
 
 
+def test_normalise_attribute_error_is_caught_too(tmp_path, monkeypatch, capsys):
+    """An upstream dict-to-list or dict-to-null reshape (e.g. a level's
+    `cost` becoming None) raises AttributeError from `.items()`/`.get()`
+    calls in knowledge/normalise.py, not KeyError/TypeError/ValueError --
+    it must be rescued by the same per-table guard, not end the run."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+
+    def bad_normaliser(raw):
+        raise AttributeError("'NoneType' object has no attribute 'items'")
+
+    monkeypatch.setattr(rk, "NORMALISERS", {"buildings": bad_normaliser})
+    monkeypatch.setattr(rk, "fetch_json", lambda url, opener=None: {})
+    monkeypatch.setattr(rk, "source_commit", lambda repo, opener=None: "abc123")
+    with pytest.raises(SystemExit):
+        rk.main(["--table", "buildings"])
+    out = capsys.readouterr().out
+    assert "buildings: NORMALISE FAILED AttributeError" in out
+
+
 def test_required_table_failure_exits_1(tmp_path, monkeypatch):
     monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
     monkeypatch.setattr(rk, "NORMALISERS", {"buildings": lambda raw: {}})

@@ -1,0 +1,56 @@
+{
+ "_meta": {
+  "source_url": "fixture",
+  "source_commit": "fixture",
+  "fetched_at": "2026-09-08T00:00:00Z",
+  "licence": "fixture",
+  "normaliser_version": 1
+ },
+ "research": {
+  "tooling_up_i": {
+   "tree": "growth",
+   "name": "Tooling Up I",
+   "stat": "construction_speed",
+   "troop_type": null,
+   "row": 1,
+   "levels": {
+    "1": {
+     "stat_addition": 0.4,
+     "power": 2000,
+     "cost": {
+      "meat": 2700,
+      "wood": 2700,
+      "coal": 540,
+      "iron": 130,
+      "steel": 160
+     },
+     "seconds": 2,
+     "requires_research": {},
+     "requires_buildings": {
+      "research_center": 1
+     },
+     "verified_in_game": null
+    },
+    "2": {
+     "stat_addition": 0.4,
+     "power": 2000,
+     "cost": {
+      "meat": 3700,
+      "wood": 3700,
+      "coal": 750,
+      "iron": 180,
+      "steel": 220
+     },
+     "seconds": 40,
+     "requires_research": {
+      "tooling_up_i": 1
+     },
+     "requires_buildings": {
+      "research_center": 2
+     },
+     "verified_in_game": null
+    }
+   }
+  }
+ }
+}

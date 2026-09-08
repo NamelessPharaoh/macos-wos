@@ -1,0 +1,19 @@
+{
+ "_meta": {
+  "source_url": "fixture",
+  "source_commit": "fixture",
+  "fetched_at": "2026-09-08T00:00:00Z",
+  "licence": "fixture",
+  "normaliser_version": 1
+ },
+ "events": {
+  "svs_castle": {
+   "category": "svs",
+   "name": "SVS Castle Battle",
+   "repeat_every_days": 28,
+   "length_hours": 6,
+   "anchor": "2024-10-12T12:00:00Z",
+   "available_after_age": null
+  }
+ }
+}

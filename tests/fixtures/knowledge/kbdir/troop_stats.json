@@ -1,0 +1,35 @@
+{
+ "_meta": {
+  "source_url": "fixture",
+  "source_commit": "fixture",
+  "fetched_at": "2026-09-08T00:00:00Z",
+  "licence": "fixture",
+  "normaliser_version": 1
+ },
+ "stats": {
+  "infantry": {
+   "1-fc0": {
+    "name": "Rookie",
+    "power": 3,
+    "attack": 1,
+    "defense": 4,
+    "lethality": 1,
+    "health": 6,
+    "load": 108,
+    "speed": 11
+   },
+   "9-fc0": {
+    "name": "Supreme",
+    "power": 50,
+    "attack": 9,
+    "defense": 12,
+    "lethality": 9,
+    "health": 14,
+    "load": 330,
+    "speed": 11
+   }
+  },
+  "lancer": {},
+  "marksman": {}
+ }
+}

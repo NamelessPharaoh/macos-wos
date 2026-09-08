@@ -1,0 +1,109 @@
+{
+ "_meta": {
+  "source_url": "fixture",
+  "source_commit": "fixture",
+  "fetched_at": "2026-09-08T00:00:00Z",
+  "licence": "fixture",
+  "normaliser_version": 1
+ },
+ "buildings": {
+  "furnace": {
+   "0": {
+    "meat": 0,
+    "wood": 0,
+    "coal": 0,
+    "iron": 0,
+    "fire_crystals": 0,
+    "refined_fire_crystals": 0,
+    "seconds": 0,
+    "prerequisites": {},
+    "verified_in_game": null
+   },
+   "27": {
+    "meat": 140000000,
+    "wood": 140000000,
+    "coal": 24000000,
+    "iron": 7400000,
+    "fire_crystals": 0,
+    "refined_fire_crystals": 0,
+    "seconds": 2187780,
+    "prerequisites": {
+     "command_center": 1,
+     "coal_mine": 3,
+     "embassy": 26,
+     "hunters_hut": 6,
+     "infantry_camp": 24,
+     "infirmary": 1,
+     "iron_mine": 5,
+     "lancer_camp": 26,
+     "marksman_camp": 25,
+     "research_center": 23,
+     "sawmill": 1,
+     "shelter": 3
+    },
+    "verified_in_game": null
+   },
+   "30": {
+    "meat": 300000000,
+    "wood": 300000000,
+    "coal": 60000000,
+    "iron": 15000000,
+    "fire_crystals": 0,
+    "refined_fire_crystals": 0,
+    "seconds": 3472020,
+    "prerequisites": {
+     "command_center": 1,
+     "coal_mine": 3,
+     "embassy": 29,
+     "hunters_hut": 6,
+     "infantry_camp": 28,
+     "infirmary": 1,
+     "iron_mine": 5,
+     "lancer_camp": 26,
+     "marksman_camp": 29,
+     "research_center": 27,
+     "sawmill": 1,
+     "shelter": 3
+    },
+    "verified_in_game": null
+   },
+   "28": {
+    "meat": 190000000,
+    "wood": 190000000,
+    "coal": 39000000,
+    "iron": 9900000,
+    "fire_crystals": 0,
+    "refined_fire_crystals": 0,
+    "seconds": 2515920,
+    "prerequisites": {
+     "command_center": 1,
+     "coal_mine": 3,
+     "embassy": 27,
+     "hunters_hut": 6,
+     "infantry_camp": 24,
+     "infirmary": 1,
+     "iron_mine": 5,
+     "lancer_camp": 26,
+     "marksman_camp": 25,
+     "research_center": 27,
+     "sawmill": 1,
+     "shelter": 3
+    },
+    "verified_in_game": null
+   }
+  },
+  "hunters_hut": {
+   "0": {
+    "meat": 0,
+    "wood": 0,
+    "coal": 0,
+    "iron": 0,
+    "fire_crystals": 0,
+    "refined_fire_crystals": 0,
+    "seconds": 0,
+    "prerequisites": {},
+    "verified_in_game": null
+   }
+  }
+ }
+}

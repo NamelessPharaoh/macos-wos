@@ -171,7 +171,12 @@ def test_events_page_and_backpack_tooltip_parsers():
     assert e["name"] == "Endless Trial" and e["remaining_s"] == 12 * 3600 + 38 * 60 + 17 and e["attempts_left"] == 30
     timg, titems, tpath = _frame("backpack_tile")
     h, w = timg.shape[:2]
-    got = backpack.read_tooltip(titems, h, w)
+    # Tile centre measured from the fixture's own visible sibling tiles
+    # (col 0.404, row fy=0.2624 -> cy = 0.2624 - 0.045 = 0.217): the tapped
+    # tile's own count is covered by the tooltip, same as every real shape
+    # A/C sighting, so cy comes from the surrounding grid, not this frame's
+    # own tile_targets() (which can no longer see the covered tile).
+    got = backpack.read_tooltip(titems, h, w, 0.404, 0.217)
     assert got[:2] == ("1 Gems", None)
     assert isinstance(got[2], str) and got[2] and got[2] != got[0]
     assert got[2] == "Grants 1 Gems."
@@ -189,62 +194,112 @@ def test_events_page_and_backpack_tooltip_parsers():
     assert r2.doc["backpack"]["items"]["speedup/5m_speedup"] == 220
 
 
-def test_read_tooltip_joins_a_two_line_description():
-    """Fix round 1, item 3: the only real fixture on hand has a single-line
-    description, so nothing exercised a description that wraps across more
-    than one OCR line. Built synthetically (h=w=1000): a Use button at
-    fy=0.5, a name in the 0.15-0.24 band above it, and two description
-    lines in the 0.10-0.15 band, top line first. read_tooltip must return
-    both lines joined top-to-bottom with a space, not just the first."""
+def test_read_tooltip_shape_a_resources_with_slider():
+    """Live sweep 2026-09-09 found at least three tooltip layouts, and a
+    fixed offset from the Use button cannot fit all of them (round 1 of
+    this fix tried exactly that and still failed shapes B and C). The fix
+    anchors on the tapped tile's centre (cx, cy) instead -- the one thing
+    read() already knows before it taps.
+
+    Shape A (Resources, with a quantity slider between the description and
+    the buttons): real measured offsets from cy, Chief Stamina tooltip
+    (~/wos-chief/20260909T120815Z/010-tile.png, tile at cx=0.216, cy=0.218):
+
+        cy+0.117  "Chief Stamina"                                  name
+        cy+0.151  "Restores 10 Chief Stamina. Used for daily ..."  desc line 1
+        cy+0.174  "troop deployment."                              desc line 2
+        cy+0.226  quantity slider ("00", "+", count)
+        cy+0.315  Source / Use
+
+    Reproduced here at cy=0.300 (h=w=1000, so 1 fy unit = 1000px). The
+    quantity slider and the buttons must both be excluded from the
+    description: the old fixed-offset code (and an earlier round of this
+    same fix that only handled shape A) both stored "troop deployment." --
+    the tail of a sentence -- because the first description line landed in
+    what used to be the fixed name band."""
     from native.readers import backpack
 
     def item(text, cx, cy):
         return {"text": text, "score": 1.0, "box": [cx - 10, cy - 5, cx + 10, cy + 5]}
 
+    cy = 0.300
     items = [
-        item("Use", 500, 500),                          # uy = 0.5
-        item("Wonder Box", 500, 300),                    # fy = 0.30, in the 0.26-0.35 name band
-        item("Contains a random reward.", 500, 360),     # fy = 0.36, in the 0.35-0.40 description band
-        item("Open it to find out!", 500, 385),          # fy = 0.385, same band, below the first line
+        item("Chief Stamina", 500, int((cy + 0.117) * 1000)),
+        item("Restores 10 Chief Stamina. Used for daily events like", 500, int((cy + 0.151) * 1000)),
+        item("troop deployment.", 500, int((cy + 0.174) * 1000)),
+        item("00", 566, int((cy + 0.226) * 1000)),
+        item("+", 632, int((cy + 0.227) * 1000)),
+        item("220", 798, int((cy + 0.228) * 1000)),
+        item("Source", 333, int((cy + 0.315) * 1000)),
+        item("Use", 666, int((cy + 0.315) * 1000)),
     ]
-    got = backpack.read_tooltip(items, 1000, 1000)
-    assert got[0] == "Wonder Box"
-    assert got[2] == "Contains a random reward. Open it to find out!"
-
-
-def test_read_tooltip_keeps_a_description_line_that_sits_in_the_old_name_band():
-    """Live sweep 2026-09-09. The test above passes against the BROKEN code:
-    it places both description lines inside the old 0.10-0.15 band, which
-    the old fixed split already captured. The case that actually failed in
-    the game is a description whose FIRST line sits inside the old
-    0.15-0.24 name band, directly under the name.
-
-    Real measured offsets from the Chief Stamina tooltip
-    (~/wos-chief/20260909T120815Z/010-tile.png, Use button at fy=0.5331):
-
-        uy-0.1977  "Chief Stamina"
-        uy-0.1646  "Restores 10 Chief Stamina. Used for daily events like"
-        uy-0.1414  "troop deployment."
-        uy-0.0899  quantity box
-
-    Reproduced here against uy=0.5. The old code stored only "troop
-    deployment." -- the tail of a sentence, with nothing to signal that the
-    first half had been dropped."""
-    from native.readers import backpack
-
-    def item(text, cx, cy):
-        return {"text": text, "score": 1.0, "box": [cx - 10, cy - 5, cx + 10, cy + 5]}
-
-    items = [
-        item("Use", 500, 500),                                            # uy = 0.500
-        item("Chief Stamina", 500, 302),                                  # uy-0.198, name
-        item("Restores 10 Chief Stamina. Used for daily events like", 500, 335),   # uy-0.165, OLD name band
-        item("troop deployment.", 500, 359),                              # uy-0.141, old desc band
-    ]
-    got = backpack.read_tooltip(items, 1000, 1000)
+    got = backpack.read_tooltip(items, 1000, 1000, 0.216, cy)
     assert got[0] == "Chief Stamina"
     assert got[2] == ("Restores 10 Chief Stamina. Used for daily events like "
                       "troop deployment.")
+
+
+def test_read_tooltip_shape_b_speedup_has_no_buttons_at_all():
+    """Shape B (Speedup): no Use/Source button exists at all -- the old
+    Use-anchored read_tooltip returned None for every one of these, which
+    is why the 2026-09-09 sweep captured zero speedups out of ~20+ tiles
+    tapped in that tab. Real measured offsets from cy, 1m Construction
+    Speedup (~/wos-chief/20260909T120815Z/086-tile.png, tile at cx=0.404,
+    cy=0.218):
+
+        cy+0.120  "1m Construction Speedup"                            name
+        cy+0.150  "Speeds up your [Construction] queue by 1 minute."   desc
+
+    Reproduced here at cy=0.300. With no button to anchor on, this shape
+    can *only* be read via the tapped-tile position."""
+    from native.readers import backpack
+
+    def item(text, cx, cy):
+        return {"text": text, "score": 1.0, "box": [cx - 10, cy - 5, cx + 10, cy + 5]}
+
+    cy = 0.300
+    items = [
+        item("1m Construction Speedup", 500, int((cy + 0.120) * 1000)),
+        item("Speeds up your [Construction] queue by 1 minute.", 500, int((cy + 0.150) * 1000)),
+    ]
+    got = backpack.read_tooltip(items, 1000, 1000, 0.404, cy)
+    assert got[0] == "1m Construction Speedup"
+    assert got[2] == "Speeds up your [Construction] queue by 1 minute."
+
+
+def test_read_tooltip_shape_c_other_no_slider_buttons_sit_closer():
+    """Shape C (Other): Source/Use exist but there is no quantity slider,
+    so the buttons sit much closer to the description than in shape A --
+    close enough that shape A's own floor (DESC_FLOOR) would have clipped
+    it if the floor were set from shape A's Use offset (0.315) instead of
+    a value that works for both. Real measured offsets from cy, Mystery
+    Badge (~/wos-chief/20260909T120815Z/110-tile.png, tile at cx=0.593,
+    cy=0.257):
+
+        cy+0.121  "Mystery Badge"                                        name
+        cy+0.151  "Mystery Badge can be used for trading in the ..."     desc line 1
+        cy+0.174  "Shop."                                                desc line 2
+        cy+0.242  Source / Use  (no slider -- shape A has one at cy+0.226)
+
+    Reproduced here at cy=0.300: the full two-line description must come
+    back, and Source/Use (only 0.058 below the last description line, far
+    closer than shape A's 0.089 gap) must not leak into it."""
+    from native.readers import backpack
+
+    def item(text, cx, cy):
+        return {"text": text, "score": 1.0, "box": [cx - 10, cy - 5, cx + 10, cy + 5]}
+
+    cy = 0.300
+    items = [
+        item("Mystery Badge", 500, int((cy + 0.121) * 1000)),
+        item("Mystery Badge can be used for trading in the Mystery", 500, int((cy + 0.151) * 1000)),
+        item("Shop.", 500, int((cy + 0.174) * 1000)),
+        item("Source", 333, int((cy + 0.242) * 1000)),
+        item("Use", 666, int((cy + 0.242) * 1000)),
+    ]
+    got = backpack.read_tooltip(items, 1000, 1000, 0.593, cy)
+    assert got[0] == "Mystery Badge"
+    assert got[2] == "Mystery Badge can be used for trading in the Mystery Shop."
 
 
 def test_classify_kind_is_reexported_from_knowledge_util():

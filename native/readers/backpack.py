@@ -83,52 +83,72 @@ def tile_targets(items, h, w):
     return sorted(set(out), key=lambda c: (c[1], c[0]))
 
 
-# The quantity box under a tooltip's description starts around uy-0.090
-# (measured on the live Chief Stamina frame, 2026-09-09). Candidates are
-# taken down to this floor so a description of any number of lines is
-# captured whole, without reaching into that box.
-DESC_FLOOR = 0.10
+# Anchored on the tapped tile's centre (cy), not the Use button: the live
+# sweep of 2026-09-09 found at least three tooltip layouts (see below), and
+# a fixed offset from Use cannot fit all of them -- Speedup tooltips have no
+# Use button at all. What all three share is the tap position, which the
+# caller already knows (read() has the tile's cx, cy to hand close_tooltip).
+#
+# Measured offsets from cy, real frames in
+# ~/wos-chief/20260909T120815Z/ (2026-09-09):
+#
+#   Shape A -- Resources, 010-tile.png (tile at cx=0.216, cy=0.218):
+#       cy+0.117  "Chief Stamina"                                  <- name
+#       cy+0.151  "Restores 10 Chief Stamina. Used for daily ..."  <- desc line 1
+#       cy+0.174  "troop deployment."                              <- desc line 2
+#       cy+0.226  quantity slider ("00", "+", count)
+#       cy+0.315  Source / Use
+#
+#   Shape B -- Speedup, 086-tile.png (tile at cx=0.404, cy=0.218):
+#       cy+0.120  "1m Construction Speedup"                        <- name
+#       cy+0.150  "Speeds up your [Construction] queue by 1 minute." <- desc
+#       (no Source/Use button at all -- speedups can't be re-sourced or
+#       manually used, so the old Use-anchored read_tooltip returned None
+#       for every one of these, which is why the 2026-09-09 sweep captured
+#       zero speedups)
+#
+#   Shape C -- Other, 110-tile.png (tile at cx=0.593, cy=0.257):
+#       cy+0.121  "Mystery Badge"                                  <- name
+#       cy+0.151  "Mystery Badge can be used for trading in the ..." <- desc line 1
+#       cy+0.174  "Shop."                                          <- desc line 2
+#       cy+0.242  Source / Use  (no quantity slider, so Source/Use sits
+#       closer to the description than in shape A)
+#
+# Name lands at cy+0.117..0.121 and description lines at cy+0.15/+0.174
+# across all three shapes; the only thing that varies is what comes after
+# (a slider, Source/Use, both, or nothing), which is why a fixed offset
+# from a button could never work but a fixed band below the tile does.
+# NAME_LO sits below the tooltip's own border/pointer glyphs (stray single
+# characters at cy+0.00..0.06, already excluded by the len(text) > 1
+# filter below); DESC_FLOOR sits above the nearest thing that can follow a
+# two-line description in any shape (the slider at cy+0.226 in shape A).
+NAME_LO = 0.08
+DESC_FLOOR = 0.19
 
 
-def read_tooltip(items, h, w):
-    """(name, None, description) from an open tile tooltip, else None. The
-    tooltip pops up beside its tile, so it is located by its Use button: the
-    name is the topmost text line 0.15-0.24 above it; the owned count is the
-    tile's own label, not the tooltip's.
+def read_tooltip(items, h, w, cx, cy):
+    """(name, None, description) from an open tile tooltip, else None.
 
-    Description: everything between the name and the quantity box, joined
-    top-to-bottom by y into one space-separated string.
+    `cx, cy` is the tapped tile's centre, the same fraction the caller
+    already passes to `close_tooltip` -- the tooltip always opens directly
+    below the tapped tile, in every shape seen so far, so this is the one
+    thing all shapes can be anchored on (see the offsets measured above).
+    `cx` is accepted for symmetry with the caller's tile-target tuple but
+    unused: the tooltip is horizontally centred (fx ~= 0.5) regardless of
+    which grid column was tapped.
 
-    The band is NOT split by a fixed name/description boundary, and the
-    live sweep of 2026-09-09 is why. The earlier version took the name from
-    a 0.15-0.24 band and the description from a 0.10-0.15 band below it,
-    surveyed against the single-line `backpack_tile` fixture. On the real
-    Chief Stamina tooltip the layout is:
-
-        uy-0.1977  "Chief Stamina"                                  <- name
-        uy-0.1646  "Restores 10 Chief Stamina. Used for daily ..."  <- desc line 1
-        uy-0.1414  "troop deployment."                              <- desc line 2
-        uy-0.0899  quantity box
-
-    A two-line description puts its FIRST line inside the old name band, so
-    the fixed split silently stored only "troop deployment." — the tail of a
-    sentence, with no tell that anything was dropped. The fixture could not
-    show this because it is single-line; only a real sweep could.
-
-    So: the name is the topmost candidate, and the description is every
-    candidate below it down to DESC_FLOOR, which sits above the quantity
-    box (that box starts around uy-0.090). Wrapping to any number of lines
-    is handled by the same rule as one line."""
-    use = next((i for i in items if norm(i["text"]) == "use"), None)
-    if use is None:
-        return None
-    uy = frac(use, h, w)[1]
-
+    The name is the topmost text line in the cy+NAME_LO .. cy+DESC_FLOOR
+    band; the description is every remaining candidate below the name,
+    joined top-to-bottom by y into one space-separated string. Button
+    labels ("Source", "Use") are excluded outright rather than relying on
+    the band alone, since shape A's Use sits close enough to the floor
+    that a slightly generous band could otherwise catch it."""
     def band(lo, hi):
-        return [i for i in items if 0.22 < frac(i, h, w)[0] < 0.78 and uy - hi <= frac(i, h, w)[1] <= uy - lo
-                and len(norm(i["text"])) > 1 and not re.fullmatch(r"[\d,.+() k]+", i["text"].strip().lower())]
+        return [i for i in items if 0.22 < frac(i, h, w)[0] < 0.78 and cy + lo <= frac(i, h, w)[1] <= cy + hi
+                and len(norm(i["text"])) > 1 and norm(i["text"]) not in ("source", "use")
+                and not re.fullmatch(r"[\d,.+() k]+", i["text"].strip().lower())]
 
-    cands = band(DESC_FLOOR, 0.24)
+    cands = band(NAME_LO, DESC_FLOOR)
     if not cands:
         return None
     name = min(cands, key=lambda i: frac(i, h, w)[1])
@@ -242,7 +262,7 @@ def read(sc, tabs=TABS):
                     sc.go_home()
                     res.status = "partial" if tiles_read else "failed"
                     return res
-                got = read_tooltip(titems, th, tw)
+                got = read_tooltip(titems, th, tw, cx, cy)
                 if got:
                     v, exact = parse_number(count_text.replace(" ", "").replace(".", ""))
                     if v is not None:

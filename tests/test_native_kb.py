@@ -1,5 +1,7 @@
 import json
 import os
+import shutil
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -170,3 +172,86 @@ def test_load_missing_optional_table_is_skipped(tmp_path, capsys):
     assert "events" not in result
     assert "not available" in capsys.readouterr().out
     kb._CACHE.pop(str(tmp_path), None)
+
+
+# ----------------------------------------------------------------------------- Task 5: labels, verification, freshness
+_FC31_ROW = {"source": "whiteoutdata", "label": "30-1", "meat": 67_000_000, "wood": 67_000_000,
+             "coal": 13_000_000, "iron": 3_300_000, "fire_crystals": 132, "refined_fire_crystals": 0,
+             "seconds": 604800, "power": 1_580_900, "prerequisites": {}}
+
+
+def _kbdir_with_overlay(tmp_path):
+    d = tmp_path / "kbdir"
+    shutil.copytree(FIX, d)
+    overlay = {"_meta": {"sources": ["whiteoutdata"]}, "buildings": {"furnace": {"31": dict(_FC31_ROW)}}}
+    (d / "local").mkdir()
+    (d / "local" / "overlay.json").write_text(json.dumps(overlay))
+    return d
+
+
+def test_building_row_accepts_furnace_labels_and_next_label(k):
+    assert kb.building_row("furnace", "28", kb=k)["meat"] == 190_000_000
+    assert kb.building_row("furnace", 99, kb=k) is None
+    assert [kb.next_level_label(x) for x in (27, 30, 34, 35, 79)] == ["28", "30-1", "FC1", "FC1-1", "FC10"]
+
+
+def test_mark_verified_writes_and_invalidates_cache(tmp_path):
+    d = tmp_path / "kbdir"
+    shutil.copytree(FIX, d)
+    kb.load(str(d))
+    assert kb.mark_verified("buildings", "furnace", 28, "20260908T122223Z", directory=str(d))
+    assert kb.load(str(d))["buildings"]["furnace"]["28"]["verified_in_game"] == "20260908T122223Z"
+    assert not kb.mark_verified("buildings", "furnace", 999, "x", directory=str(d))
+
+
+def test_mark_verified_returns_false_for_overlay_only_level(tmp_path):
+    """C12: mark_verified opens the committed file directly, never the
+    merged in-memory table, so an overlay-only level (ordinal > 30, added
+    only by _apply_overlay from the gitignored, terms-restricted local
+    overlay) always returns False. Writing it would put whiteoutdata's data
+    into a committed file, which is exactly what the overlay design (A5) is
+    there to prevent."""
+    d = _kbdir_with_overlay(tmp_path)
+    merged = kb.load(str(d))
+    assert merged["buildings"]["furnace"]["31"]["meat"] == 67_000_000  # confirms the overlay actually merged
+    assert kb.mark_verified("buildings", "furnace", 31, "sid", directory=str(d)) is False
+    kb._CACHE.pop(str(d), None)
+
+
+def test_load_with_real_overlay_file_reaches_the_prerequisites_guard(tmp_path):
+    """Closes the Task 4 coverage gap: the existing overlay-row test for
+    prerequisites() builds its row as a hand-written dict, so nothing
+    proves kb.load() merging a REAL knowledge/local/overlay.json file on
+    disk produces a row shaped the way that guard expects. This round-trips
+    it end to end: write the overlay fixture, kb.load() it for real, and
+    exercise both building_row's furnace-label lookup and prerequisites()'s
+    overlay guard on the merged row."""
+    d = _kbdir_with_overlay(tmp_path)
+    merged = kb.load(str(d))
+    assert kb.building_row("furnace", "30-1", kb=merged)["meat"] == 67_000_000
+    unmet, assumed = kb.prerequisites("furnace", 31, {}, kb=merged)
+    assert unmet == [] and assumed == ["unknown: overlay row"]
+    kb._CACHE.pop(str(d), None)
+
+
+def _iso(dt):
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_freshness_flags_tables_older_than_the_threshold():
+    now = datetime(2026, 9, 8, 12, 0, tzinfo=timezone.utc)
+    stale_kb = {
+        "_meta_buildings": {"fetched_at": _iso(now - timedelta(days=40))},
+        "_meta_research": {"fetched_at": _iso(now - timedelta(days=5))},
+    }
+    out = {t: (age, stale) for t, age, stale in kb.freshness(kb=stale_kb, now=now)}
+    assert out["buildings"] == (40, True)
+    assert out["research"] == (5, False)
+    # training/stats/events have no _meta_* entry at all -> omitted, not a false "fresh"
+    assert "training" not in out and "stats" not in out and "events" not in out
+
+
+def test_freshness_uses_the_default_stale_threshold_of_30_days():
+    now = datetime(2026, 9, 8, 12, 0, tzinfo=timezone.utc)
+    edge_kb = {"_meta_buildings": {"fetched_at": _iso(now - timedelta(days=30))}}
+    assert kb.freshness(kb=edge_kb, now=now) == [("buildings", 30, False)]

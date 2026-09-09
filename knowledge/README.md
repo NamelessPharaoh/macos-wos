@@ -70,3 +70,35 @@ top-level key of its committed file. Neither test needs fixtures -- the four
 required tables are committed in this repo, and the optional `events`
 (`calendar.json`, not shipped in M1) is skipped rather than failed when its
 file is absent.
+
+## In-game verification
+
+Rows carry `verified_in_game: null | "<snapshot_id>"`. The executor calls
+`native.kb.mark_verified("buildings", "furnace", 28, snapshot_id)` when the
+cost it read on the Upgrade popup matched the table within 2%
+(`native.kb.verify`). A row's mark survives a refresh whenever that row's
+own costs did not change (`carry_marks`); it is cleared back to `null` when
+they did.
+
+`mark_verified` opens the committed table file directly -- never the
+merged, cached table `kb.load()` returns. This means a Fire Crystal furnace
+level (ordinal > 30) that exists only via `knowledge/local/overlay.json`
+can never be marked verified: the committed file has no row for it, so
+`mark_verified` returns `False`, exactly like any other level that doesn't
+exist. This is intended, not a bug (C12) -- overlay data is
+terms-restricted and must never be written into a committed file, and
+`mark_verified` is the only place in the knowledge base that writes to
+disk. It stays irrelevant until the tracked furnace actually passes
+level 30.
+
+## Knowledge freshness
+
+`native.kb.freshness(kb=None, now=None, stale_days=30)` returns
+`[(table, age_days, stale)]` computed from each table's `_meta.fetched_at`;
+a table with no `_meta` (an optional table not yet fetched, or a hand-built
+test kb) is omitted rather than reported as fresh. The chief report prints
+it under Warnings (`knowledge: buildings 12 d, research 12 d`) and, for any
+table past the threshold, a one-line refresh hint
+(`knowledge table buildings is 40 days old: uv run python
+scripts/refresh_knowledge.py --table buildings`); `native.report.doctor`
+prints the same hint.

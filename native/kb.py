@@ -24,14 +24,22 @@ values come from (M2 data; the load path and the None-without-overlay
 behaviour ship now). Without it, `power_gain("building", ...)` returns
 `None`, never `0`, so a planner never mistakes "unknown" for "no power".
 
-furnace_ordinal is imported from knowledge/util.py (B9/R4): this module
-never redefines the ordinal maths.
+furnace_ordinal, next_level_label and write_table are imported from
+knowledge/util.py (B9/R4): this module never redefines the ordinal maths,
+the label-after-ordinal maths, or the atomic-write helper -- it only
+re-exports them for its own callers (`kb.next_level_label(...)` works).
+
+Verification (mark_verified, C12): opens the COMMITTED file directly --
+never the merged in-memory table `load()` returns -- so a level that only
+exists via the local overlay (an ordinal > 30 Fire Crystal row, terms-
+restricted data that must never reach a committed file) always returns
+False. This is the only place in the knowledge base that writes to disk.
 """
 import json
 import os
 from collections import namedtuple
 
-from knowledge.util import furnace_ordinal
+from knowledge.util import furnace_ordinal, next_level_label, write_table
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KNOWLEDGE_DIR = os.path.join(REPO, "knowledge")
@@ -131,7 +139,18 @@ def _row_cost(row):
 
 # ----------------------------------------------------------------------------- buildings
 def building_row(name, level, kb=None):
-    return _kb(kb)["buildings"].get(name, {}).get(str(level))
+    """`level` is either a plain ordinal (int or digit string) or, for the
+    furnace, one of the game's Fire-Crystal labels ("30-1", "FC1", "FC1-1",
+    ...), resolved through `furnace_ordinal`. A label that doesn't parse as
+    a furnace level returns None rather than raising -- callers already
+    treat a missing row as "not in the knowledge base"."""
+    key = str(level)
+    if name == "furnace" and not key.isdigit():
+        try:
+            key = str(furnace_ordinal(key))
+        except ValueError:
+            return None
+    return _kb(kb)["buildings"].get(name, {}).get(key)
 
 
 def _require_building_row(name, level, kb):
@@ -316,6 +335,54 @@ def verify(kb_cost, screen_cost, tolerance=0.02):
         if expect == 0 or abs(seen - expect) / expect > tolerance:
             return False, f"{res}: table {expect:,} vs screen {seen:,}"
     return True, "ok"
+
+
+def mark_verified(table, key, level, snapshot_id, directory=None):
+    """Record that a screen read agreed with a row (`native.kb.verify`); the
+    planner trusts verified rows first and the briefing lists unverified
+    ones it relies on.
+
+    C12 (binding): this opens the COMMITTED file at `directory` directly --
+    never `load()`'s merged, cached table -- so a level that exists only
+    via the local overlay (a Fire Crystal furnace row, ordinal > 30,
+    whiteoutdata-sourced and terms-restricted) is never found here and
+    `mark_verified` returns False for it, same as any other unknown level.
+    This is the only place in the knowledge base that writes to disk, which
+    is exactly why it must never write overlay data into a committed file.
+    """
+    directory = directory or KNOWLEDGE_DIR
+    fname = {"buildings": "buildings.json", "research": "research.json"}[table]
+    path = os.path.join(directory, fname)
+    with open(path) as f:
+        doc = json.load(f)
+    if table == "buildings":
+        row = doc[table].get(key, {}).get(str(level))
+    else:
+        row = doc[table].get(key, {}).get("levels", {}).get(str(level))
+    if row is None:
+        return False
+    row["verified_in_game"] = snapshot_id
+    write_table(path, doc)
+    _CACHE.pop(directory, None)
+    return True
+
+
+def freshness(kb=None, now=None, stale_days=30):
+    """[(table, age_days, stale)] from each table's `_meta.fetched_at`
+    (A9): the report line that tells the operator a vendored table hasn't
+    been refreshed in a while. A table with no `_meta` or no `fetched_at`
+    (an optional table that hasn't shipped yet, or a hand-built test kb) is
+    omitted rather than reported as either fresh or stale."""
+    from datetime import datetime, timezone
+    now = now or datetime.now(timezone.utc)
+    out = []
+    for key in TABLES:
+        m = _kb(kb).get(f"_meta_{key}")
+        if not m or not m.get("fetched_at"):
+            continue
+        age = (now - datetime.fromisoformat(m["fetched_at"].replace("Z", "+00:00"))).days
+        out.append((key, age, age > stale_days))
+    return out
 
 
 def speed_bonus_from_sheet(sheet, kind):

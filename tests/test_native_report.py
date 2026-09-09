@@ -40,3 +40,40 @@ def test_render_handles_missing_numbers(tmp_path):
 def test_doctor_needs_three_runs(tmp_path):
     conn = _db(tmp_path)
     assert "need 3" in report.doctor(conn, "p")
+
+
+def test_render_text_shows_knowledge_freshness(tmp_path):
+    """A9: the freshness line render_text prints comes from data["knowledge"]
+    (populated by build() from kb.freshness()); render_text itself just
+    formats whatever list it is handed, so this pins the exact wording."""
+    conn = _db(tmp_path)
+    data = report.build(conn, "p")
+    data["knowledge"] = [("buildings", 12, False), ("research", 12, False)]
+    text = report.render_text(data)
+    assert "knowledge: buildings 12 d, research 12 d" in text
+
+
+def test_render_text_flags_a_stale_knowledge_table(tmp_path):
+    conn = _db(tmp_path)
+    data = report.build(conn, "p")
+    data["knowledge"] = [("buildings", 40, True)]
+    text = report.render_text(data)
+    assert "knowledge table buildings is 40 days old" in text
+    assert "uv run python scripts/refresh_knowledge.py --table buildings" in text
+
+
+def test_build_populates_knowledge_freshness_from_the_real_tables(tmp_path):
+    """Sanity check on the real wiring (not just render_text's formatting):
+    build() must call kb.freshness() and store a non-empty list, since the
+    repo's committed knowledge/*.json all carry a _meta.fetched_at."""
+    conn = _db(tmp_path)
+    data = report.build(conn, "p")
+    assert data["knowledge"]
+    assert all(isinstance(t, str) and isinstance(age, int) and isinstance(stale, bool) for t, age, stale in data["knowledge"])
+
+
+def test_doctor_flags_a_stale_knowledge_table(tmp_path):
+    conn = _db(tmp_path)
+    msg = report.doctor(conn, "p", runs=2, kb_freshness=[("buildings", 40, True)])
+    assert "buildings" in msg and "40 days old" in msg
+    assert "uv run python scripts/refresh_knowledge.py --table buildings" in msg

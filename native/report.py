@@ -9,7 +9,7 @@ import html
 import json
 from collections import defaultdict
 
-from native import model, schema
+from native import kb, model, schema
 
 SHEET = [
     ("Identity", [("identity.name", "name"), ("identity.id", "id"), ("identity.state", "state"),
@@ -93,7 +93,8 @@ def build(conn, player_id, snapshot_id=None):
         if len(parts) == 3 and parts[0] == "heroes":
             heroes[parts[1]][parts[2]] = row["value_num"] if row["value_num"] is not None else row["value_text"]
     return {"snapshot": dict(snap) if snap else None, "latest": latest, "deltas": deltas,
-            "warnings": warnings, "sections": sections, "series": series, "heroes": dict(heroes)}
+            "warnings": warnings, "sections": sections, "series": series, "heroes": dict(heroes),
+            "knowledge": kb.freshness()}  # A9: table freshness, independent of this player's snapshots
 
 
 def render_text(data):
@@ -139,13 +140,23 @@ def render_text(data):
         out.append(f"  {w['unread_no_reader']} paths have no reader yet (phase 2/3), not counted as warnings")
     if snap["power_rose"]:
         out.append("  power rose during the run: a timer completed, or something was spent")
+    know = data.get("knowledge") or []
+    if know:
+        out.append("  knowledge: " + ", ".join(f"{t} {age} d" for t, age, _ in know))
+        for t, age, stale in know:
+            if stale:
+                out.append(f"  knowledge table {t} is {age} days old: uv run python scripts/refresh_knowledge.py --table {t}")
     if len(out) and out[-1] == "\nWarnings":
         out.append("  none")
     return "\n".join(out)
 
 
-def doctor(conn, player_id, runs=3):
-    """Readers that failed on each of the last `runs` non-operator snapshots."""
+def doctor(conn, player_id, runs=3, kb_freshness=None):
+    """Readers that failed on each of the last `runs` non-operator snapshots,
+    plus a hint for any knowledge table older than the staleness threshold
+    (A9) -- the same hint render_text prints, so a caller that only ever
+    runs `doctor()` (not the full report) still sees a stale table.
+    `kb_freshness` overrides the real `kb.freshness()` read, for tests."""
     rows = conn.execute("SELECT id, sections FROM snapshots WHERE player_id = ? AND source != 'operator' "
                         "ORDER BY id DESC LIMIT ?", (player_id, runs)).fetchall()
     if len(rows) < runs:
@@ -156,7 +167,11 @@ def doctor(conn, player_id, runs=3):
             if st in ("failed", "partial"):
                 fails[name] += 1
     sick = [n for n, c in fails.items() if c == runs]
-    return "doctor: " + (", ".join(f"{n} failed {runs} runs in a row" for n in sick) if sick else "every reader succeeded at least once in the last %d runs" % runs)
+    msg = "doctor: " + (", ".join(f"{n} failed {runs} runs in a row" for n in sick) if sick else "every reader succeeded at least once in the last %d runs" % runs)
+    stale = [(t, age) for t, age, is_stale in (kb.freshness() if kb_freshness is None else kb_freshness) if is_stale]
+    if stale:
+        msg += "; " + "; ".join(f"knowledge table {t} is {age} days old: uv run python scripts/refresh_knowledge.py --table {t}" for t, age in stale)
+    return msg
 
 
 def _spark(points, width=320, height=48):

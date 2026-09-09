@@ -31,6 +31,7 @@ from native.readers import hud as r_hud
 from native.readers import profile as r_profile
 from native.readers import queues as r_queues
 from native.readers import resources as r_resources
+from native.readers import stats as r_stats
 from native.readers import troops as r_troops
 from native.screen import Screen, read_hud
 
@@ -40,6 +41,7 @@ MAIN_POWER_FLOOR = 1_000_000   # the tutorial account reads five digits; main te
 READERS = {
     "hud": r_hud.read,
     "profile": r_profile.read,
+    "stats": r_stats.read,
     "gear": r_gear.read,
     "troops": r_troops.read,
     "resources": r_resources.read,
@@ -53,7 +55,7 @@ READERS = {
 # backpack is opt-in (--readers backpack): on 2026-09-08 the Backpack kept
 # opening on its last tab (Gear), whose tiles open a Gear Details dialog, and
 # an earlier close gesture consumed a cosmetic item. See TODOS.md.
-ORDER = ("hud", "profile", "gear", "troops", "resources", "alliance", "queues", "buildings", "events", "heroes")
+ORDER = ("hud", "profile", "stats", "gear", "troops", "resources", "alliance", "queues", "buildings", "events", "heroes")
 
 
 class SnapshotStopped(RuntimeError):

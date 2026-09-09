@@ -202,6 +202,22 @@ def test_backpack_tab_active_by_pixel():
     assert active == {"Resources": True, "Speedup": False, "Bonus": False, "Gear": False, "Other": False}
 
 
+def test_stats_reads_construction_research_and_training_speed_across_scrolls():
+    """Bonus Overview is one long scrollable list: Training Speed sits in the
+    Military section, Construction/Research Speed in the Growth section
+    further down, never together in one frame -- so parse() accumulates into
+    the same ReaderResult across the frames the reader visits while scrolling
+    (native/readers/stats.py::read), exactly like this test does."""
+    from native.readers import stats, ReaderResult
+    r = ReaderResult("stats")
+    for name in ("stats", "stats_scroll1", "stats_scroll2"):
+        img, items, path = _frame(name)
+        stats.parse(r, img, items, path)
+    d = r.doc["progress"]["bonus"]
+    assert d == {"construction_speed": 51, "research_speed": 37, "training_speed": 156}
+    assert r.settle(stats.EXPECTED).status == "ok"
+
+
 def test_resources_assigns_by_row_so_a_dropped_bullet_cannot_become_iron():
     import cv2
     from core.vision_engine import VisionEngine

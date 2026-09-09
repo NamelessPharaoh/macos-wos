@@ -50,6 +50,14 @@ _add("progress.vip.level", "monotonic_step", "int")
 _add("progress.power", "bounded", "int")
 _add("progress.kills", "monotonic", "int")
 
+# Account speed bonuses (Task 7 / A10): the game's own percentage (+128% ->
+# 128), read from Chief Profile -> Bonus Overview by native/readers/stats.py.
+# native/kb.py::speed_bonus_from_sheet converts to the multiplier delta
+# building_time/training_time want.
+_add("progress.bonus.construction_speed", "volatile", "int")
+_add("progress.bonus.research_speed", "volatile", "int")
+_add("progress.bonus.training_speed", "volatile", "int")
+
 _add("economy.gems", "volatile", "int")
 for _res in ("meat", "wood", "coal", "iron"):
     _add(f"economy.resources.{_res}", "volatile", "int")
@@ -165,6 +173,7 @@ SECTION_OF_PATH_TABLE = (
     ("identity.", "profile"),
     ("progress.power", "hud"),
     ("progress.vip", "hud"),
+    ("progress.bonus.", "stats"),
     ("progress.", "profile"),
     ("economy.gems", "hud"),
     ("economy.resources.coal", "hud"),

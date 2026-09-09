@@ -444,6 +444,15 @@ def mark_verified(table, key, level, snapshot_id, directory=None):
 ITEMS_FILE = "items.json"
 
 
+def _read_items_doc(path):
+    """items.json, shape-checked (fix round 2, item 5): see below."""
+    with open(path) as f:
+        doc = json.load(f)
+    if "items" not in doc:
+        raise ValueError(f"{path}: malformed item catalogue -- missing top-level 'items' key")
+    return doc
+
+
 def items(directory=None):
     """The item catalogue `record_item` builds from backpack tooltips:
     {slug: {name, slug, tab, description, kind, classifier_version,
@@ -453,14 +462,10 @@ def items(directory=None):
     path: `record_item` can add a row mid-run (a backpack sweep classifies
     tiles as it reads them, `fold` looks the same slug up moments later)
     and a process-lifetime cache would hide what the same run just wrote.
-    Empty when `knowledge/items.json` doesn't exist yet -- a fresh clone,
-    or before the backpack reader has ever run."""
+    Empty when missing; malformed raises ValueError, not empty (item 5)."""
     directory = directory or KNOWLEDGE_DIR
     path = os.path.join(directory, ITEMS_FILE)
-    if not os.path.exists(path):
-        return {}
-    with open(path) as f:
-        return json.load(f).get("items", {})
+    return {} if not os.path.exists(path) else _read_items_doc(path)["items"]
 
 
 def record_item(name, tab, description, snapshot_id, directory=None):
@@ -503,8 +508,7 @@ def record_item(name, tab, description, snapshot_id, directory=None):
     directory = directory or KNOWLEDGE_DIR
     path = os.path.join(directory, ITEMS_FILE)
     if os.path.exists(path):
-        with open(path) as f:
-            doc = json.load(f)
+        doc = _read_items_doc(path)  # item 5: same shape-check as items()
     else:
         doc = {"_meta": {"source": "in-game backpack tooltips"}, "items": {}}
     slug = slugify(name)

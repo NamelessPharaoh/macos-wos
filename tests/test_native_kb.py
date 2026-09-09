@@ -389,6 +389,22 @@ def test_items_returns_empty_dict_when_the_catalogue_file_is_absent(tmp_path):
     assert kb.items(directory=str(tmp_path)) == {}
 
 
+def test_items_and_record_item_agree_a_malformed_catalogue_is_a_named_failure(tmp_path):
+    """Fix round 2, item 5: `items()` used `.get("items", {})` (a malformed
+    file silently read as empty) while `record_item` used `doc["items"]`
+    (a bare, unnamed KeyError partway through a backpack sweep) -- the two
+    accessors disagreed about the same bad file. Both must now raise the
+    same named, guarded error, matching every other malformed knowledge
+    file in this codebase, rather than one of them reading it as empty."""
+    d = tmp_path
+    (d / "items.json").write_text('{"_meta": {"source": "x"}}')  # truncated: no "items" key
+
+    with pytest.raises(ValueError, match="items.json"):
+        kb.items(directory=str(d))
+    with pytest.raises(ValueError, match="items.json"):
+        kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sid", directory=str(d))
+
+
 def test_record_item_upsert_sets_first_seen_once_and_advances_last_seen(tmp_path):
     d = str(tmp_path)
     row1 = kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sidA", directory=d)

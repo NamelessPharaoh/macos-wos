@@ -96,8 +96,23 @@ def slugify(text):
     and must not import native/screen.py (cv2, numpy, native.drive at module
     level) just to get one. native/screen.py re-exports this unchanged, so
     the five reader modules that already import it from there see no
-    change, and record_item's slug always matches what they compute."""
-    t = re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
+    change, and record_item's slug always matches what they compute.
+
+    Apostrophes are dropped, not turned into separators (fix round 2, item
+    3): "Hunter's Hut" -> 'hunters_hut', matching
+    `knowledge.normalise.slug` -- the vendored tables' own slugger, whose
+    output is what `knowledge/buildings.json` and
+    `native/kb.py::UNTRACKED_ASSUMED_MET` key by. Before this fix this
+    function alone produced 'hunter_s_hut', an apostrophe convention no
+    other slug in `knowledge/` uses; unreachable only because no reader
+    read a building whose screen name has one yet. Safe to change here
+    (rather than in normalise.slug) because `knowledge/items.json` is
+    empty in every checkout today -- there is no existing catalogue row
+    keyed by the old apostrophe-as-separator form for this change to
+    orphan; the day it isn't empty, this is the direction that agrees with
+    the already-committed vendored tables, not the one that would need a
+    migration of its own."""
+    t = re.sub(r"[^a-z0-9]+", "_", re.sub(r"['’]", "", str(text).lower())).strip("_")
     return t or "unnamed"
 
 

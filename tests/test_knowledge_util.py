@@ -81,6 +81,25 @@ def test_slugify_moved_intact():
     assert ku.slugify("") == "unnamed"
 
 
+def test_slugify_and_normalise_slug_agree_on_apostrophes():
+    """Fix round 2, item 3: knowledge/util.py::slugify (backpack items,
+    other screen-read names) and knowledge/normalise.py::slug (the
+    vendored tables' own slugger, used by knowledge/buildings.json's keys
+    and native/kb.py::UNTRACKED_ASSUMED_MET) used to disagree on
+    apostrophes -- "Hunter's Hut" was 'hunter_s_hut' from one and
+    'hunters_hut' from the other. Unreachable only because no reader read
+    a building whose screen name has an apostrophe yet; the day one does,
+    a `prerequisites()` lookup under the wrong slug would find nothing,
+    fall through to the assumed-met list, and report a now-tracked
+    building as merely "assumed met" -- the exact silent-satisfaction bug
+    that list exists to prevent. Both must produce the same slug for every
+    apostrophe-bearing name, not just for "Hunter's Hut"."""
+    from knowledge import normalise
+
+    for name in ("Hunter's Hut", "Chief's Charm", "O'Brien's Camp", "Marksman's Guild"):
+        assert ku.slugify(name) == normalise.slug(name), name
+
+
 def test_speedup_duration_extracts_kind_and_duration():
     assert ku.speedup_duration("Construction Speedup 1h") == ("construction", "1h")
     assert ku.speedup_duration("5m Speedup") == ("general", "5m")

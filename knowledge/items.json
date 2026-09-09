@@ -9,9 +9,9 @@
       "tab": "Resources",
       "description": "Restores 10 Chief Stamina. Used for daily events like troop deployment.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "lv_1_custom_resource_chest": {
       "name": "Lv.1 Custom Resource Chest",
@@ -19,9 +19,9 @@
       "tab": "Resources",
       "description": "Grants your choice of 10K Meat, 10K Wood, 2K Coal or 500 Iron.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "lv_2_custom_resource_chest": {
       "name": "Lv.2 Custom Resource Chest",
@@ -29,9 +29,9 @@
       "tab": "Resources",
       "description": "Grants your choice of 100K Meat, 100K Wood, 20K Coal or 5K Iron.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1k_meat": {
       "name": "1K Meat",
@@ -39,9 +39,9 @@
       "tab": "Resources",
       "description": "Grants 1,000 Meat.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1k_meat_secured": {
       "name": "1K Meat (Secured)",
@@ -49,9 +49,9 @@
       "tab": "Resources",
       "description": "Gives 1,000 Meat (Secured).",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "10k_meat_secured": {
       "name": "10K Meat (Secured)",
@@ -59,9 +59,9 @@
       "tab": "Resources",
       "description": "Gives 10,000 Meat (Secured).",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "10k_meat": {
       "name": "10K Meat",
@@ -69,9 +69,9 @@
       "tab": "Resources",
       "description": "Grants 10,000 Meat.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "100k_meat": {
       "name": "100K Meat",
@@ -79,9 +79,9 @@
       "tab": "Resources",
       "description": "Grants 100,000 Meat.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1k_wood": {
       "name": "1K Wood",
@@ -89,9 +89,9 @@
       "tab": "Resources",
       "description": "Grants 1,000 Wood.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1k_wood_secured": {
       "name": "1K Wood (Secured)",
@@ -99,9 +99,9 @@
       "tab": "Resources",
       "description": "Gives 1,000 Wood (Secured).",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "10k_wood": {
       "name": "10K Wood",
@@ -109,9 +109,9 @@
       "tab": "Resources",
       "description": "Grants 10,000 Wood.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "100k_wood": {
       "name": "100K Wood",
@@ -119,9 +119,9 @@
       "tab": "Resources",
       "description": "Grants 100,000 Wood.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "100_coal": {
       "name": "100 Coal",
@@ -129,9 +129,9 @@
       "tab": "Resources",
       "description": "Grants 100 Coal.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1k_coal": {
       "name": "1K Coal",
@@ -139,9 +139,9 @@
       "tab": "Resources",
       "description": "Grants 1,000 Coal.",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "10k_wood_secured": {
       "name": "10K Wood (Secured)",
@@ -149,9 +149,9 @@
       "tab": "Resources",
       "description": "Gives 10,000 Wood (Secured).",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "10k_coal": {
       "name": "10K Coal",
@@ -193,35 +193,15 @@
       "first_seen": "20260909T120815Z",
       "last_seen": "20260909T120815Z"
     },
-    "restores_10_chief_stamina_used_for_daily_events_like": {
-      "name": "Restores 10 Chief Stamina. Used for daily events like",
-      "slug": "restores_10_chief_stamina_used_for_daily_events_like",
-      "tab": "Resources",
-      "description": "troop deployment.",
-      "kind": "other",
-      "classifier_version": 1,
-      "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
-    },
-    "grants_your_choice_of_10k_meat_10k_wood_2k_coal_or": {
-      "name": "Grants your choice of 10K Meat, 10K Wood, 2K Coal or",
-      "slug": "grants_your_choice_of_10k_meat_10k_wood_2k_coal_or",
-      "tab": "Resources",
-      "description": "500 Iron.",
-      "kind": "other",
-      "classifier_version": 1,
-      "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
-    },
     "grants_1_000_meat": {
       "name": "Grants 1,000 Meat.",
       "slug": "grants_1_000_meat",
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "gives_10_000_meat_secured": {
       "name": "Gives 10,000 Meat (Secured).",
@@ -229,9 +209,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "gives_1_000_meat_secured": {
       "name": "Gives 1,000 Meat (Secured).",
@@ -239,9 +219,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_10_000_meat": {
       "name": "Grants 10,000 Meat.",
@@ -249,9 +229,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_100_000_meat": {
       "name": "Grants 100,000 Meat.",
@@ -259,9 +239,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_1_000_wood": {
       "name": "Grants 1,000 Wood.",
@@ -269,9 +249,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "gives_1_000_wood_secured": {
       "name": "Gives 1,000 Wood (Secured).",
@@ -279,9 +259,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_10_000_wood": {
       "name": "Grants 10,000 Wood.",
@@ -289,9 +269,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "gives_10_000_wood_secured": {
       "name": "Gives 10,000 Wood (Secured).",
@@ -299,9 +279,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_100_000_wood": {
       "name": "Grants 100,000 Wood.",
@@ -309,9 +289,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_100_coal": {
       "name": "Grants 100 Coal.",
@@ -319,9 +299,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "grants_1_000_coal": {
       "name": "Grants 1,000 Coal.",
@@ -329,9 +309,9 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "o0": {
       "name": "O0",
@@ -339,89 +319,89 @@
       "tab": "Resources",
       "description": null,
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1h_construction_speedup": {
       "name": "1h Construction Speedup",
       "slug": "1h_construction_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Construction] queue by 60 minutes.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1m_construction_speedup": {
       "name": "1m Construction Speedup",
       "slug": "1m_construction_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Construction] queue by 1 minute.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "5m_construction_speedup": {
       "name": "5m Construction Speedup",
       "slug": "5m_construction_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Construction] queue by 5 minutes.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1m_training_speedup": {
       "name": "1m Training Speedup",
       "slug": "1m_training_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your (Training] queue by 1 minute.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "5m_training_speedup": {
       "name": "5m Training Speedup",
       "slug": "5m_training_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Training] queue by 5 minutes.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1h_training_speedup": {
       "name": "1h Training Speedup",
       "slug": "1h_training_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Training] queue by 60 minutes.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "1m_healing_speedup": {
       "name": "1m Healing Speedup",
       "slug": "1m_healing_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Healing] queue by 1 minute.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "5m_healing_speedup": {
       "name": "5m Healing Speedup",
       "slug": "5m_healing_speedup",
-      "tab": "Speedup",
+      "tab": "Other",
       "description": "Speeds up your [Healing] queue by 5 minutes.",
-      "kind": "other",
-      "classifier_version": 1,
+      "kind": "speedup",
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "gem_of_enigma": {
       "name": "Gem of Enigma",
@@ -429,9 +409,9 @@
       "tab": "Other",
       "description": "Stone with engravings of mystery on it, used to open chests in [Frosty Fortune].",
       "kind": "other",
-      "classifier_version": 1,
+      "classifier_version": 2,
       "first_seen": "20260909T123929Z",
-      "last_seen": "20260909T123929Z"
+      "last_seen": "20260909T124614Z"
     },
     "mystery_badge": {
       "name": "Mystery Badge",
@@ -452,6 +432,66 @@
       "classifier_version": 1,
       "first_seen": "20260909T123929Z",
       "last_seen": "20260909T123929Z"
+    },
+    "fortune_token": {
+      "name": "Fortune Token",
+      "slug": "fortune_token",
+      "tab": "Other",
+      "description": "[Mia's Fortune Hut] is open! Fancy telling your fortune?",
+      "kind": "other",
+      "classifier_version": 2,
+      "first_seen": "20260909T124614Z",
+      "last_seen": "20260909T124614Z"
+    },
+    "horn_of_the_cryptid": {
+      "name": "Horn of the Cryptid",
+      "slug": "horn_of_the_cryptid",
+      "tab": "Other",
+      "description": "Can be obtained by defeating beasts during the Gina's Revenge event. Use it to track down 'Berserk Cryptid'.",
+      "kind": "other",
+      "classifier_version": 2,
+      "first_seen": "20260909T124614Z",
+      "last_seen": "20260909T124614Z"
+    },
+    "explosive_arrowheads": {
+      "name": "Explosive Arrowheads",
+      "slug": "explosive_arrowheads",
+      "tab": "Other",
+      "description": "Effectively raises the Alliance's \"Hunting Trap\" level, causing more damage to the \"Raging Bear\".",
+      "kind": "other",
+      "classifier_version": 2,
+      "first_seen": "20260909T124614Z",
+      "last_seen": "20260909T124614Z"
+    },
+    "taming_manual": {
+      "name": "Taming Manual",
+      "slug": "taming_manual",
+      "tab": "Other",
+      "description": "A manual with diligent beast taming notes that can be used for pet advancement.",
+      "kind": "other",
+      "classifier_version": 2,
+      "first_seen": "20260909T124614Z",
+      "last_seen": "20260909T124614Z"
+    },
+    "energizing_potion": {
+      "name": "Energizing Potion",
+      "slug": "energizing_potion",
+      "tab": "Other",
+      "description": "A rejuvenating potion. Can be used for pet advancement.",
+      "kind": "other",
+      "classifier_version": 2,
+      "first_seen": "20260909T124614Z",
+      "last_seen": "20260909T124614Z"
+    },
+    "charm_design": {
+      "name": "Charm Design",
+      "slug": "charm_design",
+      "tab": "Other",
+      "description": "A Chief Charm upgrade material.",
+      "kind": "other",
+      "classifier_version": 2,
+      "first_seen": "20260909T124614Z",
+      "last_seen": "20260909T124614Z"
     }
   }
 }

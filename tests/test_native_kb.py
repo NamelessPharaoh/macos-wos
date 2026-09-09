@@ -414,6 +414,29 @@ def test_record_item_updates_tab_and_description_on_a_later_sighting(tmp_path):
     assert row["tab"] == "Other" and row["description"] == "Grants 1 Gems."
 
 
+def test_record_item_does_not_blank_a_real_description_with_a_later_none(tmp_path):
+    """Fix round 2, item 4: `read_tooltip` returns description=None when its
+    band comes up empty on a particular read (e.g. a different scroll
+    offset pushed the description line out of frame) -- that must not
+    replace a real description already in the catalogue, since the
+    catalogue is the only record of that text and there is no way to
+    re-derive it. Every OTHER field must still refresh normally, proving
+    this isn't a blanket "ignore later sightings" regression."""
+    d = str(tmp_path)
+    kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sidA", directory=d)
+    row = kb.record_item("1 Gems", "Other", None, "sidB", directory=d)
+    assert row["description"] == "Grants 1 Gems."  # kept, not blanked
+    assert row["tab"] == "Other" and row["last_seen"] == "sidB"  # other fields still refresh
+
+    # a real description read AFTER a None read must still win normally
+    row2 = kb.record_item("1 Gems", "Other", "Grants 1 Gem, refined.", "sidC", directory=d)
+    assert row2["description"] == "Grants 1 Gem, refined."
+
+    # a brand-new row with no prior sighting at all: None stays None, not "" or a crash
+    fresh = kb.record_item("Mystery Item", "Other", None, "sidA", directory=d)
+    assert fresh["description"] is None
+
+
 def test_record_item_kind_reuses_backpacks_classification_rules(tmp_path):
     """kind must come from native.readers.backpack.classify_kind -- the
     same SPEEDUP_RE/keyword logic `fold` uses -- not a second copy."""

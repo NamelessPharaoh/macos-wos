@@ -484,9 +484,16 @@ def record_item(name, tab, description, snapshot_id, directory=None):
     rule change) from a current one and recompute instead of trusting it --
     see `fold`'s docstring.
 
-    Upsert semantics: `first_seen` is set once and never overwritten;
-    every other field, including `last_seen`, is refreshed to this call's
-    values on every sighting.
+    Upsert semantics: `first_seen` is set once and never overwritten; every
+    other field, including `last_seen`, is refreshed to this call's values
+    on every sighting -- EXCEPT `description`, which keeps the existing row's
+    value when this sighting's is None (fix round 2, item 4).
+    `native.readers.backpack.read_tooltip` returns `description=None` when
+    its band comes up empty on that particular read (a different scroll
+    offset, say), and the catalogue is the only record of that text -- there
+    is no way to re-derive it once overwritten. "a better read must not be
+    stuck behind a worse one" cuts both ways: a later None is not a better
+    read, it is no read at all.
 
     This is the second of the two functions in this module that write to
     disk (see the module docstring). Like `mark_verified`, it never writes
@@ -503,6 +510,8 @@ def record_item(name, tab, description, snapshot_id, directory=None):
     slug = slugify(name)
     row = dict(doc["items"].get(slug) or {})
     first_seen = row.get("first_seen", snapshot_id)
+    if description is None:
+        description = row.get("description")  # a worse read must not blank a better one
     row.update({
         "name": name,
         "slug": slug,

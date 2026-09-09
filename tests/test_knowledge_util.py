@@ -156,3 +156,43 @@ def test_classify_kind_rules_are_fingerprinted_by_the_current_version():
         "itself) but CLASSIFIER_VERSION was not bumped -- bump it in knowledge/util.py "
         "and pin a new fingerprint for the new version in CLASSIFIER_RULES_FINGERPRINTS"
     )
+
+
+def test_speedup_names_use_the_order_the_game_actually_prints():
+    """Live sweep 2026-09-09. The game names these "1m Construction Speedup":
+    duration FIRST, then the queue. SPEEDUP_RE originally only allowed
+    "Construction 1m Speedup", so on every real name the type group failed to
+    match, the duration group (which had to sit immediately before "speedup")
+    failed too, and classify_kind returned "other" for all eight speedups on
+    the account. The consequence was invisible in the database rather than
+    loud: `backpack.speedups.<type>.<duration>` had 45 rows, every one null,
+    because fold never routed a single speedup to them.
+
+    Names below are verbatim from the sweep. The reversed order and the
+    bare/trailing forms are kept so a future rename in either direction stays
+    covered."""
+    from knowledge.util import classify_kind, speedup_duration
+
+    real = {
+        "1m Construction Speedup": ("construction", "1m"),
+        "5m Construction Speedup": ("construction", "5m"),
+        "1h Construction Speedup": ("construction", "1h"),
+        "1m Training Speedup": ("training", "1m"),
+        "5m Training Speedup": ("training", "5m"),
+        "1h Training Speedup": ("training", "1h"),
+        "1m Healing Speedup": ("healing", "1m"),
+        "5m Healing Speedup": ("healing", "5m"),
+    }
+    for name, want in real.items():
+        assert classify_kind(name) == "speedup", name
+        assert speedup_duration(name) == want, name
+
+    # the other orders and forms must keep working
+    assert speedup_duration("Construction 5m Speedup") == ("construction", "5m")
+    assert speedup_duration("1m Speedup") == ("general", "1m")
+    assert speedup_duration("Speedup (5m)") == ("general", "5m")
+
+    # and nothing else becomes a speedup
+    for name in ("Fire Crystal", "Refined Fire Crystal", "Mystery Badge", "1K Meat"):
+        assert speedup_duration(name) is None, name
+        assert classify_kind(name) != "speedup", name

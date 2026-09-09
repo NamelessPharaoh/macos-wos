@@ -7,31 +7,31 @@
       "name": "Chief Stamina",
       "slug": "chief_stamina",
       "tab": "Resources",
-      "description": "troop deployment.",
+      "description": "Restores 10 Chief Stamina. Used for daily events like troop deployment.",
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "lv_1_custom_resource_chest": {
       "name": "Lv.1 Custom Resource Chest",
       "slug": "lv_1_custom_resource_chest",
       "tab": "Resources",
-      "description": "500 Iron.",
+      "description": "Grants your choice of 10K Meat, 10K Wood, 2K Coal or 500 Iron.",
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "lv_2_custom_resource_chest": {
       "name": "Lv.2 Custom Resource Chest",
       "slug": "lv_2_custom_resource_chest",
       "tab": "Resources",
-      "description": "Coal or 5K Iron.",
+      "description": "Grants your choice of 100K Meat, 100K Wood, 20K Coal or 5K Iron.",
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "1k_meat": {
       "name": "1K Meat",
@@ -41,7 +41,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "1k_meat_secured": {
       "name": "1K Meat (Secured)",
@@ -51,7 +51,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "10k_meat_secured": {
       "name": "10K Meat (Secured)",
@@ -61,7 +61,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "10k_meat": {
       "name": "10K Meat",
@@ -71,7 +71,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "100k_meat": {
       "name": "100K Meat",
@@ -81,7 +81,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "1k_wood": {
       "name": "1K Wood",
@@ -91,7 +91,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "1k_wood_secured": {
       "name": "1K Wood (Secured)",
@@ -101,7 +101,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "10k_wood": {
       "name": "10K Wood",
@@ -111,7 +111,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "100k_wood": {
       "name": "100K Wood",
@@ -121,7 +121,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "100_coal": {
       "name": "100 Coal",
@@ -131,7 +131,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "1k_coal": {
       "name": "1K Coal",
@@ -141,7 +141,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "10k_wood_secured": {
       "name": "10K Wood (Secured)",
@@ -151,7 +151,7 @@
       "kind": "other",
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
-      "last_seen": "20260909T120815Z"
+      "last_seen": "20260909T123929Z"
     },
     "10k_coal": {
       "name": "10K Coal",
@@ -192,6 +192,266 @@
       "classifier_version": 1,
       "first_seen": "20260909T120815Z",
       "last_seen": "20260909T120815Z"
+    },
+    "restores_10_chief_stamina_used_for_daily_events_like": {
+      "name": "Restores 10 Chief Stamina. Used for daily events like",
+      "slug": "restores_10_chief_stamina_used_for_daily_events_like",
+      "tab": "Resources",
+      "description": "troop deployment.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_your_choice_of_10k_meat_10k_wood_2k_coal_or": {
+      "name": "Grants your choice of 10K Meat, 10K Wood, 2K Coal or",
+      "slug": "grants_your_choice_of_10k_meat_10k_wood_2k_coal_or",
+      "tab": "Resources",
+      "description": "500 Iron.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_1_000_meat": {
+      "name": "Grants 1,000 Meat.",
+      "slug": "grants_1_000_meat",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "gives_10_000_meat_secured": {
+      "name": "Gives 10,000 Meat (Secured).",
+      "slug": "gives_10_000_meat_secured",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "gives_1_000_meat_secured": {
+      "name": "Gives 1,000 Meat (Secured).",
+      "slug": "gives_1_000_meat_secured",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_10_000_meat": {
+      "name": "Grants 10,000 Meat.",
+      "slug": "grants_10_000_meat",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_100_000_meat": {
+      "name": "Grants 100,000 Meat.",
+      "slug": "grants_100_000_meat",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_1_000_wood": {
+      "name": "Grants 1,000 Wood.",
+      "slug": "grants_1_000_wood",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "gives_1_000_wood_secured": {
+      "name": "Gives 1,000 Wood (Secured).",
+      "slug": "gives_1_000_wood_secured",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_10_000_wood": {
+      "name": "Grants 10,000 Wood.",
+      "slug": "grants_10_000_wood",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "gives_10_000_wood_secured": {
+      "name": "Gives 10,000 Wood (Secured).",
+      "slug": "gives_10_000_wood_secured",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_100_000_wood": {
+      "name": "Grants 100,000 Wood.",
+      "slug": "grants_100_000_wood",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_100_coal": {
+      "name": "Grants 100 Coal.",
+      "slug": "grants_100_coal",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "grants_1_000_coal": {
+      "name": "Grants 1,000 Coal.",
+      "slug": "grants_1_000_coal",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "o0": {
+      "name": "O0",
+      "slug": "o0",
+      "tab": "Resources",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "1h_construction_speedup": {
+      "name": "1h Construction Speedup",
+      "slug": "1h_construction_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Construction] queue by 60 minutes.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "1m_construction_speedup": {
+      "name": "1m Construction Speedup",
+      "slug": "1m_construction_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Construction] queue by 1 minute.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "5m_construction_speedup": {
+      "name": "5m Construction Speedup",
+      "slug": "5m_construction_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Construction] queue by 5 minutes.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "1m_training_speedup": {
+      "name": "1m Training Speedup",
+      "slug": "1m_training_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your (Training] queue by 1 minute.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "5m_training_speedup": {
+      "name": "5m Training Speedup",
+      "slug": "5m_training_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Training] queue by 5 minutes.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "1h_training_speedup": {
+      "name": "1h Training Speedup",
+      "slug": "1h_training_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Training] queue by 60 minutes.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "1m_healing_speedup": {
+      "name": "1m Healing Speedup",
+      "slug": "1m_healing_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Healing] queue by 1 minute.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "5m_healing_speedup": {
+      "name": "5m Healing Speedup",
+      "slug": "5m_healing_speedup",
+      "tab": "Speedup",
+      "description": "Speeds up your [Healing] queue by 5 minutes.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "gem_of_enigma": {
+      "name": "Gem of Enigma",
+      "slug": "gem_of_enigma",
+      "tab": "Other",
+      "description": "Stone with engravings of mystery on it, used to open chests in [Frosty Fortune].",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "mystery_badge": {
+      "name": "Mystery Badge",
+      "slug": "mystery_badge",
+      "tab": "Other",
+      "description": "Mystery Badge can be used for trading in the Mystery Shop.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
+    },
+    "lv_3": {
+      "name": "Lv.3",
+      "slug": "lv_3",
+      "tab": "Other",
+      "description": null,
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T123929Z",
+      "last_seen": "20260909T123929Z"
     }
   }
 }

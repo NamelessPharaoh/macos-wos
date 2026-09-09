@@ -127,9 +127,35 @@ def slugify(text):
 # dragged OpenCV, NumPy and the driver in to resolve a two-line string
 # classifier. native/readers/backpack.py re-exports these names unchanged,
 # so `fold`'s call sites did not have to move.
+# The live sweep of 2026-09-09 is why the duration may precede the type.
+# The game names these "1m Construction Speedup" -- duration FIRST, then the
+# queue it applies to. The original pattern only allowed "Construction 1m
+# Speedup", so on real names the type group never matched, the duration group
+# (which had to sit immediately before "speedup") never matched either, and
+# every single speedup classified as "other". `backpack.speedups.<type>.<dur>`
+# was therefore never populated from a real sweep -- 45 such paths existed in
+# the database, every one of them null. Observed names, verbatim:
+#   1m Construction Speedup   5m Construction Speedup   1h Construction Speedup
+#   1m Training Speedup       5m Training Speedup       1h Training Speedup
+#   1m Healing Speedup        5m Healing Speedup
+# Both orders are accepted now, plus a bare "1m Speedup" (general) and a
+# trailing "Speedup (5m)".
+# Named groups, not positional: the original used group(1)..group(5) and
+# adding one alternative here would have silently renumbered every read in
+# speedup_duration. Names cannot drift that way.
+_TYPE = r"general|construction|research|training|healing"
+
+
+def _dur(tag):
+    return rf"(?P<n{tag}>\d+)\s*(?P<u{tag}>m|min|h|hr|d)"
+
+
 SPEEDUP_RE = re.compile(
-    r"(?:(general|construction|research|training|healing)\s+)?"
-    r"(?:(\d+)\s*(m|min|h|hr|d)\s+)?speed-?up[s]?(?:\s*\(?(\d+)\s*(m|min|h|hr|d)\)?)?", re.I)
+    rf"(?:{_dur('a')}\s+(?P<ta>{_TYPE})\s+)?"    # "1m Construction "  (the real game order)
+    rf"(?:(?P<tb>{_TYPE})\s+)?"                   # "Construction "
+    rf"(?:{_dur('b')}\s+)?"                       # "1m "
+    r"speed-?up[s]?"
+    rf"(?:\s*\(?{_dur('c')}\)?)?", re.I)          # " (5m)"
 _SPEEDUP_DUR = {"m": "m", "min": "m", "h": "h", "hr": "h", "d": "d"}
 
 # Bump whenever classify_kind's rules change. native/kb.py::record_item
@@ -140,7 +166,7 @@ _SPEEDUP_DUR = {"m": "m", "min": "m", "h": "h", "hr": "h", "d": "d"}
 # keyword rule) would never reach an item already in the catalogue until
 # the backpack reader happened to see that exact tile live again -- a fix
 # that silently does nothing for every item already recorded.
-CLASSIFIER_VERSION = 1
+CLASSIFIER_VERSION = 2
 
 # Fix round 2, item 1: the enforcement mechanism above only works if SOMETHING
 # forces a bump whenever classify_kind's rules actually change. The first
@@ -174,6 +200,13 @@ CLASSIFIER_VERSION = 1
 # to force.
 CLASSIFIER_RULES_FINGERPRINTS = {
     1: "93df932edaa3d077",
+    # v2, 2026-09-09: SPEEDUP_RE learned the order the game actually uses,
+    # "1m Construction Speedup" (duration before type). Under v1 every real
+    # speedup name classified as "other" and speedup_duration returned None,
+    # so no sweep ever populated backpack.speedups.<type>.<duration>. This
+    # bump is what makes the 45 rows already catalogued under v1 recompute
+    # instead of keeping their stale "other" -- the mechanism's first real use.
+    2: "179a969854a12fcd",
 }
 
 
@@ -183,11 +216,14 @@ def speedup_duration(name):
     the ledger router (`native.readers.backpack.fold`) never re-derive
     them two different ways."""
     m = SPEEDUP_RE.search(name)
-    if not (m and (m.group(2) or m.group(4))):
+    if not m:
         return None
-    kind = (m.group(1) or "general").lower()
-    num, unit = (m.group(2), m.group(3)) if m.group(2) else (m.group(4), m.group(5))
-    return kind, f"{num}{_SPEEDUP_DUR[unit.lower()]}"
+    for tag in ("a", "b", "c"):
+        num, unit = m.group(f"n{tag}"), m.group(f"u{tag}")
+        if num:
+            kind = (m.group("ta") or m.group("tb") or "general").lower()
+            return kind, f"{num}{_SPEEDUP_DUR[unit.lower()]}"
+    return None
 
 
 def classify_kind(name):

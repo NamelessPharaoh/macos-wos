@@ -53,10 +53,13 @@ def test_whiteoutdata_furnace_rows_by_ordinal():
 
 
 def test_whiteoutdata_furnace_applies_the_scope_floor():
-    """D-T2: only ordinal >= FLOOR_ORDINAL (26) is parsed at all; level 27 in
-    the fixture stays (>= 26), but the floor itself is the point under test."""
+    """D-T2: only ordinal >= FLOOR_ORDINAL (26) is parsed at all. The fixture
+    carries a level 20 row precisely below the floor (finding 4, 2026-09-09
+    fix round -- without it every other row is already >= 26, so this
+    assertion could never fail even with the floor check deleted)."""
     assert ls.FLOOR_ORDINAL == 26
     doc = ls.whiteoutdata_furnace(_read_local("whiteoutdata_furnace_excerpt.html"))
+    assert "20" not in doc["furnace"]
     assert all(int(o) >= ls.FLOOR_ORDINAL for o in doc["furnace"])
 
 

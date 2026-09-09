@@ -334,10 +334,20 @@ def test_crosscheck_write_never_touches_buildings_json(tmp_path, monkeypatch):
     assert overlay["buildings"] == {}
 
 
-def test_crosscheck_applies_the_scope_floor_and_drops_all_zero_sources(tmp_path, monkeypatch):
-    """D-T2 finding 1b/2: a furnace level below ordinal 26 never reaches
-    crosscheck.json, and a source whose every row parsed to zero cost/time
-    is dropped rather than reported as a pile of disagreements."""
+def test_crosscheck_cli_run_applies_the_scope_floor(tmp_path, monkeypatch):
+    """D-T2 finding 1b: a furnace level below ordinal 26 never reaches
+    crosscheck.json, exercised through the actual `--crosscheck --write` CLI
+    path (reading pre-parsed knowledge/local/*.json, same as a real run).
+
+    Renamed from ..._and_drops_all_zero_sources (finding 4, 2026-09-09 fix
+    round): `--crosscheck` reads already-parsed local/*.json straight off
+    disk and calls `crosscheck()`, which never calls `_drop_if_all_zero` --
+    that only runs at PARSE time, inside `whiteoutdata_furnace`/
+    `wiki_furnace`, under `--local`. This test wrote pre-parsed JSON, so the
+    all-zero drop was never reachable here regardless of what the row
+    contained; the old name and docstring claimed coverage this test could
+    not provide. The all-zero drop has its own coverage in
+    tests/test_knowledge_local.py (test_wiki_furnace_all_zero_rows_are_dropped)."""
     monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
     monkeypatch.setattr(rk, "LOCAL_DIR", str(tmp_path / "local"))
     monkeypatch.setattr(rk, "SOURCES", {})

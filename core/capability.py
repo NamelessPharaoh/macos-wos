@@ -22,7 +22,7 @@ asserting on a return value.
 
     profile ──▶ account_state() ──┐
                                   ├──▶ evaluate() ──▶ Verdict
-    feature-unlocks.json ─────────┘                   {decision, reason,
+    knowledge/unlocks.json ───────┘                   {decision, reason,
                                                        source, warnings}
 """
 import json
@@ -38,7 +38,7 @@ from core.player_profile import get_furnace_level
 # happening at all, not like an error.
 _HERE = os.path.dirname(os.path.abspath(__file__))
 KB_PATH = os.path.normpath(
-    os.path.join(_HERE, os.pardir, "docs", "knowledge", "feature-unlocks.json")
+    os.path.join(_HERE, os.pardir, "knowledge", "unlocks.json")
 )
 
 # A gate declared with either sentinel never skips. ALWAYS means the task has no

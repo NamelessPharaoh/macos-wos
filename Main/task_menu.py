@@ -43,7 +43,7 @@ class TaskSpec:
     """One runnable routine.
 
     `gate` names the game feature this task needs, resolved against
-    docs/knowledge/feature-unlocks.json, or one of the capability sentinels
+    knowledge/unlocks.json, or one of the capability sentinels
     (ALWAYS = no game gate, UNKNOWN = a gate may exist but is unverified).
     Both sentinels fail open.
 

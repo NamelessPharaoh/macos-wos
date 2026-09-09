@@ -8,6 +8,7 @@ readers in `native/` verify rows against the screen (`verified_in_game`).
 | buildings.json | wosnerdwarriors/website-index `calculator/data/construction.json` | `uv run python scripts/refresh_knowledge.py --table buildings` |
 | troops.json | website-index `calculator/data/troops.json` + wos-data `data/troop-stats.json` | `--table troops --table troop_stats` |
 | research.json | wos-data `data/research-upgrades.json` | `--table research` |
+| unlocks.json | community guides, seeded 2026-09-01 (see docs/designs/adaptive-automation.md) | hand-maintained; observation overrides |
 
 Required (fetched by a plain `refresh_knowledge.py` run, no `--table` given):
 `buildings`, `troops`, `troop_stats`, `research`. A failure on any of these

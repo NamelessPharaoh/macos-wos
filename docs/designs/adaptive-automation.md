@@ -38,8 +38,8 @@ problem where a small local LLM can help, but only as an optional advisor.
 
 ### Layer 1 — Account capability model (no LLM; biggest ROI)
 
-- **Static rules** live in the curated knowledge base under `docs/knowledge/`
-  (`feature-unlocks.json`): unlock requirements and fixed schedule facts for
+- **Static rules** live in the curated knowledge base under `knowledge/`
+  (`unlocks.json`): unlock requirements and fixed schedule facts for
   every `TpDailyTaskEnum` routine, with per-entry confidence and source
   provenance. The file graduates to a module resource once an engine service
   consumes it.
@@ -97,7 +97,7 @@ Hard constraints:
 ## Knowledge Base Summary
 
 Seeded on 2026-09-01 from community references (schema and trust rules in
-`docs/knowledge/README.md`). Confirmed gates worth designing around:
+`knowledge/README.md`). Confirmed gates worth designing around:
 
 | Gate | Requirement |
 | --- | --- |
@@ -144,7 +144,7 @@ marked unverified until confirmed in game.
 
 ## Status
 
-- Seed knowledge base committed (`docs/knowledge/`,
+- Seed knowledge base committed (`knowledge/`,
   branch `claude/game-script-llm-strategy-5ab7a7`).
 - Capability model, OCR state capture, and queue gating: not started.
 - Risks: unlock values drift with game patches (mitigated by

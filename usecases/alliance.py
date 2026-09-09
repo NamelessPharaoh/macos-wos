@@ -49,7 +49,7 @@ def capture_alliance_state(player_id, force=False):
     """Read the alliance name and member count into the profile.
 
     Wires two ROIs that have existed unused since the port: the gate already
-    declares alliance_member_count as a state key (feature-unlocks.json gates
+    declares alliance_member_count as a state key (knowledge/unlocks.json gates
     Alliance Mobilization on >= 15 members) and treats it as unreadable, so
     every condition on it fails open. This is what makes it readable.
 

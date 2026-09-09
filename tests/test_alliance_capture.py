@@ -172,7 +172,7 @@ def test_unreachable_screen_keeps_the_stored_snapshot(profile_dir, monkeypatch):
 
 
 def test_member_count_reaches_the_gate():
-    """feature-unlocks.json gates Alliance Mobilization on >= 15 members. Before
+    """knowledge/unlocks.json gates Alliance Mobilization on >= 15 members. Before
     this, that condition was permanently UNKNOWN and failed open."""
     captured = capability.account_state(
         {"alliance": {"name": "[TST]FakeAlliance", "member_count": 52}})

@@ -345,6 +345,55 @@ def test_report_surfaces_a_broken_knowledge_base(tmp_path, monkeypatch, capsys):
     assert skipped == [], "a broken knowledge base gates nothing"
 
 
+def test_load_table_finds_the_shipped_unlock_file():
+    """A move that lands without the path change fails open silently
+    (core/capability.py:79-112), so the tmp_path tests cannot catch it."""
+    capability._reset_cache()
+    table, warnings = capability.load_table()
+    assert warnings == []
+    assert table["features"], "the shipped knowledge base is empty or missing"
+
+
+def test_unlocks_json_lives_in_the_knowledge_package_with_meta():
+    """The unlock table moved into knowledge/unlocks.json (Task 6, formerly
+    feature-unlocks.json under the old docs directory) and gained the same
+    _meta provenance format as the other knowledge tables. load_table() discards everything
+    but `features`, so `_meta`/`_schema`/`_unverified_gates` are checked with
+    a plain json.load, not through the loader."""
+    assert capability.KB_PATH.endswith("knowledge/unlocks.json")
+
+    with open(capability.KB_PATH) as f:
+        raw = json.load(f)
+
+    assert raw["_meta"] == {
+        "source_url": "community guides (see docs/designs/adaptive-automation.md)",
+        "fetched_at": "2026-09-01",
+        "licence": "community guides; per-entry source and confidence kept",
+    }
+    assert "_schema" in raw
+    assert "features" in raw
+    assert "_unverified_gates" in raw
+
+
+def test_check_table_filters_sentinels_and_reports_drift():
+    """scripts/capability_report.py --check-table (F-c): List A is gates a
+    task declares with no table entry, List B is table entries no task's
+    gate names. ALWAYS/UNKNOWN are sentinels, not features, and must not
+    leak into List A."""
+    from scripts.capability_report import check_table
+
+    class _Task:
+        def __init__(self, gate):
+            self.gate = gate
+
+    tasks = [_Task("ALWAYS"), _Task("UNKNOWN"), _Task("arena_of_glory"), _Task("ghost_feature")]
+    table = {"features": {"arena_of_glory": {}, "unused_feature": {}}}
+
+    missing_from_table, unreferenced = check_table(table, tasks)
+    assert missing_from_table == ["ghost_feature"]
+    assert unreferenced == ["unused_feature"]
+
+
 def test_account_state_reads_state_age_and_command_center():
     from datetime import date
     from core.capability import account_state

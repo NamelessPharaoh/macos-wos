@@ -72,7 +72,7 @@ a FastAPI server on `localhost:8210` for the process itself, which is not a depl
 |---------|------|--------|--------|-------------|
 | **Mac port record** | `docs/port/` | 14 `.md` + 4 `.jsonl` | Complete, authoritative | The whole port history: `00-original-brief.md` (three of its technical claims are wrong — flagged in `INDEX.md`), `01-plan-reviewed.md`, `02-ceo-review.md` (account-ban risk finding), `03-test-plan.md`, `04-execution-ledger.md`, `05-final-review-findings.md`, plus `briefs/` (4), `reports/` (5) and `decisions/` (`decisions.jsonl`, `learnings.jsonl`, `reviews.jsonl`, `timeline.jsonl`). **Read `INDEX.md` before touching the code.** |
 | **Vision/OCR swap design** | `docs/designs/vision-ocr-swap.md` | `.md` | Implemented, burn-in open | Design + burn-in exit criteria for retiring PaddleOCR. |
-| **Feature-unlock knowledge** | `docs/knowledge/feature-unlocks.json` | `.json` | Active data | Deterministic game unlock rules backing `core/capability.py`. |
+| **Feature-unlock knowledge** | `knowledge/unlocks.json` | `.json` | Active data | Deterministic game unlock rules backing `core/capability.py`. |
 | **Adaptive Automation Design** | `# Adaptive Automation Design.md` | `.md` | Untracked draft | Root-level design record for making the bot state-aware instead of running routines blindly; carries scope + acceptance criteria because GitHub Issues are disabled on this repo. |
 | **TODOS** | `TODOS.md` | `.md` | Live backlog | Deferred work with enough context to pick up cold: OCR lock removal, template-digit fallback, Linux capture removal, 2× render probe. |
 
@@ -85,7 +85,7 @@ a FastAPI server on `localhost:8210` for the process itself, which is not a depl
 | Pipeline | Path | Tech | Scripts | Data | Entry Point |
 |----------|------|------|---------|------|-------------|
 | **OCR burn-in telemetry** | `logs/` + `scripts/burnin_report.py` | Python, JSONL | 1 (382 lines with capability_report) | `ocr_burnin.jsonl` (560KB), `ocr_burnin.run0.jsonl` (12KB), `burnin_epoch.txt`, `burnin_waivers.txt` | `uv run python scripts/burnin_report.py [jsonl]` |
-| **Capability report** | `scripts/capability_report.py` | Python | 1 | reads `docs/knowledge/feature-unlocks.json` + player profiles | `uv run python scripts/capability_report.py` |
+| **Capability report** | `scripts/capability_report.py` | Python | 1 | reads `knowledge/unlocks.json` + player profiles | `uv run python scripts/capability_report.py` |
 | **Runtime state store** | `db/` | JSON + flat file | — | `players/<id>.json` (per-player name, state, furnace level, adaptive gather node level), `completion_log.txt` (3h skip window), `account.json` (+ `.example`) | seeded from `db/players/example.json` |
 | **Coordinate migration** | root | Python | 2 | — | `convert_textarea_to_percent.py` (pixel→percent for `references/TextArea/*.json`), `coordinate_conversion_reference.py` (same for hardcoded pixels in `.py`) |
 | **OCR sample dump** | `Home.json` | JSON | — | 3.5KB captured OCR result set (text/score/box) | reference sample, not loaded at runtime |
@@ -171,7 +171,7 @@ a FastAPI server on `localhost:8210` for the process itself, which is not a depl
     <Pipeline id="ocr-burnin"  domain="D" path="logs"    tech="Python,JSONL" entry="scripts/burnin_report.py"
               data="ocr_burnin.jsonl" size_kb="560" status="active" purpose="paddle_shadow_check_go_nogo" />
     <Pipeline id="capability"  domain="D" path="scripts" tech="Python" entry="scripts/capability_report.py"
-              reads="docs/knowledge/feature-unlocks.json" status="active" />
+              reads="knowledge/unlocks.json" status="active" />
     <Pipeline id="state-store" domain="D" path="db"      tech="JSON" status="active"
               files="players/&lt;id&gt;.json,completion_log.txt,account.json" gitignored="true"
               purpose="per_player_profile_and_3h_skip_window" />

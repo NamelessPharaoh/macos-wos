@@ -1,4 +1,9 @@
 {
+  "_meta": {
+    "source_url": "community guides (see docs/designs/adaptive-automation.md)",
+    "fetched_at": "2026-09-01",
+    "licence": "community guides; per-entry source and confidence kept"
+  },
   "_schema": {
     "purpose": "Which game features an account has unlocked, so the task queue can skip work that cannot succeed. Read by core/capability.py and scripts/capability_report.py.",
     "entry": {

@@ -16,9 +16,17 @@ scripts/burnin_report.py.
 
 Usage:
   uv run python scripts/capability_report.py [player_id]
+  uv run python scripts/capability_report.py --check-table
 
 With no player id it reports on every profile in db/players/ except the
 example template.
+
+`--check-table` skips the per-player report and instead checks the task
+gates in Main/task_menu.py against knowledge/unlocks.json for drift: gates a
+task declares that the table has no entry for (List A), and table entries no
+task's gate names (List B). It exits non-zero when either list is non-empty,
+so it can gate CI the way the per-table registry tests do for the other
+knowledge tables.
 """
 import os
 import sys
@@ -116,7 +124,43 @@ def capability_gate_on():
     return os.environ.get("WOS_CAPABILITY_GATE", "1").strip() != "0"
 
 
+def check_table(table, tasks):
+    """Drift between the task gate declarations and the unlock table.
+
+    Returns (missing_from_table, unreferenced): List A is gates a task
+    declares that have no entry in the table (the dangerous direction — a
+    task would run ungated); List B is table entries no task's gate names
+    (stale data, not a bug in the gate). ALWAYS/UNKNOWN are sentinels, not
+    features, and are excluded from List A.
+    """
+    features = table.get("features") or {}
+    gates = {
+        task.gate for task in tasks
+        if task.gate and task.gate not in capability.SENTINELS
+    }
+    missing_from_table = sorted(gates - set(features))
+    unreferenced = sorted(set(features) - gates)
+    return missing_from_table, unreferenced
+
+
+def _report_check_table():
+    capability._reset_cache()
+    table, warnings = capability.load_table()
+    for warning in warnings:
+        print(f"WARNING: {warning}")
+
+    missing_from_table, unreferenced = check_table(table, TASKS)
+    print("List A (gate referenced, not in table): " +
+          (", ".join(missing_from_table) if missing_from_table else "empty"))
+    print("List B (in table, no task references it): " +
+          (", ".join(unreferenced) if unreferenced else "empty"))
+    return 1 if (missing_from_table or unreferenced) else 0
+
+
 def main():
+    if "--check-table" in sys.argv[1:]:
+        return _report_check_table()
+
     capability._reset_cache()
     table, warnings = capability.load_table()
 

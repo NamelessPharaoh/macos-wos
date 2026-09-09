@@ -214,6 +214,7 @@ it. Readers are then encoded against those frames.
 | research | side panel Research row -> Research Center: current research + per-tab completion figure on the tab header; per-node levels are a canvas read, deferred | current, tabs done/total | S (3h / 30m) |
 | heroes | bottom bar Heroes roster; detail view per hero (read-only, close only) | name, rarity, level, stars, gear | M (1d / 1h) |
 | gear | Chief Profile -> Chief Gear; Charms tab | six slots tier/stars; 18 charm levels | M (0.5d / 40m) |
+| stats | avatar -> Chief Profile -> power magnifier -> Bonus Overview, scrolled until all three labels are read | construction/research/training speed bonus percentages | S (Task 7) |
 | backpack | bottom bar Backpack, each tab, scrolled to end (frame-signature stop) | speedups by type/duration, resource boxes, FC/RFC, shards, materials; then every tab | M (1d / 1h) |
 | events | HUD Events; walk the tab strip the way the cart walk does (tap each visible label, re-read, nudge when nothing new), de-dupe by page title | event name, remaining time | M (1d / 45m) |
 

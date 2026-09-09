@@ -107,13 +107,22 @@ wiki's item index has no tables, only 421 individual pages, and crawling
 them all is the crawling the constraints forbid. The backpack reader
 (`native/readers/backpack.py`) already opens every tile's tooltip to read
 its name; `native.kb.record_item(name, tab, description, snapshot_id)`
-upserts a row per item (`first_seen` set once, `last_seen` refreshed every
-sighting) and `native.kb.items()` reads the catalogue back. `kind` comes
-from `native.readers.backpack.classify_kind` -- the same SPEEDUP_RE match
-and keyword rules `fold` uses to route ledger writes, so classification
-can't drift between the ledger and the catalogue. `fold` itself consults
-the catalogue first by exact slug match, falling back to `classify_kind`
-only for a name it hasn't seen before.
+upserts a row per item (`first_seen` set once; every other field refreshes
+on every sighting, except `description`, which keeps its existing value
+when a later read comes back empty rather than blanking a good read with
+a worse one) and `native.kb.items()` reads the catalogue back. `kind`
+comes from `knowledge.util.classify_kind` -- the same SPEEDUP_RE match and
+keyword rules `fold` uses to route ledger writes, so classification can't
+drift between the ledger and the catalogue.
+
+`fold` consults the catalogue first by exact slug match, but only trusts
+its stored `kind` when the row's `classifier_version` matches
+`knowledge.util.CLASSIFIER_VERSION`; a name the catalogue hasn't seen at
+all, or a row stamped with an older (or missing) version, both fall back
+to a fresh `classify_kind(name)` call. This is what makes a classify_kind
+rule change reach every already-catalogued item at once, rather than only
+the next time the backpack reader happens to see that exact tile live
+again.
 
 Unlike every vendored table, `items.json` IS committed even though it has
 no `source_commit`: its source is this account's own in-game tooltips,

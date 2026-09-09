@@ -200,9 +200,13 @@ ALL_READERS = tuple(sorted({reader for _, reader in SECTION_OF_PATH_TABLE}))
 
 
 def SECTION_OF_PATH(path):
-    """Which reader is responsible for a path, by longest-matching prefix.
-    None only for a path that fits none of the known sections (unreachable
-    for anything in STATIC_SCHEMA today, but callers should not assume it)."""
+    """Which reader is responsible for a path: the FIRST prefix in
+    SECTION_OF_PATH_TABLE (table order, not sorted by length) that `path`
+    starts with wins. Correct only because the table is hand-ordered
+    most-specific first (see the comment above it) -- a row added out of
+    order is wrong by its position, not caught by any check here. None
+    only for a path that fits none of the known sections (unreachable for
+    anything in STATIC_SCHEMA today, but callers should not assume it)."""
     for prefix, reader in SECTION_OF_PATH_TABLE:
         if path.startswith(prefix):
             return reader

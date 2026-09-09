@@ -1918,10 +1918,20 @@ Synthesized from this review. Each derives from a specific finding above.
   - Surfaced by: A10, C7
   - Files: `native/readers/stats.py`, `native/schema.py`, `native/snapshot.py`, `references/screen-map.md`, `tests/test_native_readers.py`
   - Verify: `snapshot.py --readers hud,profile,stats --no-write` shows three percentages
-- [ ] **T8 (P3, human ~4h / CC ~30m)** — item catalogue from tooltips
+- [x] **T8 (P3, human ~4h / CC ~30m)** — item catalogue from tooltips
   - Surfaced by: A11, C9
   - Files: `native/readers/backpack.py`, `native/kb.py`, `knowledge/items.json`, tests
   - Verify: a backpack run writes catalogue entries; `fold` prefers the catalogue
+  - Done 2026-09-09: fixture-driven only (no live run -- optional per the
+    controller brief and unnecessary once the fixtures covered the
+    behaviour). `read_tooltip` widened to a 3-tuple `(name, None,
+    description)`, the description band surveyed (not guessed) against the
+    `backpack_tile` fixture. `classify_kind` extracted from `fold` so the
+    catalogue's `kind` and the ledger's routing share one implementation.
+    `native.kb.items()`/`record_item()` added; `record_item` is the second
+    function in the module that writes to disk, and both "only place that
+    writes to disk" claims (native/kb.py:36, :390) were corrected, along
+    with a matching claim in knowledge/README.md.
 
 Order: T1 -> T2 -> T3 (T4 and T6 parallel after T2) -> T5 -> T7 -> T8.
 

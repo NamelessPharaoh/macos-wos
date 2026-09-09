@@ -7,6 +7,7 @@ title. Names land in backpack.items.<tab>/<slug> (dynamic); speedups are also
 folded into backpack.speedups.<type>.<duration> and fire crystals into their
 static paths, so strategy queries do not depend on the ledger's naming.
 """
+import os
 import re
 import time
 
@@ -22,22 +23,53 @@ DUR = {"m": "m", "min": "m", "h": "h", "hr": "h", "d": "d"}
 EXPECTED = []
 
 
-def fold(res, tab, name, count, raw, frame, score, exact):
-    """Store the item under the ledger path and, when it is a known kind,
-    under the static path a query can rely on."""
-    key = f"{slugify(tab)}/{slugify(name)}"
-    res.put(f"backpack.items.{key}", count, raw=raw, frame=frame, score=score, exact=exact)
+def classify_kind(name):
+    """"speedup" | "fire_crystal" | "other" from the exact SPEEDUP_RE match
+    and "fire crystal" keyword `fold` uses to route ledger writes (A11):
+    one function, so the item catalogue's `kind` (native/kb.py::record_item)
+    and the ledger router can never classify the same name two different
+    ways. "resource_box" is part of the kind enum `record_item` promises,
+    but like `fold` before this change, nothing here recognises it yet --
+    the day a keyword for it is added, it is added HERE, and both the
+    catalogue and the ledger pick it up from this one place."""
     n = norm(name)
     m = SPEEDUP_RE.search(name)
     if m and (m.group(2) or m.group(4)):
-        kind = (m.group(1) or "general").lower()
-        num, unit = (m.group(2), m.group(3)) if m.group(2) else (m.group(4), m.group(5))
-        dur = f"{num}{DUR[unit.lower()]}"
-        res.put(f"backpack.speedups.{kind}.{dur}", count, raw=raw, frame=frame, score=score, exact=exact)
-    elif "refined fire crystal" in n:
-        res.put("backpack.refined_fire_crystals", count, raw=raw, frame=frame, score=score, exact=exact)
-    elif "fire crystal" in n:
-        res.put("backpack.fire_crystals", count, raw=raw, frame=frame, score=score, exact=exact)
+        return "speedup"
+    if "fire crystal" in n:
+        return "fire_crystal"
+    return "other"
+
+
+def fold(res, tab, name, count, raw, frame, score, exact, directory=None):
+    """Store the item under the ledger path and, when it is a known kind,
+    under the static path a query can rely on.
+
+    A11: the item catalogue (`native.kb.items()`, built from backpack
+    tooltips) is consulted first by exact slug match -- the game's own
+    tooltip text already classified this item on an earlier sighting --
+    and only when the slug isn't catalogued yet does this fall back to
+    `classify_kind`'s SPEEDUP_RE/keyword rules. `directory` is forwarded to
+    `kb.items()` untouched; production callers leave it None (the real,
+    committed `knowledge/items.json`), tests pass a tmp_path."""
+    key = f"{slugify(tab)}/{slugify(name)}"
+    res.put(f"backpack.items.{key}", count, raw=raw, frame=frame, score=score, exact=exact)
+    n = norm(name)
+    from native import kb
+    entry = kb.items(directory=directory).get(slugify(name))
+    kind = entry["kind"] if entry else classify_kind(name)
+    if kind == "speedup":
+        m = SPEEDUP_RE.search(name)
+        if m and (m.group(2) or m.group(4)):
+            spd = (m.group(1) or "general").lower()
+            num, unit = (m.group(2), m.group(3)) if m.group(2) else (m.group(4), m.group(5))
+            dur = f"{num}{DUR[unit.lower()]}"
+            res.put(f"backpack.speedups.{spd}.{dur}", count, raw=raw, frame=frame, score=score, exact=exact)
+    elif kind == "fire_crystal":
+        if "refined fire crystal" in n:
+            res.put("backpack.refined_fire_crystals", count, raw=raw, frame=frame, score=score, exact=exact)
+        else:
+            res.put("backpack.fire_crystals", count, raw=raw, frame=frame, score=score, exact=exact)
 
 
 def tile_targets(items, h, w):
@@ -58,20 +90,35 @@ def tile_targets(items, h, w):
 
 
 def read_tooltip(items, h, w):
-    """(name, None) from an open tile tooltip, else None. The tooltip pops up
-    beside its tile, so it is located by its Use button: the name is the
-    topmost text line 0.15-0.24 above it (the quantity box and the description
-    sit between); the owned count is the tile's own label, not the tooltip's."""
+    """(name, None, description) from an open tile tooltip, else None. The
+    tooltip pops up beside its tile, so it is located by its Use button: the
+    name is the topmost text line 0.15-0.24 above it; the owned count is the
+    tile's own label, not the tooltip's.
+
+    Description band (C9, surveyed against the `backpack_tile` fixture in
+    tests/fixtures/local/reader_frames.json, not guessed): with the Use
+    button at uy, that frame's name sits at uy-0.175 (inside the 0.15-0.24
+    band above) and its description line ("Grants 1 Gems.") sits right
+    below the name at uy-0.144; the quantity box ("+220") starts at
+    uy-0.090. The 0.10-0.15 band below the name therefore holds the
+    description with margin on both sides, without reaching into the
+    quantity box."""
     use = next((i for i in items if norm(i["text"]) == "use"), None)
     if use is None:
         return None
     uy = frac(use, h, w)[1]
-    cands = [i for i in items if 0.22 < frac(i, h, w)[0] < 0.78 and uy - 0.24 <= frac(i, h, w)[1] <= uy - 0.15
-             and len(norm(i["text"])) > 1 and not re.fullmatch(r"[\d,.+() k]+", i["text"].strip().lower())]
+
+    def band(lo, hi):
+        return [i for i in items if 0.22 < frac(i, h, w)[0] < 0.78 and uy - hi <= frac(i, h, w)[1] <= uy - lo
+                and len(norm(i["text"])) > 1 and not re.fullmatch(r"[\d,.+() k]+", i["text"].strip().lower())]
+
+    cands = band(0.15, 0.24)
     if not cands:
         return None
     name = min(cands, key=lambda i: frac(i, h, w)[1])
-    return name["text"].strip(), None
+    desc_cands = band(0.10, 0.15)
+    description = min(desc_cands, key=lambda i: frac(i, h, w)[1])["text"].strip() if desc_cands else None
+    return name["text"].strip(), None, description
 
 
 def close_tooltip(sc, img, items, cx=None, cy=None):
@@ -184,6 +231,8 @@ def read(sc, tabs=TABS):
                     if v is not None:
                         fold(res, tab, got[0], v, count_text, tpath, 1.0, exact)
                         tiles_read += 1
+                    from native import kb
+                    kb.record_item(got[0], tab, got[2], os.path.basename(sc.dir))
                 close_tooltip(sc, timg, titems)
                 img, items, path = sc.frame("tile-closed")
                 h, w = img.shape[:2]

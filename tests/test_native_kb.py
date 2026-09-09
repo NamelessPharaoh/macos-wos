@@ -331,3 +331,59 @@ def test_freshness_omits_a_table_with_an_unparseable_fetched_at():
     out = {t: (age, stale) for t, age, stale in kb.freshness(kb=bad_kb, now=now)}
     assert "buildings" not in out and "training" not in out
     assert out["research"] == (5, False)
+
+
+# ----------------------------------------------------------------------------- Task 8: item catalogue (A11)
+def test_items_returns_empty_dict_when_the_catalogue_file_is_absent(tmp_path):
+    assert kb.items(directory=str(tmp_path)) == {}
+
+
+def test_record_item_upsert_sets_first_seen_once_and_advances_last_seen(tmp_path):
+    d = str(tmp_path)
+    row1 = kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sidA", directory=d)
+    assert row1["first_seen"] == "sidA" and row1["last_seen"] == "sidA"
+    assert row1["slug"] == "1_gems" and row1["tab"] == "Resources"
+
+    row2 = kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sidB", directory=d)
+    assert row2["first_seen"] == "sidA"  # never overwritten
+    assert row2["last_seen"] == "sidB"   # always advances
+
+    # the upsert round-trips through kb.items(), the file record_item wrote
+    catalogue = kb.items(directory=d)
+    assert catalogue["1_gems"] == row2
+
+
+def test_record_item_updates_tab_and_description_on_a_later_sighting(tmp_path):
+    """Every field but first_seen refreshes to the latest sighting -- a
+    later, better OCR read of the description must not be stuck behind an
+    earlier, worse one."""
+    d = str(tmp_path)
+    kb.record_item("1 Gems", "Resources", "Grants 1 Gem.", "sidA", directory=d)
+    row = kb.record_item("1 Gems", "Other", "Grants 1 Gems.", "sidB", directory=d)
+    assert row["tab"] == "Other" and row["description"] == "Grants 1 Gems."
+
+
+def test_record_item_kind_reuses_backpacks_classification_rules(tmp_path):
+    """kind must come from native.readers.backpack.classify_kind -- the
+    same SPEEDUP_RE/keyword logic `fold` uses -- not a second copy."""
+    d = str(tmp_path)
+    speedup = kb.record_item("5m Speedup", "Speedup", "Reduces a queue by 5 minutes.", "sid", directory=d)
+    fc = kb.record_item("Fire Crystal", "Resources", "A rare crystal.", "sid", directory=d)
+    other = kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sid", directory=d)
+    assert speedup["kind"] == "speedup"
+    assert fc["kind"] == "fire_crystal"
+    assert other["kind"] == "other"
+
+
+def test_record_item_writes_meta_source_and_never_touches_the_overlay(tmp_path):
+    """The safety property the module docstring and mark_verified's
+    docstring both now name explicitly (the controller's finding): a
+    second on-disk writer exists, and it must never carry overlay data.
+    record_item's only inputs are name/tab/description/snapshot_id read
+    off the screen -- there is no overlay path for it to take."""
+    d = str(tmp_path)
+    kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sid", directory=d)
+    with open(os.path.join(d, "items.json")) as f:
+        doc = json.load(f)
+    assert doc["_meta"]["source"] == "in-game backpack tooltips"
+    assert "overlay" not in json.dumps(doc)

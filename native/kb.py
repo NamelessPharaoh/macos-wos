@@ -33,7 +33,17 @@ Verification (mark_verified, C12): opens the COMMITTED file directly --
 never the merged in-memory table `load()` returns -- so a level that only
 exists via the local overlay (an ordinal > 30 Fire Crystal row, terms-
 restricted data that must never reach a committed file) always returns
-False. This is the only place in the knowledge base that writes to disk.
+False.
+
+Two functions write to disk: `mark_verified` (above) and `record_item`
+(A11), which upserts `knowledge/items.json` from in-game backpack
+tooltips read by native/readers/backpack.py -- an in-game source with no
+terms restriction, unlike the vendored tables' local overlay. Both keep
+the same property: neither ever writes anything sourced from the local
+overlay. `mark_verified` can't, because it opens the committed file
+directly rather than `load()`'s overlay-merged table; `record_item` can't,
+because its only inputs are a name, tab and description just read off the
+screen -- it never touches `load()`, the cache or the overlay at all.
 """
 import json
 import os
@@ -387,8 +397,9 @@ def mark_verified(table, key, level, snapshot_id, directory=None):
     via the local overlay (a Fire Crystal furnace row, ordinal > 30,
     whiteoutdata-sourced and terms-restricted) is never found here and
     `mark_verified` returns False for it, same as any other unknown level.
-    This is the only place in the knowledge base that writes to disk, which
-    is exactly why it must never write overlay data into a committed file.
+    This and `record_item` (A11) are the only two places in the knowledge
+    base that write to disk, which is exactly why neither ever writes
+    overlay data into a committed file.
 
     Not a transaction: this reads the file, mutates the in-memory doc and
     writes the whole thing back (the write itself is atomic via
@@ -414,6 +425,75 @@ def mark_verified(table, key, level, snapshot_id, directory=None):
     write_table(path, doc)
     _CACHE.pop(directory, None)
     return True
+
+
+# ----------------------------------------------------------------------------- item catalogue (A11)
+ITEMS_FILE = "items.json"
+
+
+def items(directory=None):
+    """The item catalogue `record_item` builds from backpack tooltips:
+    {slug: {name, slug, tab, description, kind, first_seen, last_seen}}.
+
+    Read fresh from disk every call, never through the `load()`/`_CACHE`
+    path: `record_item` can add a row mid-run (a backpack sweep classifies
+    tiles as it reads them, `fold` looks the same slug up moments later)
+    and a process-lifetime cache would hide what the same run just wrote.
+    Empty when `knowledge/items.json` doesn't exist yet -- a fresh clone,
+    or before the backpack reader has ever run."""
+    directory = directory or KNOWLEDGE_DIR
+    path = os.path.join(directory, ITEMS_FILE)
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        return json.load(f).get("items", {})
+
+
+def record_item(name, tab, description, snapshot_id, directory=None):
+    """Upsert one row into `knowledge/items.json` from an in-game backpack
+    tooltip (A11) -- the item catalogue's only source, which is why, unlike
+    every vendored table, it carries no terms restriction and is committed
+    (see knowledge/README.md). `native/readers/backpack.py::read` calls this
+    for every tooltip it reads; it taps nothing itself.
+
+    `kind` reuses `native.readers.backpack.classify_kind`, the exact
+    function `fold` calls to route ledger writes, so the catalogue's
+    classification and the ledger's routing can never drift apart.
+
+    Upsert semantics: `first_seen` is set once and never overwritten;
+    every other field, including `last_seen`, is refreshed to this call's
+    values on every sighting.
+
+    This is the second of the two functions in this module that write to
+    disk (see the module docstring). Like `mark_verified`, it never writes
+    anything sourced from the local overlay -- its only inputs are what
+    the screen just showed, and it never reads `load()`, `_CACHE` or the
+    overlay file at all."""
+    from native.readers.backpack import classify_kind
+    from native.screen import slugify
+
+    directory = directory or KNOWLEDGE_DIR
+    path = os.path.join(directory, ITEMS_FILE)
+    if os.path.exists(path):
+        with open(path) as f:
+            doc = json.load(f)
+    else:
+        doc = {"_meta": {"source": "in-game backpack tooltips"}, "items": {}}
+    slug = slugify(name)
+    row = dict(doc["items"].get(slug) or {})
+    first_seen = row.get("first_seen", snapshot_id)
+    row.update({
+        "name": name,
+        "slug": slug,
+        "tab": tab,
+        "description": description,
+        "kind": classify_kind(name),
+        "first_seen": first_seen,
+        "last_seen": snapshot_id,
+    })
+    doc["items"][slug] = row
+    write_table(path, doc)
+    return row
 
 
 def freshness(kb=None, now=None, stale_days=30):

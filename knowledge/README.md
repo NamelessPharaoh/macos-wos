@@ -1,7 +1,9 @@
 # Game knowledge base
 
-Tables the planner computes with. Nothing here is read from the game; the
-readers in `native/` verify rows against the screen (`verified_in_game`).
+Tables the planner computes with. Every table but `items.json` is fetched
+from the web, not read from the game; the readers in `native/` verify rows
+against the screen (`verified_in_game`). `items.json` (below) is the one
+exception: it is built entirely from in-game backpack tooltips.
 
 | file | source | refresh |
 |---|---|---|
@@ -9,6 +11,7 @@ readers in `native/` verify rows against the screen (`verified_in_game`).
 | troops.json | website-index `calculator/data/troops.json` + wos-data `data/troop-stats.json` | `--table troops --table troop_stats` |
 | research.json | wos-data `data/research-upgrades.json` | `--table research` |
 | unlocks.json | community guides, seeded 2026-09-01 (see docs/designs/adaptive-automation.md) | hand-maintained; observation overrides |
+| items.json | in-game backpack tooltips (see "Item catalogue" below) | `native.kb.record_item`, called by the backpack reader on every tooltip it reads |
 
 Required (fetched by a plain `refresh_knowledge.py` run, no `--table` given):
 `buildings`, `troops`, `troop_stats`, `research`. A failure on any of these
@@ -93,9 +96,29 @@ can never be marked verified: the committed file has no row for it, so
 `mark_verified` returns `False`, exactly like any other level that doesn't
 exist. This is intended, not a bug (C12) -- overlay data is
 terms-restricted and must never be written into a committed file, and
-`mark_verified` is the only place in the knowledge base that writes to
-disk. It stays irrelevant until the tracked furnace actually passes
-level 30.
+`mark_verified` and `record_item` (below) are the only two places in the
+knowledge base that write to disk. It stays irrelevant until the tracked
+furnace actually passes level 30.
+
+## Item catalogue
+
+`items.json` is built from in-game backpack tooltips, not fetched: the
+wiki's item index has no tables, only 421 individual pages, and crawling
+them all is the crawling the constraints forbid. The backpack reader
+(`native/readers/backpack.py`) already opens every tile's tooltip to read
+its name; `native.kb.record_item(name, tab, description, snapshot_id)`
+upserts a row per item (`first_seen` set once, `last_seen` refreshed every
+sighting) and `native.kb.items()` reads the catalogue back. `kind` comes
+from `native.readers.backpack.classify_kind` -- the same SPEEDUP_RE match
+and keyword rules `fold` uses to route ledger writes, so classification
+can't drift between the ledger and the catalogue. `fold` itself consults
+the catalogue first by exact slug match, falling back to `classify_kind`
+only for a name it hasn't seen before.
+
+Unlike every vendored table, `items.json` IS committed even though it has
+no `source_commit`: its source is this account's own in-game tooltips,
+which carry no terms restriction (contrast `knowledge/local/`, above,
+whose sources' terms keep it off this repo entirely).
 
 It reads the committed file, mutates the row and writes the whole document
 back; the write itself is atomic (`write_table`), but the read-modify-write

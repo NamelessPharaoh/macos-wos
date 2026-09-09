@@ -171,7 +171,10 @@ def test_events_page_and_backpack_tooltip_parsers():
     assert e["name"] == "Endless Trial" and e["remaining_s"] == 12 * 3600 + 38 * 60 + 17 and e["attempts_left"] == 30
     timg, titems, tpath = _frame("backpack_tile")
     h, w = timg.shape[:2]
-    assert backpack.read_tooltip(titems, h, w) == ("1 Gems", None)
+    got = backpack.read_tooltip(titems, h, w)
+    assert got[:2] == ("1 Gems", None)
+    assert isinstance(got[2], str) and got[2] and got[2] != got[0]
+    assert got[2] == "Grants 1 Gems."
     bimg, bitems, _ = _frame("backpack")
     h, w = bimg.shape[:2]
     tiles = backpack.tile_targets(bitems, h, w)
@@ -184,6 +187,36 @@ def test_events_page_and_backpack_tooltip_parsers():
     assert r2.doc["backpack"]["speedups"]["construction"]["1h"] == 3
     assert r2.doc["backpack"]["fire_crystals"] == 12
     assert r2.doc["backpack"]["items"]["speedup/5m_speedup"] == 220
+
+
+def test_fold_prefers_the_item_catalogue_over_its_own_regex(tmp_path):
+    """A11 step 3: fold consults native.kb.items() by exact slug match
+    before falling back to classify_kind's SPEEDUP_RE/keyword rules. A name
+    that classify_kind alone would call "other" (no speedup shape, no "fire
+    crystal" keyword) must still route to the fire_crystals ledger path
+    once the catalogue -- built from the game's own tooltip -- has already
+    classified that exact slug as a fire_crystal."""
+    from native import kb
+    from native.readers import backpack, ReaderResult
+
+    assert backpack.classify_kind("Mystery Shard") == "other"
+    d = str(tmp_path)
+    kb.record_item("Mystery Shard", "Other", "A rare crystal fragment.", "sid", directory=d)
+    kb.record_item("Mystery Shard", "Other", "A rare crystal fragment.", "sid", directory=d)
+    catalogue = kb.items(directory=d)
+    catalogue["mystery_shard"]["kind"] = "fire_crystal"  # simulate a keyword rule catching it later
+    from knowledge.util import write_table
+    import os
+    write_table(os.path.join(d, "items.json"), {"_meta": {"source": "in-game backpack tooltips"}, "items": catalogue})
+
+    r = ReaderResult("backpack")
+    backpack.fold(r, "Other", "Mystery Shard", 7, "7", "frame.png", 1.0, True, directory=d)
+    assert r.doc["backpack"]["fire_crystals"] == 7
+
+    # an uncatalogued slug still falls back to classify_kind, unchanged
+    r2 = ReaderResult("backpack")
+    backpack.fold(r2, "Other", "Totally Unknown Thing", 3, "3", "frame.png", 1.0, True, directory=d)
+    assert "fire_crystals" not in r2.doc.get("backpack", {})
 
 
 def test_is_hero_card_rejects_other_screens():

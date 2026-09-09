@@ -67,6 +67,17 @@ def test_prerequisites_assumes_untracked_buildings_met(k):
     assert ("coal_mine", 3, None) in unmet_strict
 
 
+def test_prerequisites_on_an_overlay_row_reports_unknown():
+    """D-T2 1e: a Fire Crystal furnace row from the local cross-check
+    overlay carries a `source` marker and no real prerequisite data (D-T2
+    hard-codes `prerequisites: {}` there rather than parsing text that
+    breaks on the live pages). `([], [])` would read as "all met", which is
+    not known -- the overlay branch must say so instead of going silent."""
+    overlay_kb = {"buildings": {"furnace": {"31": {"source": "whiteoutdata", "prerequisites": {}, "meat": 1}}}}
+    unmet, assumed = kb.prerequisites("furnace", 31, {}, kb=overlay_kb)
+    assert unmet == [] and assumed == ["unknown: overlay row"]
+
+
 def test_research_path_expands_prerequisites_once(k):
     steps = kb.research_path("tooling_up_i", 2, {}, kb=k)
     assert [(s.node, s.level) for s in steps] == [("tooling_up_i", 1), ("tooling_up_i", 2)]

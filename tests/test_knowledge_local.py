@@ -1,5 +1,6 @@
 """knowledge/local_sources.py: HTML/JS parsers for the terms-restricted
-cross-check sites and the overlay-producing `crosscheck()` (A5/B10).
+cross-check sites and the report-only `crosscheck()` (D-T2, binding over the
+earlier A5/B10 overlay-annotation design).
 
 The three site excerpts (whiteoutdata.com, whiteoutsurvival.wiki, wostools.net)
 are terms-restricted and never committed (B5): they live in
@@ -36,16 +37,34 @@ def test_whiteoutdata_furnace_rows_by_ordinal():
     doc = ls.whiteoutdata_furnace(_read_local("whiteoutdata_furnace_excerpt.html"))
     f = doc["furnace"]
     assert f["28"]["meat"] == 190_000_000 and f["28"]["seconds"] == 29 * 86400 + 2 * 3600 + 52 * 60 and f["28"]["power"] == 1_213_100
-    assert f["28"]["prerequisites"] == {"embassy": 27, "research_center": 27}
+    assert "prerequisites" not in f["28"]  # D-T2: no prerequisite parsing at all
     assert f["31"]["label"] == "30-1" and f["31"]["fire_crystals"] == 132 and f["31"]["refined_fire_crystals"] == 0
-    assert f["80"]["label"] == "FC 10" and f["80"]["refined_fire_crystals"] == 140 and f["80"]["prerequisites"] == {"embassy": 75, "marksman_camp": 75}
+    assert f["80"]["label"] == "FC 10" and f["80"]["refined_fire_crystals"] == 140
+
+
+def test_whiteoutdata_furnace_applies_the_scope_floor():
+    """D-T2: only ordinal >= FLOOR_ORDINAL (26) is parsed at all; level 27 in
+    the fixture stays (>= 26), but the floor itself is the point under test."""
+    assert ls.FLOOR_ORDINAL == 26
+    doc = ls.whiteoutdata_furnace(_read_local("whiteoutdata_furnace_excerpt.html"))
+    assert all(int(o) >= ls.FLOOR_ORDINAL for o in doc["furnace"])
 
 
 def test_wiki_furnace_row():
     doc = ls.wiki_furnace(_read_local("wiki_furnace_excerpt.html"))
     r = doc["furnace"]["28"]
     assert (r["meat"], r["wood"], r["coal"], r["iron"]) == (190_000_000, 190_000_000, 39_000_000, 9_900_000)
-    assert r["prerequisites"]["research_center"] == 27
+    assert "prerequisites" not in r  # D-T2: no prerequisite parsing at all
+
+
+def test_wiki_furnace_all_zero_rows_are_dropped():
+    """Finding 2 (2026-09-09 fix round): a source whose every parsed row has
+    zero cost/time (a header-label mismatch on the live page, not real data)
+    is dropped like an unrecognised bundle shape, not reported as a pile of
+    disagreements."""
+    html = ('<table><tr><th>Level</th><th>Nonsense</th></tr>'
+            '<tr><td>28</td><td>whatever</td></tr></table>')
+    assert ls.wiki_furnace(html) == {"furnace": {}}
 
 
 def test_wostools_buildings_from_chunk():
@@ -55,39 +74,63 @@ def test_wostools_buildings_from_chunk():
     assert ls.wostools_buildings("var x = 1;") == {}
 
 
-def test_crosscheck_marks_disputed_and_appends_fc_rows():
-    """A5's rewritten version of this test (binding over the task body):
-    crosscheck() never touches the committed dict, it returns an overlay
-    shaped exactly like native/kb.py::_apply_overlay consumes."""
-    committed = {"furnace": {"28": {"meat": 190_000_000, "wood": 190_000_000, "coal": 39_000_000, "iron": 9_900_000,
-                                     "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920,
-                                     "prerequisites": {}, "verified_in_game": None}}}
+def _committed_row(**overrides):
+    row = {"meat": 190_000_000, "wood": 190_000_000, "coal": 39_000_000, "iron": 9_900_000,
+           "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920,
+           "prerequisites": {}, "verified_in_game": None}
+    row.update(overrides)
+    return row
+
+
+def test_crosscheck_reports_in_scope_disagreements_without_touching_committed_shape():
+    """D-T2: a level the committed table has (>= floor) gets a report entry
+    with every source's costs/times and a disagrees list -- no `disputed` or
+    `power` is ever written back onto that level (that lived in the
+    superseded A5 overlay design)."""
+    committed = {"furnace": {"28": _committed_row()}}
     wd = {"furnace": {"28": {"label": "28", "meat": 190_000_000, "wood": 190_000_000, "coal": 40_000_000, "iron": 9_900_000,
-                              "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920, "power": 1_213_100, "prerequisites": {}},
-                       "31": {"label": "30-1", "meat": 67_000_000, "wood": 67_000_000, "coal": 13_000_000, "iron": 3_300_000,
-                              "fire_crystals": 132, "refined_fire_crystals": 0, "seconds": 604_800, "power": 1_580_900, "prerequisites": {}}}}
-    overlay, lines = ls.crosscheck(committed, {"whiteoutdata": wd})
-    assert overlay["buildings"]["furnace"]["28"] == {"power": 1_213_100, "disputed": {"whiteoutdata": {"coal": 40_000_000}}}
-    assert overlay["buildings"]["furnace"]["31"]["source"] == "whiteoutdata" and overlay["buildings"]["furnace"]["31"]["fire_crystals"] == 132
-    assert any("furnace.28 coal" in l for l in lines) and any("furnace.31 added from whiteoutdata" in l for l in lines)
+                              "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920, "power": 1_213_100}}}
+    report, overlay, lines = ls.crosscheck(committed, {"whiteoutdata": wd})
+    entry = report["furnace"]["28"]
+    assert entry["committed"]["coal"] == 39_000_000
+    assert entry["whiteoutdata"]["coal"] == 40_000_000
+    assert entry["disagrees"] == ["whiteoutdata.coal"]
+    assert "power" not in entry and "disputed" not in entry
+    assert overlay["buildings"] == {}  # nothing to add to the overlay -- level 28 is already committed
+    assert any("furnace.28 coal" in l for l in lines)
 
 
-def test_crosscheck_ignores_wiki_and_wostools_power():
-    """B10: power is copied from whiteoutdata only; other sources' power
-    fields (and wostools, which carries none) never reach the overlay."""
-    committed = {"furnace": {"28": {"meat": 190_000_000, "wood": 190_000_000, "coal": 39_000_000, "iron": 9_900_000,
-                                     "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920,
-                                     "prerequisites": {}, "verified_in_game": None}}}
-    wiki = {"furnace": {"28": {"label": "28", "meat": 190_000_000, "wood": 190_000_000, "coal": 39_000_000, "iron": 9_900_000,
-                                "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 2_515_920, "power": 999, "prerequisites": {}}}}
-    overlay, lines = ls.crosscheck(committed, {"wiki": wiki})
-    assert overlay["buildings"] == {}
-    assert lines == []
+def test_crosscheck_appends_fc_rows_to_the_overlay_only():
+    """The one thing D-T2 keeps from A5: FC rows (ordinal > 30) the
+    committed table lacks entirely go into the overlay, full row, source
+    marked, prerequisites hard-coded empty (no parsing, D-T2)."""
+    committed = {"furnace": {"28": _committed_row()}}
+    wd = {"furnace": {"31": {"label": "30-1", "meat": 67_000_000, "wood": 67_000_000, "coal": 13_000_000, "iron": 3_300_000,
+                              "fire_crystals": 132, "refined_fire_crystals": 0, "seconds": 604_800, "power": 1_580_900}}}
+    report, overlay, lines = ls.crosscheck(committed, {"whiteoutdata": wd})
+    row = overlay["buildings"]["furnace"]["31"]
+    assert row["source"] == "whiteoutdata" and row["fire_crystals"] == 132 and row["prerequisites"] == {}
+    assert "31" not in report["furnace"]  # FC rows are overlay-only, never in the report
+    assert any("furnace.31 added from whiteoutdata" in l for l in lines)
+
+
+def test_crosscheck_applies_the_scope_floor():
+    """D-T2: furnace levels below ordinal 26 are out of scope entirely --
+    the two known whiteoutdata/wosnerds disagreements at levels 11 and 17
+    (C6) must never appear."""
+    committed = {"furnace": {"11": _committed_row(coal=20_000), "28": _committed_row()}}
+    wd = {"furnace": {"11": {"label": "11", "meat": 1_300_000, "wood": 1_300_000, "coal": 260_000, "iron": 65_000,
+                              "fire_crystals": 0, "refined_fire_crystals": 0, "seconds": 27_000, "power": 0}}}
+    report, overlay, lines = ls.crosscheck(committed, {"whiteoutdata": wd})
+    assert "11" not in report["furnace"]
+    assert not any(l.startswith("furnace.11") for l in lines)
 
 
 def test_crosscheck_without_local_dir():
-    """B10: no local docs at all -> an empty overlay and zero findings, not
-    an error (this is what `--crosscheck` sees on a fresh clone)."""
-    overlay, lines = ls.crosscheck({"furnace": {}}, {})
+    """B10 (kept): no local docs at all -> an empty report/overlay and zero
+    findings, not an error (this is what `--crosscheck` sees on a fresh
+    clone or before `--local` has run)."""
+    report, overlay, lines = ls.crosscheck({"furnace": {}}, {})
+    assert report["furnace"] == {}
     assert overlay["buildings"] == {}
     assert lines == []

@@ -172,11 +172,22 @@ def prerequisites(name, level, sheet, kb=None, assume_untracked_met=True):
     satisfied, unless the building is in UNTRACKED_ASSUMED_MET, in which
     case it is dropped from `unmet` and named in `assumed` instead.
 
+    An overlay row (a Fire Crystal furnace level from the local cross-check,
+    D-T2) carries a `"source"` marker and no real prerequisite data --
+    D-T2's `local_sources.crosscheck` hard-codes `prerequisites: {}` there
+    rather than parsing text that breaks on the live pages. Returning
+    `([], [])` for such a row would read as "every prerequisite is met",
+    which is not known; instead this returns `([], ["unknown: overlay
+    row"])` so the planner never mistakes silence for satisfaction.
+
     Returns (unmet, assumed) where assumed is a sorted list of
-    (building, needed) pairs.
+    (building, needed) pairs -- except for an overlay row, where the second
+    element is the one-line marker above instead.
     """
     kb = _kb(kb)
     row = _require_building_row(name, level, kb)
+    if row.get("source"):
+        return [], ["unknown: overlay row"]
     unmet = []
     assumed = []
     for b, needed in sorted(row["prerequisites"].items()):

@@ -239,8 +239,9 @@ def main(argv=None):
     ap.add_argument("--write", action="store_true", help="save the refreshed tables")
     ap.add_argument("--local", action="store_true", help="also run the gitignored cross-check fetchers")
     ap.add_argument("--crosscheck", action="store_true",
-                     help="report disagreements and FC rows from knowledge/local/*.json into "
-                          "knowledge/local/overlay.json (needs --write to save; never touches knowledge/buildings.json)")
+                     help="report disagreements (>= furnace level 26) into knowledge/local/crosscheck.json and "
+                          "Fire Crystal rows into knowledge/local/overlay.json (needs --write to save; "
+                          "never touches knowledge/buildings.json)")
     a = ap.parse_args(argv)
     # A standalone --local or --crosscheck run must not also refetch (and, with
     # --write, re-timestamp) the required tables: `--crosscheck --write` writes
@@ -271,13 +272,16 @@ def main(argv=None):
             doc = load_table(os.path.join(LOCAL_DIR, rel))
             if doc:
                 local_docs[name] = doc
-        overlay, lines = crosscheck(committed.get("buildings", {}), local_docs)
+        report, overlay, lines = crosscheck(committed.get("buildings", {}), local_docs)
         print(f"== crosscheck: {len(lines)} finding(s)" + ("" if a.write else " (dry run)"))
         for line in lines[:100]:
             print("  " + line)
         if a.write:
+            cpath = os.path.join(LOCAL_DIR, "crosscheck.json")
             opath = os.path.join(LOCAL_DIR, "overlay.json")
+            write_table(cpath, report)
             write_table(opath, overlay)
+            print(f"  wrote {cpath} (gitignored)")
             print(f"  wrote {opath} (gitignored)")
     if failed_required:
         sys.exit(f"{failed_required} required table(s) failed")

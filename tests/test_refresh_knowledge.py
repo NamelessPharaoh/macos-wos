@@ -305,11 +305,12 @@ def test_crosscheck_without_local_dir(tmp_path, monkeypatch, capsys):
 
 
 def test_crosscheck_write_never_touches_buildings_json(tmp_path, monkeypatch):
-    """A5, the constraint that must not regress: --crosscheck --write writes
-    ONLY knowledge/local/overlay.json; knowledge/buildings.json is left
-    byte-for-byte unmodified. SOURCES is emptied so the ordinary per-table
-    refresh loop (which --crosscheck runs alongside, unrelated to this test)
-    has nothing to fetch or write, isolating the guarantee under test."""
+    """D-T2/A5, the constraint that must not regress: --crosscheck --write
+    writes ONLY knowledge/local/crosscheck.json and knowledge/local/overlay.json;
+    knowledge/buildings.json is left byte-for-byte unmodified. SOURCES is
+    emptied so the ordinary per-table refresh loop (which --crosscheck runs
+    alongside, unrelated to this test) has nothing to fetch or write,
+    isolating the guarantee under test."""
     monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
     monkeypatch.setattr(rk, "LOCAL_DIR", str(tmp_path / "local"))
     monkeypatch.setattr(rk, "SOURCES", {})
@@ -321,9 +322,32 @@ def test_crosscheck_write_never_touches_buildings_json(tmp_path, monkeypatch):
     os.makedirs(tmp_path / "local")
     (tmp_path / "local" / "whiteoutdata-furnace.json").write_text(json.dumps(
         {"furnace": {"28": {"label": "28", "meat": 1, "wood": 1, "coal": 2, "iron": 1, "seconds": 1,
-                             "fire_crystals": 0, "refined_fire_crystals": 0, "power": 999, "prerequisites": {}}}}))
+                             "fire_crystals": 0, "refined_fire_crystals": 0, "power": 999}}}))
     rk.main(["--crosscheck", "--write"])
     assert (tmp_path / "buildings.json").read_text() == before
+    # D-T2: level 28 (already committed) is a report entry, never a
+    # `disputed`/`power` write into the overlay.
+    report = json.loads((tmp_path / "local" / "crosscheck.json").read_text())
+    entry = report["furnace"]["28"]
+    assert entry["whiteoutdata"]["coal"] == 2 and entry["disagrees"] == ["whiteoutdata.coal"]
     overlay = json.loads((tmp_path / "local" / "overlay.json").read_text())
-    assert overlay["buildings"]["furnace"]["28"]["power"] == 999
-    assert overlay["buildings"]["furnace"]["28"]["disputed"] == {"whiteoutdata": {"coal": 2}}
+    assert overlay["buildings"] == {}
+
+
+def test_crosscheck_applies_the_scope_floor_and_drops_all_zero_sources(tmp_path, monkeypatch):
+    """D-T2 finding 1b/2: a furnace level below ordinal 26 never reaches
+    crosscheck.json, and a source whose every row parsed to zero cost/time
+    is dropped rather than reported as a pile of disagreements."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "LOCAL_DIR", str(tmp_path / "local"))
+    monkeypatch.setattr(rk, "SOURCES", {})
+    committed = {"buildings": {"furnace": {"11": {"meat": 1_300_000, "wood": 1_300_000, "coal": 20_000, "iron": 65_000,
+                                                   "seconds": 27_000, "fire_crystals": 0, "refined_fire_crystals": 0}}}}
+    (tmp_path / "buildings.json").write_text(json.dumps(committed))
+    os.makedirs(tmp_path / "local")
+    (tmp_path / "local" / "whiteoutdata-furnace.json").write_text(json.dumps(
+        {"furnace": {"11": {"label": "11", "meat": 1_300_000, "wood": 1_300_000, "coal": 260_000, "iron": 65_000,
+                             "seconds": 27_000, "fire_crystals": 0, "refined_fire_crystals": 0, "power": 0}}}))
+    rk.main(["--crosscheck", "--write"])
+    report = json.loads((tmp_path / "local" / "crosscheck.json").read_text())
+    assert report["furnace"] == {}  # level 11 is below the floor -- never reported

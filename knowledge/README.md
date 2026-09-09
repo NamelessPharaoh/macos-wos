@@ -25,14 +25,31 @@ fetch date and the data is treated as revocable.
 `knowledge/local/` (gitignored, never committed): cross-check tables fetched
 from whiteoutdata.com, whiteoutsurvival.wiki and wostools.net with
 `--local` (`knowledge/local_sources.py`). Their terms restrict reproduction,
-so they stay on this machine. `--crosscheck` diffs them against the
-committed furnace rows and writes `knowledge/local/overlay.json` -- it never
-edits `knowledge/buildings.json` itself (spec D8). The overlay holds only
-`power` (copied from whiteoutdata alone) and `disputed: {source: {field:
-value}}` for levels the committed table already has, plus full Fire
-Crystal rows (ordinal > 30, `"source": "whiteoutdata"`) for levels it
-lacks. `native/kb.py::load` merges it at read time; without it,
-`power_gain("building", ...)` is `None` and FC rows are absent.
+so they stay on this machine. `--crosscheck` is report-only (D-T2, a
+user decision that overrides the earlier A5 "annotate the committed table"
+design) and never edits `knowledge/buildings.json` (spec D8). It only parses
+and compares furnace levels with ordinal >= 26 (the account is upgrading
+26 -> 27; two known whiteoutdata/wosnerds disagreements below that floor,
+at levels 11 and 17, are out of scope by design). It writes two gitignored
+files:
+
+- `knowledge/local/crosscheck.json` -- per furnace level >= 26 the
+  committed table has, every source's costs/times plus a `disagrees` list
+  naming which "source.field" pairs differ by more than 2%. Report only:
+  nothing here is ever written back onto the committed table.
+- `knowledge/local/overlay.json` -- the Fire Crystal furnace rows (ordinal
+  31-80) that whiteoutdata carries and the committed table lacks entirely,
+  each a full row marked `"source": "whiteoutdata"` with `prerequisites: {}`
+  (no prerequisite parsing at all -- it is the part that breaks on the live
+  pages). `native/kb.py::load` merges this one at read time; without it,
+  `power_gain("building", ...)` is `None` and FC rows are absent.
+  `prerequisites()` on an overlay row returns `([], ["unknown: overlay
+  row"])` rather than reading empty prerequisites as satisfied.
+
+A local source whose every parsed row comes back with zero cost and time
+(a header-label mismatch on the live page, not real data) is dropped with
+one printed line naming it, the same way `wostools_buildings` drops an
+unrecognised bundle shape -- never reported as a pile of disagreements.
 
 Refresh prints a diff and writes nothing without `--write`. A patch on one
 table never stops the others: each table's fetch and normalise step is

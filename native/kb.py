@@ -218,14 +218,20 @@ def building_time(name, from_level, to_level, speed_bonus=0.0, kb=None):
     return int(round(secs / (1.0 + speed_bonus)))
 
 
-def prerequisites(name, level, sheet, kb=None, assume_untracked_met=True):
+def prerequisites(name, level, building_levels, kb=None, assume_untracked_met=True):
     """Unmet (building, needed, have) for reaching `level`, plus the ones
     assumed met because the sheet doesn't track them (D-T1/C8).
 
-    `have` is None when the sheet has no reading for that building (missing
-    key or an explicit None) -- reported, never silently treated as 0 or as
-    satisfied, unless the building is in UNTRACKED_ASSUMED_MET, in which
-    case it is dropped from `unmet` and named in `assumed` instead.
+    `building_levels` is {building_name: level_int} -- renamed from `sheet`
+    (fix round 2, item 2): `speed_bonus_from_sheet`'s `bonuses` param used
+    that same name for an incompatible dotted-path mapping, and both being
+    called `sheet` invited passing one where the other belongs with no
+    error, just a wrong answer.
+
+    `have` is None when `building_levels` has no reading for that building
+    (missing key or an explicit None) -- reported, never silently treated
+    as 0 or as satisfied, unless the building is in UNTRACKED_ASSUMED_MET,
+    in which case it is dropped from `unmet` and named in `assumed` instead.
 
     An overlay row (a Fire Crystal furnace level from the local cross-check,
     D-T2) carries a `"source"` marker and no real prerequisite data --
@@ -246,7 +252,7 @@ def prerequisites(name, level, sheet, kb=None, assume_untracked_met=True):
     unmet = []
     assumed = []
     for b, needed in sorted(row["prerequisites"].items()):
-        have = sheet.get(b)
+        have = building_levels.get(b)
         if have is None:
             if assume_untracked_met and b in UNTRACKED_ASSUMED_MET:
                 assumed.append((b, needed))
@@ -541,11 +547,31 @@ def freshness(kb=None, now=None, stale_days=30):
     return out
 
 
-def speed_bonus_from_sheet(sheet, kind):
+def speed_bonus_from_sheet(bonuses, kind):
     """kind is construction | research | training. The sheet stores the
     game's own percentage (128 means +128%); building_time/training_time
     want a multiplier delta. Returns 0.0 when the stats reader (Task 7)
     has not run, so a caller must say a bonus was not applied rather than
-    silently present a base time as an ETA (F-a)."""
-    pct = sheet.get(f"progress.bonus.{kind}_speed")
-    return (float(pct) / 100.0) if pct is not None else 0.0
+    silently present a base time as an ETA (F-a).
+
+    `bonuses` (renamed from `sheet`: `prerequisites` uses that name for an
+    incompatible {building: level} shape, fix round 2 item 2) takes a plain
+    {path: percent} mapping or the {path: row_dict} shape
+    `native.model.latest()` returns -- the actual "current sheet" here.
+    A row dict is read via its 'value_num' key (schema'd "int"); one with
+    no such key is unrecognised and raises TypeError naming it, rather
+    than silently returning 0.0 as if the stats reader never ran."""
+    path = f"progress.bonus.{kind}_speed"
+    pct = bonuses.get(path)
+    if pct is None:
+        return 0.0
+    if isinstance(pct, dict):
+        if "value_num" not in pct:
+            raise TypeError(
+                f"speed_bonus_from_sheet: unrecognised row shape for {path!r}: "
+                f"expected a plain number or a row dict with 'value_num', got keys {sorted(pct)}"
+            )
+        pct = pct["value_num"]
+        if pct is None:
+            return 0.0
+    return float(pct) / 100.0

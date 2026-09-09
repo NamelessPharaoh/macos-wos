@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from native import kb
+from native import kb, model
 
 FIX = os.path.join(os.path.dirname(__file__), "fixtures", "knowledge", "kbdir")
 
@@ -161,6 +161,57 @@ def test_furnace_ordinal():
 def test_speed_bonus_from_sheet():
     assert kb.speed_bonus_from_sheet({"progress.bonus.construction_speed": 128}, "construction") == 1.28
     assert kb.speed_bonus_from_sheet({}, "training") == 0.0
+
+
+def test_speed_bonus_from_sheet_rejects_an_unrecognised_dict_shape():
+    """Fix round 2, item 2: a shape this function can't interpret must be
+    loud, not silently read as "bonus not applied"."""
+    with pytest.raises(TypeError):
+        kb.speed_bonus_from_sheet({"progress.bonus.construction_speed": {"unexpected": 1}}, "construction")
+
+
+def test_speed_bonus_from_sheet_reads_model_latest_row_dicts(tmp_path, k):
+    """Fix round 2, item 2 (the deliverable, not a nicety): native.model.latest
+    is documented, in its own docstring, as "the current sheet", but it
+    returns {path: row_dict}, not {path: value} -- the shape the old test
+    above hand-builds and which nothing in this repo actually produces.
+    Before this fix, `float(row_dict)` raised TypeError; a caller that
+    defensively caught that got the same 0.0 this function returns for
+    "the stats reader never ran", indistinguishable from Task 7 never
+    having shipped.
+
+    Built end to end through the real model functions -- write_snapshot()
+    writes the three bonus paths the normal way, model.latest() reads them
+    back -- rather than a hand-built row-dict fixture, so a wrong guess
+    about the shape model.latest() hands back can't hide behind a
+    convenient stand-in."""
+    conn = model.connect(str(tmp_path / "wos.sqlite"))
+    doc = {
+        "identity": {"id": "P1", "name": "Bob", "state": 100, "state_age_days": 1},
+        "progress": {"bonus": {"construction_speed": 128, "research_speed": 50, "training_speed": 30}},
+    }
+    model.write_snapshot(
+        conn, player={"id": "P1", "name": "Bob", "state": 100},
+        snapshot_id="20260101T000000Z", taken_at="2026-01-01T00:00:00Z",
+        source="native-app", run_dir="/tmp/run", status="ok", sections={},
+        duration_s=1, gems_before=0, gems_after=0, power_before=0, power_after=0,
+        power_rose=False, doc=doc, provenance={},
+    )
+    sheet = model.latest(conn, "P1")
+    assert isinstance(sheet["progress.bonus.construction_speed"], dict)  # the row-dict shape, not a bare value
+    assert kb.speed_bonus_from_sheet(sheet, "construction") == 1.28
+    assert kb.speed_bonus_from_sheet(sheet, "research") == 0.5
+    assert kb.speed_bonus_from_sheet(sheet, "training") == 0.3
+
+    # the buffed number a real caller wants: base furnace 27->28 time with
+    # the account's own construction bonus applied, not the unbuffed base
+    # time (which would read as if Task 7 had never shipped, F-a).
+    base = kb.building_time("furnace", 27, 28, kb=k)
+    buffed = kb.building_time(
+        "furnace", 27, 28, speed_bonus=kb.speed_bonus_from_sheet(sheet, "construction"), kb=k
+    )
+    assert buffed == kb.building_time("furnace", 27, 28, speed_bonus=1.28, kb=k)
+    assert buffed != base
 
 
 def test_cache_is_read_only():

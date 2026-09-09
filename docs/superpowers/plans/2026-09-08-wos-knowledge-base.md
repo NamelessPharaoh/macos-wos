@@ -1890,31 +1890,31 @@ Knowledge row lifecycle:
 
 Synthesized from this review. Each derives from a specific finding above.
 
-- [ ] **T1 (P1, human ~1d / CC ~45m)** — knowledge/fetch.py, util.py, refresh — named per-table failures, recursive `diff_rows`, `carry_marks`, provenance
+- [x] **T1 (P1, human ~1d / CC ~45m)** — knowledge/fetch.py, util.py, refresh — named per-table failures, recursive `diff_rows`, `carry_marks`, provenance
   - Surfaced by: A1, A2, B3, B4, B9, C1
   - Files: `knowledge/fetch.py`, `knowledge/util.py`, `scripts/refresh_knowledge.py`, `knowledge/README.md`, `tests/test_knowledge_fetch.py`, `tests/test_refresh_knowledge.py`, `.gitignore`
   - Verify: `uv run pytest tests/test_knowledge_fetch.py tests/test_refresh_knowledge.py -q`
-- [ ] **T2 (P1, human ~1d / CC ~1h)** — normalisers for the four required tables plus the real vendored files
+- [x] **T2 (P1, human ~1d / CC ~1h)** — normalisers for the four required tables plus the real vendored files
   - Surfaced by: Task 2, A3, A7 (now optional per D-T3), B1, C5, C11
   - Files: `knowledge/normalise.py`, `knowledge/*.json`, `tests/fixtures/knowledge/*`, `tests/test_knowledge_normalise.py`
   - Verify: `uv run python scripts/refresh_knowledge.py` dry run, then `--write`; `uv run pytest tests/test_knowledge_normalise.py -q`
-- [ ] **T3 (P1, human ~1d / CC ~1h)** — `native/kb.py` calculators, strict ordinal, cycle guard, `next_occurrences`, assumed-met prerequisites
+- [x] **T3 (P1, human ~1d / CC ~1h)** — `native/kb.py` calculators, strict ordinal, cycle guard, `next_occurrences`, assumed-met prerequisites
   - Surfaced by: Task 3, A8, B7, B8, C2, C3, C8, D-T1, D-T4
   - Files: `native/kb.py`, `tests/test_native_kb.py`, `tests/fixtures/knowledge/kbdir/*`
   - Verify: `uv run pytest tests/test_native_kb.py -q`
-- [ ] **T4 (P2, human ~0.5d / CC ~40m)** — cross-check report from level 26 up, FC rows to the local overlay
+- [x] **T4 (P2, human ~0.5d / CC ~40m)** — cross-check report from level 26 up, FC rows to the local overlay
   - Surfaced by: Task 4, A5, B5, B10, C6, D-T2
   - Files: `knowledge/local_sources.py`, `scripts/refresh_knowledge.py`, `tests/fixtures/local/knowledge/*`, `tests/test_knowledge_local.py`
   - Verify: `--local --write`, `--crosscheck`; `git status` shows nothing under `knowledge/local/`
-- [ ] **T5 (P2, human ~0.5d / CC ~30m)** — verification marks, overlay merge, freshness in the report
+- [x] **T5 (P2, human ~0.5d / CC ~30m)** — verification marks, overlay merge, freshness in the report
   - Surfaced by: Task 5, A5, A9, C12
   - Files: `native/kb.py`, `native/report.py`, `knowledge/README.md`, `tests/test_native_kb.py`
   - Verify: `uv run pytest tests/ -q`; `report.py` prints the knowledge line
-- [ ] **T6 (P2, human ~2h / CC ~20m)** — absorb the unlock table and update every reference
+- [x] **T6 (P2, human ~2h / CC ~20m)** — absorb the unlock table and update every reference
   - Surfaced by: A6, outside voice 8
   - Files: `knowledge/unlocks.json` (git mv), `core/capability.py`, `Main/task_menu.py`, `usecases/alliance.py`, `tests/test_alliance_capture.py`, `DIRECTORY_MAP.md`, `docs/designs/adaptive-automation.md`
   - Verify: `uv run pytest tests/ -q`; `grep -r "docs/knowledge" --include=*.py --include=*.md .` returns nothing outside `docs/superpowers/`
-- [ ] **T7 (P2, human ~4h / CC ~30m)** — speed-bonus reader
+- [x] **T7 (P2, human ~4h / CC ~30m)** — speed-bonus reader
   - Surfaced by: A10, C7
   - Files: `native/readers/stats.py`, `native/schema.py`, `native/snapshot.py`, `references/screen-map.md`, `tests/test_native_readers.py`
   - Verify: `snapshot.py --readers hud,profile,stats --no-write` shows three percentages

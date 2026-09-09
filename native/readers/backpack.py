@@ -83,27 +83,42 @@ def tile_targets(items, h, w):
     return sorted(set(out), key=lambda c: (c[1], c[0]))
 
 
+# The quantity box under a tooltip's description starts around uy-0.090
+# (measured on the live Chief Stamina frame, 2026-09-09). Candidates are
+# taken down to this floor so a description of any number of lines is
+# captured whole, without reaching into that box.
+DESC_FLOOR = 0.10
+
+
 def read_tooltip(items, h, w):
     """(name, None, description) from an open tile tooltip, else None. The
     tooltip pops up beside its tile, so it is located by its Use button: the
     name is the topmost text line 0.15-0.24 above it; the owned count is the
     tile's own label, not the tooltip's.
 
-    Description band (C9, surveyed against the `backpack_tile` fixture in
-    tests/fixtures/local/reader_frames.json, not guessed): with the Use
-    button at uy, that frame's name sits at uy-0.175 (inside the 0.15-0.24
-    band above) and its description line ("Grants 1 Gems.") sits right
-    below the name at uy-0.144; the quantity box ("+220") starts at
-    uy-0.090. The 0.10-0.15 band below the name therefore holds the
-    description with margin on both sides, without reaching into the
-    quantity box.
+    Description: everything between the name and the quantity box, joined
+    top-to-bottom by y into one space-separated string.
 
-    A description that wraps to more than one OCR line is deliberately
-    joined, top-to-bottom by y, into one space-separated string (fix round
-    1): the only fixture on hand is single-line, but nothing about the game
-    guarantees every item's effect text fits on one line, and truncating to
-    the topmost candidate would silently drop the rest of a longer
-    description rather than fail loudly."""
+    The band is NOT split by a fixed name/description boundary, and the
+    live sweep of 2026-09-09 is why. The earlier version took the name from
+    a 0.15-0.24 band and the description from a 0.10-0.15 band below it,
+    surveyed against the single-line `backpack_tile` fixture. On the real
+    Chief Stamina tooltip the layout is:
+
+        uy-0.1977  "Chief Stamina"                                  <- name
+        uy-0.1646  "Restores 10 Chief Stamina. Used for daily ..."  <- desc line 1
+        uy-0.1414  "troop deployment."                              <- desc line 2
+        uy-0.0899  quantity box
+
+    A two-line description puts its FIRST line inside the old name band, so
+    the fixed split silently stored only "troop deployment." — the tail of a
+    sentence, with no tell that anything was dropped. The fixture could not
+    show this because it is single-line; only a real sweep could.
+
+    So: the name is the topmost candidate, and the description is every
+    candidate below it down to DESC_FLOOR, which sits above the quantity
+    box (that box starts around uy-0.090). Wrapping to any number of lines
+    is handled by the same rule as one line."""
     use = next((i for i in items if norm(i["text"]) == "use"), None)
     if use is None:
         return None
@@ -113,11 +128,12 @@ def read_tooltip(items, h, w):
         return [i for i in items if 0.22 < frac(i, h, w)[0] < 0.78 and uy - hi <= frac(i, h, w)[1] <= uy - lo
                 and len(norm(i["text"])) > 1 and not re.fullmatch(r"[\d,.+() k]+", i["text"].strip().lower())]
 
-    cands = band(0.15, 0.24)
+    cands = band(DESC_FLOOR, 0.24)
     if not cands:
         return None
     name = min(cands, key=lambda i: frac(i, h, w)[1])
-    desc_cands = sorted(band(0.10, 0.15), key=lambda i: frac(i, h, w)[1])
+    ny = frac(name, h, w)[1]
+    desc_cands = sorted((i for i in cands if frac(i, h, w)[1] > ny), key=lambda i: frac(i, h, w)[1])
     description = " ".join(i["text"].strip() for i in desc_cands) if desc_cands else None
     return name["text"].strip(), None, description
 

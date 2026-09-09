@@ -212,6 +212,41 @@ def test_read_tooltip_joins_a_two_line_description():
     assert got[2] == "Contains a random reward. Open it to find out!"
 
 
+def test_read_tooltip_keeps_a_description_line_that_sits_in_the_old_name_band():
+    """Live sweep 2026-09-09. The test above passes against the BROKEN code:
+    it places both description lines inside the old 0.10-0.15 band, which
+    the old fixed split already captured. The case that actually failed in
+    the game is a description whose FIRST line sits inside the old
+    0.15-0.24 name band, directly under the name.
+
+    Real measured offsets from the Chief Stamina tooltip
+    (~/wos-chief/20260909T120815Z/010-tile.png, Use button at fy=0.5331):
+
+        uy-0.1977  "Chief Stamina"
+        uy-0.1646  "Restores 10 Chief Stamina. Used for daily events like"
+        uy-0.1414  "troop deployment."
+        uy-0.0899  quantity box
+
+    Reproduced here against uy=0.5. The old code stored only "troop
+    deployment." -- the tail of a sentence, with nothing to signal that the
+    first half had been dropped."""
+    from native.readers import backpack
+
+    def item(text, cx, cy):
+        return {"text": text, "score": 1.0, "box": [cx - 10, cy - 5, cx + 10, cy + 5]}
+
+    items = [
+        item("Use", 500, 500),                                            # uy = 0.500
+        item("Chief Stamina", 500, 302),                                  # uy-0.198, name
+        item("Restores 10 Chief Stamina. Used for daily events like", 500, 335),   # uy-0.165, OLD name band
+        item("troop deployment.", 500, 359),                              # uy-0.141, old desc band
+    ]
+    got = backpack.read_tooltip(items, 1000, 1000)
+    assert got[0] == "Chief Stamina"
+    assert got[2] == ("Restores 10 Chief Stamina. Used for daily events like "
+                      "troop deployment.")
+
+
 def test_classify_kind_is_reexported_from_knowledge_util():
     """Fix round 1, item 1: classify_kind (and SPEEDUP_RE, speedup_duration)
     moved to knowledge/util.py so native/kb.py::record_item can import it

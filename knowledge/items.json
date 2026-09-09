@@ -2,5 +2,196 @@
   "_meta": {
     "source": "in-game backpack tooltips"
   },
-  "items": {}
+  "items": {
+    "chief_stamina": {
+      "name": "Chief Stamina",
+      "slug": "chief_stamina",
+      "tab": "Resources",
+      "description": "troop deployment.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "lv_1_custom_resource_chest": {
+      "name": "Lv.1 Custom Resource Chest",
+      "slug": "lv_1_custom_resource_chest",
+      "tab": "Resources",
+      "description": "500 Iron.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "lv_2_custom_resource_chest": {
+      "name": "Lv.2 Custom Resource Chest",
+      "slug": "lv_2_custom_resource_chest",
+      "tab": "Resources",
+      "description": "Coal or 5K Iron.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "1k_meat": {
+      "name": "1K Meat",
+      "slug": "1k_meat",
+      "tab": "Resources",
+      "description": "Grants 1,000 Meat.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "1k_meat_secured": {
+      "name": "1K Meat (Secured)",
+      "slug": "1k_meat_secured",
+      "tab": "Resources",
+      "description": "Gives 1,000 Meat (Secured).",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "10k_meat_secured": {
+      "name": "10K Meat (Secured)",
+      "slug": "10k_meat_secured",
+      "tab": "Resources",
+      "description": "Gives 10,000 Meat (Secured).",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "10k_meat": {
+      "name": "10K Meat",
+      "slug": "10k_meat",
+      "tab": "Resources",
+      "description": "Grants 10,000 Meat.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "100k_meat": {
+      "name": "100K Meat",
+      "slug": "100k_meat",
+      "tab": "Resources",
+      "description": "Grants 100,000 Meat.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "1k_wood": {
+      "name": "1K Wood",
+      "slug": "1k_wood",
+      "tab": "Resources",
+      "description": "Grants 1,000 Wood.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "1k_wood_secured": {
+      "name": "1K Wood (Secured)",
+      "slug": "1k_wood_secured",
+      "tab": "Resources",
+      "description": "Gives 1,000 Wood (Secured).",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "10k_wood": {
+      "name": "10K Wood",
+      "slug": "10k_wood",
+      "tab": "Resources",
+      "description": "Grants 10,000 Wood.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "100k_wood": {
+      "name": "100K Wood",
+      "slug": "100k_wood",
+      "tab": "Resources",
+      "description": "Grants 100,000 Wood.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "100_coal": {
+      "name": "100 Coal",
+      "slug": "100_coal",
+      "tab": "Resources",
+      "description": "Grants 100 Coal.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "1k_coal": {
+      "name": "1K Coal",
+      "slug": "1k_coal",
+      "tab": "Resources",
+      "description": "Grants 1,000 Coal.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "10k_wood_secured": {
+      "name": "10K Wood (Secured)",
+      "slug": "10k_wood_secured",
+      "tab": "Resources",
+      "description": "Gives 10,000 Wood (Secured).",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "10k_coal": {
+      "name": "10K Coal",
+      "slug": "10k_coal",
+      "tab": "Resources",
+      "description": "Grants 10,000 Coal.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "100_iron": {
+      "name": "100 Iron",
+      "slug": "100_iron",
+      "tab": "Resources",
+      "description": "Grants 100 Iron.",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "1k_coal_secured": {
+      "name": "1K Coal (Secured)",
+      "slug": "1k_coal_secured",
+      "tab": "Resources",
+      "description": "Gives 1,000 Coal (Secured).",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    },
+    "10k_coal_secured": {
+      "name": "10K Coal (Secured)",
+      "slug": "10k_coal_secured",
+      "tab": "Resources",
+      "description": "Gives 10,000 Coal (Secured).",
+      "kind": "other",
+      "classifier_version": 1,
+      "first_seen": "20260909T120815Z",
+      "last_seen": "20260909T120815Z"
+    }
+  }
 }

@@ -356,7 +356,25 @@ def verify(kb_cost, screen_cost, tolerance=0.02):
     return True, "ok"
 
 
-_MARK_VERIFIED_FILES = {"buildings": "buildings.json", "research": "research.json"}
+def _buildings_verified_row(doc, table, key, level):
+    return doc[table].get(key, {}).get(str(level))
+
+
+def _research_verified_row(doc, table, key, level):
+    return doc[table].get(key, {}).get("levels", {}).get(str(level))
+
+
+# table -> (committed filename, row-shape getter). One dict, not two
+# (finding 5, 2026-09-09 fix round): the filename lookup below already
+# raises a named error for any table outside this set, so keeping the row
+# shape in the SAME mapping (rather than a parallel `if table ==
+# "buildings" ... else ...`) means a third supported table cannot pass the
+# filename guard while silently taking the wrong (research-shaped) branch --
+# there is only one dispatch to keep in sync with itself.
+_MARK_VERIFIED = {
+    "buildings": ("buildings.json", _buildings_verified_row),
+    "research": ("research.json", _research_verified_row),
+}
 
 
 def mark_verified(table, key, level, snapshot_id, directory=None):
@@ -383,16 +401,13 @@ def mark_verified(table, key, level, snapshot_id, directory=None):
     """
     directory = directory or KNOWLEDGE_DIR
     try:
-        fname = _MARK_VERIFIED_FILES[table]
+        fname, row_getter = _MARK_VERIFIED[table]
     except KeyError:
-        raise KeyError(f"mark_verified: unsupported table {table!r}; expected one of {sorted(_MARK_VERIFIED_FILES)}") from None
+        raise KeyError(f"mark_verified: unsupported table {table!r}; expected one of {sorted(_MARK_VERIFIED)}") from None
     path = os.path.join(directory, fname)
     with open(path) as f:
         doc = json.load(f)
-    if table == "buildings":
-        row = doc[table].get(key, {}).get(str(level))
-    else:
-        row = doc[table].get(key, {}).get("levels", {}).get(str(level))
+    row = row_getter(doc, table, key, level)
     if row is None:
         return False
     row["verified_in_game"] = snapshot_id

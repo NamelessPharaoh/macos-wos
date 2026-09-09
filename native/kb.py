@@ -134,7 +134,26 @@ def add_cost(a, b):
 
 
 def _row_cost(row):
-    return {k: row[k] for k in RESOURCES if row.get(k)}
+    """RESOURCES the row actually costs, zero/absent ones dropped as usual.
+
+    A resource the row explicitly carries as None (finding 1, 2026-09-09 fix
+    round: an overlay row whose page-parse for that one column failed --
+    `power`/`fire_crystals`/`refined_fire_crystals` exist nowhere but the
+    overlay, so nothing else can catch it) is a distinct fact from a real,
+    parsed zero and must not vanish from the cost the same way -- that is
+    exactly how a level needing 132 Fire Crystals silently priced out at
+    zero. Raise instead: a caller summing costs across levels needs to know
+    the total is unknown, not receive a silently cheaper one."""
+    cost = {}
+    for k in RESOURCES:
+        if k not in row:
+            continue
+        v = row[k]
+        if v is None:
+            raise ValueError(f"{k}: unknown cost (overlay row parsed with a missing value) -- cannot total it")
+        if v:
+            cost[k] = v
+    return cost
 
 
 # ----------------------------------------------------------------------------- buildings

@@ -46,14 +46,38 @@ WOSTOOLS_BUILDINGS = "https://wostools.net/building-calculator"
 # module's problem.
 FLOOR_ORDINAL = 26
 
+# `crosscheck()`'s report/disagree comparison uses exactly this tuple (D-T2:
+# "never a power copy" -- fire_crystals/refined_fire_crystals are pre-FC
+# zero on both sides for every level this compares anyway, ordinal
+# FLOOR_ORDINAL..30). Do not add power/fire_crystals/refined_fire_crystals
+# here: the report would start flagging a committed row's absent `power`
+# (there isn't one -- committed rows carry no power field at all) against a
+# source's real value as a spurious disagreement.
 CHECKED = ("meat", "wood", "coal", "iron", "seconds")
+
+# The three fields that exist ONLY via this module's overlay (finding 1,
+# 2026-09-09 fix round): nothing else in the system carries building power
+# or Fire Crystal costs, so a broken parse of just one of these columns is
+# never caught by comparison against another source the way meat/wood/coal/
+# iron would be. Checked by `_drop_if_all_zero` only -- deliberately kept
+# out of CHECKED above so it never leaks into `crosscheck()`'s report.
+_OVERLAY_ONLY_FIELDS = ("power", "fire_crystals", "refined_fire_crystals")
+_ALL_ZERO_FIELDS = CHECKED + _OVERLAY_ONLY_FIELDS
 
 
 # ----------------------------------------------------------------------------- text parsing
 def parse_amount(text):
     """Web tables print '140M', '1,213,100', '132', '–'; knowledge.util's
-    screen-facing parser (A4/E1) already handles every one of those shapes,
-    so this is just the "missing/garbage -> 0" wrapper the local tables want."""
+    screen-facing parser (A4/E1) already handles every one of those shapes.
+    `text` is None exactly when the row dict has no entry for this column at
+    all -- the page's header for it was never found (`_table_rows` only
+    populates keys it matched) -- and that is NOT the same fact as a present
+    cell reading '-'/'--'/'' (a genuine, parsed zero, finding 1, 2026-09-09
+    fix round): a missing column returns None so callers can tell "the page
+    didn't have this at all" from "the page said zero" instead of both
+    silently becoming 0."""
+    if text is None:
+        return None
     v, _exact = parse_number(str(text).replace("–", "").replace("—", "").strip())
     return v or 0
 
@@ -100,10 +124,27 @@ def _drop_if_all_zero(name, rows):
     bail out earlier) but not the ones that carry the actual numbers -- a
     header-label mismatch on the live page, not real data. A source that
     contributes nothing usable is dropped and named, never reported as a
-    pile of disagreements (finding 2, 2026-09-09 fix round)."""
-    if rows and all(all(int(row.get(f) or 0) == 0 for f in CHECKED) for row in rows.values()):
+    pile of disagreements (finding 2, 2026-09-09 fix round).
+
+    Widened (finding 1, 2026-09-09 fix round) to also guard the three
+    overlay-only fields: a page can rename just its Power or Fire Crystal
+    column while every other column keeps parsing fine, so the all-fields
+    check above never fires for that failure on its own. Since `parse_amount`
+    now returns None (not 0) for a column it never found at all, a field
+    that is None for every single row means its column vanished from the
+    whole page -- checked separately, per field, rather than folded into the
+    all-zero-and-all-fields check (a row can legitimately have a real,
+    parsed zero for one of these -- a pre-Fire-Crystal furnace level -- and
+    that must not itself count as broken)."""
+    if not rows:
+        return rows
+    if all(all(int(row.get(f) or 0) == 0 for f in _ALL_ZERO_FIELDS) for row in rows.values()):
         print(f"{name}: every parsed row has zero cost/time (page shape probably changed); source dropped")
         return {}
+    for field in _OVERLAY_ONLY_FIELDS:
+        if all(row.get(field) is None for row in rows.values()):
+            print(f"{name}: every parsed row is missing {field!r} (page shape probably changed); source dropped")
+            return {}
     return rows
 
 
@@ -264,7 +305,7 @@ def crosscheck(committed_buildings, local_docs, tolerance=0.02):
                 furnace_overlay[ordinal] = {"source": source, "label": row.get("label"), "meat": row["meat"], "wood": row["wood"],
                                              "coal": row["coal"], "iron": row["iron"], "fire_crystals": row["fire_crystals"],
                                              "refined_fire_crystals": row["refined_fire_crystals"], "seconds": row["seconds"],
-                                             "power": row.get("power", 0), "prerequisites": {}}
+                                             "power": row.get("power"), "prerequisites": {}}
                 lines.append(f"furnace.{ordinal} added from {source} ({row.get('label')})")
     report = {"_meta": {"sources": sorted(local_docs), "floor_ordinal": FLOOR_ORDINAL}, "furnace": furnace_report}
     overlay = {"_meta": {"sources": sorted(local_docs)}, "buildings": ({"furnace": furnace_overlay} if furnace_overlay else {})}

@@ -33,6 +33,16 @@ def test_parse_amount_and_time():
     assert ls.parse_time("7d") == 7 * 86400 and ls.parse_time("") == 0
 
 
+def test_parse_amount_distinguishes_a_missing_column_from_a_real_zero():
+    """Finding 1 (2026-09-09 fix round): None is what a row dict actually
+    hands parse_amount when a column's header was never found on the page at
+    all (`_table_rows` only populates keys it matched) -- that must come
+    back None, never 0, so it can't be mistaken for a genuinely parsed zero
+    (a present cell reading '-'/'--'/''  , which test_parse_amount_and_time
+    above already pins at 0)."""
+    assert ls.parse_amount(None) is None
+
+
 def test_whiteoutdata_furnace_rows_by_ordinal():
     doc = ls.whiteoutdata_furnace(_read_local("whiteoutdata_furnace_excerpt.html"))
     f = doc["furnace"]
@@ -65,6 +75,20 @@ def test_wiki_furnace_all_zero_rows_are_dropped():
     html = ('<table><tr><th>Level</th><th>Nonsense</th></tr>'
             '<tr><td>28</td><td>whatever</td></tr></table>')
     assert ls.wiki_furnace(html) == {"furnace": {}}
+
+
+def test_whiteoutdata_furnace_drops_the_source_when_an_overlay_only_column_vanishes():
+    """Finding 1 (2026-09-09 fix round): if whiteoutdata renames just its
+    Fire Crystal column, meat/wood/coal/iron/power still parse fine for
+    every row -- the pre-existing all-fields-all-rows-zero check never fires
+    for that. fire_crystals is None (column not found) for every row here,
+    which is exactly the per-field signal _drop_if_all_zero now checks; the
+    source must be dropped rather than shipping power/fire_crystals: 0 into
+    the overlay (the two fields nothing else in the system can contradict)."""
+    html = ('<table><tr><th>Level</th><th>Wood</th><th>Meat</th><th>Coal</th><th>Iron</th>'
+            '<th>Upgrade Time</th><th>Power</th></tr>'
+            '<tr><td>30-1</td><td>67M</td><td>67M</td><td>13M</td><td>3.3M</td><td>7d</td><td>1,580,900</td></tr></table>')
+    assert ls.whiteoutdata_furnace(html) == {"furnace": {}}
 
 
 def test_wostools_buildings_from_chunk():

@@ -115,6 +115,31 @@ def test_power_gain_building_is_none_without_overlay(k):
     assert kb.power_gain("building", name="furnace", from_level=27, to_level=28, kb=k) is None
 
 
+def test_power_gain_building_is_none_for_a_row_with_unknown_power():
+    """Finding 1 (2026-09-09 fix round): a whiteoutdata column rename would
+    have left an overlay row with power=0 before this fix; now a row that
+    genuinely doesn't know its power carries power=None, and power_gain must
+    return None for it rather than treating the unknown as a real 0 (the
+    contract native/kb.py's own docstring states twice)."""
+    broken_kb = {"buildings": {"furnace": {"31": {"meat": 1, "wood": 1, "coal": 1, "iron": 1,
+                                                   "fire_crystals": 132, "refined_fire_crystals": 0,
+                                                   "seconds": 1, "power": None}}}}
+    assert kb.power_gain("building", name="furnace", from_level=30, to_level=31, kb=broken_kb) is None
+
+
+def test_building_cost_raises_rather_than_dropping_an_unknown_resource():
+    """Finding 1 (2026-09-09 fix round): before this fix, an overlay row
+    with fire_crystals=None (the parser never found the column) simply
+    vanished from the cost dict -- days_to() then reported a fraction of a
+    day for an upgrade that actually needs 132 Fire Crystals. An unknown
+    resource must be a loud failure, not a silently cheaper plan."""
+    broken_kb = {"buildings": {"furnace": {"31": {"meat": 1, "wood": 1, "coal": 1, "iron": 1,
+                                                   "fire_crystals": None, "refined_fire_crystals": 0,
+                                                   "seconds": 1, "power": 1_580_900}}}}
+    with pytest.raises(ValueError, match="fire_crystals"):
+        kb.building_cost("furnace", 30, 31, kb=broken_kb)
+
+
 def test_days_to_and_verify():
     assert kb.days_to({"meat": 100, "wood": 50}, {"meat": 10, "wood": 100}) == 10.0
     assert kb.days_to({"meat": 100}, {"meat": 10}, stock={"meat": 100}) == 0.0

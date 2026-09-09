@@ -74,3 +74,30 @@ def test_write_table_creates_missing_directories(tmp_path):
     p = tmp_path / "nested" / "dir" / "t.json"
     ku.write_table(str(p), {"a": {"1": {"v": 1}}})
     assert p.exists()
+
+
+def test_slugify_moved_intact():
+    assert ku.slugify("Supreme Infantry") == "supreme_infantry"
+    assert ku.slugify("") == "unnamed"
+
+
+def test_speedup_duration_extracts_kind_and_duration():
+    assert ku.speedup_duration("Construction Speedup 1h") == ("construction", "1h")
+    assert ku.speedup_duration("5m Speedup") == ("general", "5m")
+    assert ku.speedup_duration("Fire Crystal") is None
+
+
+def test_classify_kind_reuses_speedup_duration_and_the_fire_crystal_keyword():
+    assert ku.classify_kind("5m Speedup") == "speedup"
+    assert ku.classify_kind("Fire Crystal") == "fire_crystal"
+    assert ku.classify_kind("Refined Fire Crystal") == "fire_crystal"
+    assert ku.classify_kind("1 Gems") == "other"
+
+
+def test_classifier_version_is_a_plain_int():
+    """native/kb.py::record_item stamps every catalogue row with this, and
+    native/readers/backpack.py::fold compares against it to decide whether
+    a stored kind is still trustworthy (fix round 1, item 2). A future
+    classifier fix bumps this constant; nothing else should have to change
+    for that bump to reach every already-catalogued item."""
+    assert isinstance(ku.CLASSIFIER_VERSION, int) and ku.CLASSIFIER_VERSION >= 1

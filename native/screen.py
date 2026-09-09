@@ -6,7 +6,7 @@ this module finds them, taps them through the background driver, and refuses any
 press that lands on a spend control.
 
     frame() ─▶ OCR items ─▶ find()/close_control()/read_hud()
-                              │           parse_* live in knowledge/util.py
+                              │           parse_*/slugify live in knowledge/util.py
                               │           (re-exported here for the readers)
         guarded press ◀────── spend_label(): NEVER_RE | DANGER_RE | PRICE_RE
         positional tap ◀───── pretap_check(): OCR box around the target
@@ -27,10 +27,13 @@ import numpy as np
 
 from native import drive as drv
 # The knowledge base must not depend on native/ (E1), so parse_number,
-# parse_ratio and parse_duration live in knowledge/util.py; re-exported here
-# because native/readers/__init__.py:17 and ten reader modules import them
-# from native.screen and none of them change.
-from knowledge.util import parse_number, parse_ratio, parse_duration
+# parse_ratio, parse_duration and slugify live in knowledge/util.py;
+# re-exported here because native/readers/__init__.py:17 and several reader
+# modules import them from native.screen and none of them change.
+# native/kb.py::record_item imports slugify straight from knowledge.util,
+# never from here, precisely so it doesn't drag this module's cv2/numpy/
+# native.drive imports in for a two-line string function.
+from knowledge.util import parse_number, parse_ratio, parse_duration, slugify
 
 # ----------------------------------------------------------------------------- guards
 # A spend control is a short label that STARTS with a buy verb ("Buy", "Purchase",
@@ -53,12 +56,6 @@ REVEAL_RE = re.compile(r"tap (anywhere|to)\b")
 
 def norm(s):
     return re.sub(r"[^a-z0-9:/. $×&]", "", s.lower()).strip()
-
-
-def slugify(text):
-    """'Supreme Infantry' -> 'supreme_infantry': the key form the model stores."""
-    t = re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
-    return t or "unnamed"
 
 
 def spend_label(t, extra=()):

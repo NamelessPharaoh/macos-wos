@@ -29,6 +29,16 @@ def test_parsers_are_reexported_from_knowledge_util():
     assert s.parse_duration is ku.parse_duration
 
 
+def test_slugify_is_reexported_from_knowledge_util():
+    """Fix round 1, item 1: slugify moved to knowledge/util.py alongside
+    classify_kind, for the same reason the parsers moved (E1) -- so
+    native/kb.py::record_item can import it without dragging this module's
+    cv2/numpy/native.drive imports in. native/screen.py must still hand
+    back the exact same function object, since several reader modules
+    import slugify from here."""
+    assert s.slugify is ku.slugify
+
+
 @pytest.mark.parametrize("rel", list(_goldens().keys()) if os.path.exists(GOLDENS) else [])
 def test_moved_helpers_reproduce_goldens(rel):
     import cv2

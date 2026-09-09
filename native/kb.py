@@ -24,10 +24,17 @@ values come from (M2 data; the load path and the None-without-overlay
 behaviour ship now). Without it, `power_gain("building", ...)` returns
 `None`, never `0`, so a planner never mistakes "unknown" for "no power".
 
-furnace_ordinal, next_level_label and write_table are imported from
-knowledge/util.py (B9/R4): this module never redefines the ordinal maths,
-the label-after-ordinal maths, or the atomic-write helper -- it only
-re-exports them for its own callers (`kb.next_level_label(...)` works).
+furnace_ordinal, next_level_label, write_table, slugify, classify_kind and
+CLASSIFIER_VERSION are all imported from knowledge/util.py (B9/R4/fix-round-1):
+this module never redefines the ordinal maths, the atomic-write helper, or
+item-name classification -- it only re-exports them for its own callers
+(`kb.next_level_label(...)` works). Importing classify_kind and slugify
+from knowledge/util.py rather than from native/readers/backpack.py or
+native/screen.py is deliberate, not incidental: both of those modules pull
+in cv2, numpy and native.drive at module level, and this module's opening
+claim ("no game access") must hold for every caller of `record_item`, not
+only the backpack reader that happens to have already paid that import
+cost.
 
 Verification (mark_verified, C12): opens the COMMITTED file directly --
 never the merged in-memory table `load()` returns -- so a level that only
@@ -49,7 +56,7 @@ import json
 import os
 from collections import namedtuple
 
-from knowledge.util import furnace_ordinal, next_level_label, write_table
+from knowledge.util import CLASSIFIER_VERSION, classify_kind, furnace_ordinal, next_level_label, slugify, write_table
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KNOWLEDGE_DIR = os.path.join(REPO, "knowledge")
@@ -433,7 +440,8 @@ ITEMS_FILE = "items.json"
 
 def items(directory=None):
     """The item catalogue `record_item` builds from backpack tooltips:
-    {slug: {name, slug, tab, description, kind, first_seen, last_seen}}.
+    {slug: {name, slug, tab, description, kind, classifier_version,
+    first_seen, last_seen}}.
 
     Read fresh from disk every call, never through the `load()`/`_CACHE`
     path: `record_item` can add a row mid-run (a backpack sweep classifies
@@ -456,9 +464,19 @@ def record_item(name, tab, description, snapshot_id, directory=None):
     (see knowledge/README.md). `native/readers/backpack.py::read` calls this
     for every tooltip it reads; it taps nothing itself.
 
-    `kind` reuses `native.readers.backpack.classify_kind`, the exact
-    function `fold` calls to route ledger writes, so the catalogue's
-    classification and the ledger's routing can never drift apart.
+    `kind` and `slug` reuse `knowledge.util.classify_kind`/`slugify`, the
+    exact functions `native.readers.backpack.fold` calls to route ledger
+    writes, so the catalogue's classification and the ledger's routing can
+    never drift apart. Both are pure-stdlib (`knowledge/` depends on
+    nothing outside it) and imported at module level here -- this function
+    does not, even transitively, import cv2, numpy or the driver to do its
+    job, unlike an earlier version of this module that imported
+    classify_kind from the reader package itself.
+
+    `classifier_version` is stamped with `knowledge.util.CLASSIFIER_VERSION`
+    so `fold` can tell a stale classification (from before a classify_kind
+    rule change) from a current one and recompute instead of trusting it --
+    see `fold`'s docstring.
 
     Upsert semantics: `first_seen` is set once and never overwritten;
     every other field, including `last_seen`, is refreshed to this call's
@@ -469,9 +487,6 @@ def record_item(name, tab, description, snapshot_id, directory=None):
     anything sourced from the local overlay -- its only inputs are what
     the screen just showed, and it never reads `load()`, `_CACHE` or the
     overlay file at all."""
-    from native.readers.backpack import classify_kind
-    from native.screen import slugify
-
     directory = directory or KNOWLEDGE_DIR
     path = os.path.join(directory, ITEMS_FILE)
     if os.path.exists(path):
@@ -488,6 +503,7 @@ def record_item(name, tab, description, snapshot_id, directory=None):
         "tab": tab,
         "description": description,
         "kind": classify_kind(name),
+        "classifier_version": CLASSIFIER_VERSION,
         "first_seen": first_seen,
         "last_seen": snapshot_id,
     })

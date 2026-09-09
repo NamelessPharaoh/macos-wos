@@ -89,6 +89,76 @@ def parse_duration(text):
     return total if matched else None
 
 
+def slugify(text):
+    """'Supreme Infantry' -> 'supreme_infantry': the key form the model
+    stores. Moved from native/screen.py alongside the parsers above (E1):
+    native/kb.py::record_item needs a slug for every item name it catalogues
+    and must not import native/screen.py (cv2, numpy, native.drive at module
+    level) just to get one. native/screen.py re-exports this unchanged, so
+    the five reader modules that already import it from there see no
+    change, and record_item's slug always matches what they compute."""
+    t = re.sub(r"[^a-z0-9]+", "_", str(text).lower()).strip("_")
+    return t or "unnamed"
+
+
+# ----------------------------------------------------------------------------- item classification (A11)
+# Moved out of native/readers/backpack.py for the same reason as the move
+# above: knowledge/ depends on nothing but the standard library, but
+# native/readers/backpack.py imports native.screen at module level, which
+# imports cv2, numpy and native.drive at module level in turn. Before this
+# move, native/kb.py::record_item imported classify_kind from the reader
+# module to compute one field, so calling record_item from anything but the
+# backpack reader (a backfill script, a unit test with no screen session)
+# dragged OpenCV, NumPy and the driver in to resolve a two-line string
+# classifier. native/readers/backpack.py re-exports these names unchanged,
+# so `fold`'s call sites did not have to move.
+SPEEDUP_RE = re.compile(
+    r"(?:(general|construction|research|training|healing)\s+)?"
+    r"(?:(\d+)\s*(m|min|h|hr|d)\s+)?speed-?up[s]?(?:\s*\(?(\d+)\s*(m|min|h|hr|d)\)?)?", re.I)
+_SPEEDUP_DUR = {"m": "m", "min": "m", "h": "h", "hr": "h", "d": "d"}
+
+# Bump whenever classify_kind's rules change. native/kb.py::record_item
+# stamps every catalogue row with the version that produced its `kind`;
+# native/readers/backpack.py::fold treats a row stamped with an older (or
+# missing) version as uncatalogued and recomputes `kind` fresh rather than
+# trusting the stored value. Without this, a classifier improvement (a new
+# keyword rule) would never reach an item already in the catalogue until
+# the backpack reader happened to see that exact tile live again -- a fix
+# that silently does nothing for every item already recorded.
+CLASSIFIER_VERSION = 1
+
+
+def speedup_duration(name):
+    """(kind, "5m"/"1h"/...) for a name shaped like a speedup, else None.
+    Kind and duration come from one SPEEDUP_RE match so classify_kind and
+    the ledger router (`native.readers.backpack.fold`) never re-derive
+    them two different ways."""
+    m = SPEEDUP_RE.search(name)
+    if not (m and (m.group(2) or m.group(4))):
+        return None
+    kind = (m.group(1) or "general").lower()
+    num, unit = (m.group(2), m.group(3)) if m.group(2) else (m.group(4), m.group(5))
+    return kind, f"{num}{_SPEEDUP_DUR[unit.lower()]}"
+
+
+def classify_kind(name):
+    """"speedup" | "fire_crystal" | "other" from the exact SPEEDUP_RE match
+    and "fire crystal" keyword `native.readers.backpack.fold` uses to route
+    ledger writes (A11): one function, so the item catalogue's `kind`
+    (native/kb.py::record_item) and the ledger router can never classify
+    the same name two different ways. "resource_box" is part of the kind
+    enum `record_item` promises, but like `fold` before this module existed,
+    nothing here recognises it yet -- the day a keyword for it is added, it
+    is added HERE, and both the catalogue and the ledger pick it up from
+    this one place immediately (see CLASSIFIER_VERSION)."""
+    n = str(name).lower()
+    if speedup_duration(name):
+        return "speedup"
+    if "fire crystal" in n:
+        return "fire_crystal"
+    return "other"
+
+
 # ----------------------------------------------------------------------------- ordinal
 # Every building level past 30 is a Fire Crystal (FC) tier: the game shows
 # "30-1".."30-4" for the four sub-levels right after 30, then "FC1" (a bare

@@ -13,32 +13,20 @@ import time
 
 from native.readers import ReaderResult, frac, parse_number, norm
 from native.screen import signature, slugify
+# SPEEDUP_RE, classify_kind and speedup_duration live in knowledge/util.py
+# (fix round 1, following E1's precedent): knowledge/ depends on nothing but
+# the standard library, and native/kb.py::record_item needed this module's
+# classify_kind for one field, which meant calling record_item from
+# anything but the backpack reader dragged this module's native.screen
+# import (cv2, numpy, native.drive) in just to classify a string.
+# Re-exported here unchanged so this module's own call sites don't move.
+from knowledge.util import CLASSIFIER_VERSION, SPEEDUP_RE, classify_kind, speedup_duration
 
 TABS = ("Resources", "Speedup", "Bonus", "Other")   # Gear tiles open a stats screen, not a tooltip: TODOS.md
 TILE_COLS = (0.216, 0.404, 0.593, 0.783)
 TITLE_TAP = (0.285, 0.067)
 MAX_PAGES = 12
-SPEEDUP_RE = re.compile(r"(?:(general|construction|research|training|healing)\s+)?(?:(\d+)\s*(m|min|h|hr|d)\s+)?speed-?up[s]?(?:\s*\(?(\d+)\s*(m|min|h|hr|d)\)?)?", re.I)
-DUR = {"m": "m", "min": "m", "h": "h", "hr": "h", "d": "d"}
 EXPECTED = []
-
-
-def classify_kind(name):
-    """"speedup" | "fire_crystal" | "other" from the exact SPEEDUP_RE match
-    and "fire crystal" keyword `fold` uses to route ledger writes (A11):
-    one function, so the item catalogue's `kind` (native/kb.py::record_item)
-    and the ledger router can never classify the same name two different
-    ways. "resource_box" is part of the kind enum `record_item` promises,
-    but like `fold` before this change, nothing here recognises it yet --
-    the day a keyword for it is added, it is added HERE, and both the
-    catalogue and the ledger pick it up from this one place."""
-    n = norm(name)
-    m = SPEEDUP_RE.search(name)
-    if m and (m.group(2) or m.group(4)):
-        return "speedup"
-    if "fire crystal" in n:
-        return "fire_crystal"
-    return "other"
 
 
 def fold(res, tab, name, count, raw, frame, score, exact, directory=None):
@@ -47,23 +35,29 @@ def fold(res, tab, name, count, raw, frame, score, exact, directory=None):
 
     A11: the item catalogue (`native.kb.items()`, built from backpack
     tooltips) is consulted first by exact slug match -- the game's own
-    tooltip text already classified this item on an earlier sighting --
-    and only when the slug isn't catalogued yet does this fall back to
-    `classify_kind`'s SPEEDUP_RE/keyword rules. `directory` is forwarded to
-    `kb.items()` untouched; production callers leave it None (the real,
-    committed `knowledge/items.json`), tests pass a tmp_path."""
+    tooltip text already classified this item on an earlier sighting.
+    That stored `kind` is trusted only when its `classifier_version`
+    matches `knowledge.util.CLASSIFIER_VERSION` (fix round 1): a classifier
+    fix (a new keyword rule in `classify_kind`) ships with a version bump,
+    which makes every already-catalogued row look stale at once and fall
+    back to a fresh `classify_kind(name)` call here, immediately -- no live
+    re-sighting of that exact tile required for the fix to take effect.
+    `directory` is forwarded to `kb.items()` untouched; production callers
+    leave it None (the real, committed `knowledge/items.json`), tests pass
+    a tmp_path."""
     key = f"{slugify(tab)}/{slugify(name)}"
     res.put(f"backpack.items.{key}", count, raw=raw, frame=frame, score=score, exact=exact)
     n = norm(name)
     from native import kb
     entry = kb.items(directory=directory).get(slugify(name))
-    kind = entry["kind"] if entry else classify_kind(name)
+    if entry and entry.get("classifier_version") == CLASSIFIER_VERSION:
+        kind = entry["kind"]
+    else:
+        kind = classify_kind(name)
     if kind == "speedup":
-        m = SPEEDUP_RE.search(name)
-        if m and (m.group(2) or m.group(4)):
-            spd = (m.group(1) or "general").lower()
-            num, unit = (m.group(2), m.group(3)) if m.group(2) else (m.group(4), m.group(5))
-            dur = f"{num}{DUR[unit.lower()]}"
+        su = speedup_duration(name)
+        if su:
+            spd, dur = su
             res.put(f"backpack.speedups.{spd}.{dur}", count, raw=raw, frame=frame, score=score, exact=exact)
     elif kind == "fire_crystal":
         if "refined fire crystal" in n:
@@ -102,7 +96,14 @@ def read_tooltip(items, h, w):
     below the name at uy-0.144; the quantity box ("+220") starts at
     uy-0.090. The 0.10-0.15 band below the name therefore holds the
     description with margin on both sides, without reaching into the
-    quantity box."""
+    quantity box.
+
+    A description that wraps to more than one OCR line is deliberately
+    joined, top-to-bottom by y, into one space-separated string (fix round
+    1): the only fixture on hand is single-line, but nothing about the game
+    guarantees every item's effect text fits on one line, and truncating to
+    the topmost candidate would silently drop the rest of a longer
+    description rather than fail loudly."""
     use = next((i for i in items if norm(i["text"]) == "use"), None)
     if use is None:
         return None
@@ -116,8 +117,8 @@ def read_tooltip(items, h, w):
     if not cands:
         return None
     name = min(cands, key=lambda i: frac(i, h, w)[1])
-    desc_cands = band(0.10, 0.15)
-    description = min(desc_cands, key=lambda i: frac(i, h, w)[1])["text"].strip() if desc_cands else None
+    desc_cands = sorted(band(0.10, 0.15), key=lambda i: frac(i, h, w)[1])
+    description = " ".join(i["text"].strip() for i in desc_cands) if desc_cands else None
     return name["text"].strip(), None, description
 
 

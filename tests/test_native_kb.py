@@ -375,15 +375,60 @@ def test_record_item_kind_reuses_backpacks_classification_rules(tmp_path):
     assert other["kind"] == "other"
 
 
-def test_record_item_writes_meta_source_and_never_touches_the_overlay(tmp_path):
-    """The safety property the module docstring and mark_verified's
-    docstring both now name explicitly (the controller's finding): a
-    second on-disk writer exists, and it must never carry overlay data.
-    record_item's only inputs are name/tab/description/snapshot_id read
-    off the screen -- there is no overlay path for it to take."""
-    d = str(tmp_path)
-    kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sid", directory=d)
-    with open(os.path.join(d, "items.json")) as f:
+def test_record_item_row_has_exactly_its_own_fields_with_a_real_overlay_present(tmp_path):
+    """Fix round 1, item 4: a substring search for "overlay" would not
+    catch overlay-sourced data landing under a different key name -- the
+    real guarantee is that record_item has no overlay code path at all
+    (it never calls load()/_kb()/_apply_overlay), so plant a REAL,
+    distinctive overlay.json (the exact shape _apply_overlay merges into
+    kb.load()'s buildings table) next to items.json and prove two things
+    a leak would break: the row record_item writes has EXACTLY the eight
+    fields the upsert sets -- no "power"/"source"/"disputed" field the
+    overlay carries could sneak in unnoticed -- and none of the overlay's
+    own distinctive values appear anywhere in the file."""
+    d = tmp_path
+    (d / "local").mkdir()
+    (d / "local" / "overlay.json").write_text(json.dumps({
+        "_meta": {"sources": ["whiteoutdata"]},
+        "buildings": {"furnace": {"31": {
+            "source": "whiteoutdata", "power": 1_580_900, "meat": 67_000_000,
+            "prerequisites": {}, "disputed": {"whiteoutdata": {"coal": 40_000_000}},
+        }}},
+    }))
+    row = kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sid", directory=str(d))
+    assert set(row) == {"name", "slug", "tab", "description", "kind",
+                         "classifier_version", "first_seen", "last_seen"}
+    with open(d / "items.json") as f:
         doc = json.load(f)
-    assert doc["_meta"]["source"] == "in-game backpack tooltips"
-    assert "overlay" not in json.dumps(doc)
+    assert doc["_meta"] == {"source": "in-game backpack tooltips"}
+    written = json.dumps(doc)
+    for sentinel in ("whiteoutdata", "power", "disputed", "1580900", "67000000"):
+        assert sentinel not in written, f"overlay data ({sentinel!r}) leaked into items.json"
+
+
+def test_record_item_does_not_import_the_game_facing_stack(tmp_path):
+    """Fix round 1, item 1: native/kb.py's module docstring opens with "No
+    game access, no database." Before this fix that was true only because
+    the backpack reader (the one caller so far) had already paid the
+    native.screen import cost -- record_item's own deferred `from
+    native.readers.backpack import classify_kind` meant a fresh process
+    calling only native.kb.record_item would transitively import cv2,
+    numpy and native.drive to resolve a two-line string classifier.
+    Run in a clean subprocess (this test process has already imported cv2
+    for other tests) and assert none of that stack ever loads."""
+    import subprocess
+    import sys
+
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    script = f"""
+import sys
+sys.path.insert(0, {repo_root!r})
+from native import kb
+kb.record_item("1 Gems", "Resources", "Grants 1 Gems.", "sid", directory={str(tmp_path)!r})
+leaked = [m for m in ("cv2", "numpy", "native.drive", "native.screen", "native.readers.backpack")
+          if m in sys.modules]
+assert not leaked, f"record_item pulled in: {{leaked}}"
+print("OK")
+"""
+    result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0 and "OK" in result.stdout, result.stdout + result.stderr

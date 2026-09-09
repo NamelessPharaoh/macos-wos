@@ -189,24 +189,60 @@ def test_events_page_and_backpack_tooltip_parsers():
     assert r2.doc["backpack"]["items"]["speedup/5m_speedup"] == 220
 
 
-def test_fold_prefers_the_item_catalogue_over_its_own_regex(tmp_path):
+def test_read_tooltip_joins_a_two_line_description():
+    """Fix round 1, item 3: the only real fixture on hand has a single-line
+    description, so nothing exercised a description that wraps across more
+    than one OCR line. Built synthetically (h=w=1000): a Use button at
+    fy=0.5, a name in the 0.15-0.24 band above it, and two description
+    lines in the 0.10-0.15 band, top line first. read_tooltip must return
+    both lines joined top-to-bottom with a space, not just the first."""
+    from native.readers import backpack
+
+    def item(text, cx, cy):
+        return {"text": text, "score": 1.0, "box": [cx - 10, cy - 5, cx + 10, cy + 5]}
+
+    items = [
+        item("Use", 500, 500),                          # uy = 0.5
+        item("Wonder Box", 500, 300),                    # fy = 0.30, in the 0.26-0.35 name band
+        item("Contains a random reward.", 500, 360),     # fy = 0.36, in the 0.35-0.40 description band
+        item("Open it to find out!", 500, 385),          # fy = 0.385, same band, below the first line
+    ]
+    got = backpack.read_tooltip(items, 1000, 1000)
+    assert got[0] == "Wonder Box"
+    assert got[2] == "Contains a random reward. Open it to find out!"
+
+
+def test_classify_kind_is_reexported_from_knowledge_util():
+    """Fix round 1, item 1: classify_kind (and SPEEDUP_RE, speedup_duration)
+    moved to knowledge/util.py so native/kb.py::record_item can import it
+    without dragging native.screen's cv2/numpy/native.drive imports in.
+    backpack.py must hand back the exact same function object, not a
+    second copy, since it is `fold`'s own classifier too."""
+    from knowledge import util as ku
+    from native.readers import backpack
+    assert backpack.classify_kind is ku.classify_kind
+
+
+def test_fold_prefers_the_item_catalogue_over_its_own_regex_at_the_current_classifier_version(tmp_path):
     """A11 step 3: fold consults native.kb.items() by exact slug match
     before falling back to classify_kind's SPEEDUP_RE/keyword rules. A name
     that classify_kind alone would call "other" (no speedup shape, no "fire
     crystal" keyword) must still route to the fire_crystals ledger path
     once the catalogue -- built from the game's own tooltip -- has already
-    classified that exact slug as a fire_crystal."""
+    classified that exact slug as a fire_crystal, stamped with today's
+    CLASSIFIER_VERSION (fix round 1, item 2's gate)."""
+    from knowledge.util import CLASSIFIER_VERSION, write_table
     from native import kb
     from native.readers import backpack, ReaderResult
+    import os
 
     assert backpack.classify_kind("Mystery Shard") == "other"
     d = str(tmp_path)
     kb.record_item("Mystery Shard", "Other", "A rare crystal fragment.", "sid", directory=d)
-    kb.record_item("Mystery Shard", "Other", "A rare crystal fragment.", "sid", directory=d)
     catalogue = kb.items(directory=d)
-    catalogue["mystery_shard"]["kind"] = "fire_crystal"  # simulate a keyword rule catching it later
-    from knowledge.util import write_table
-    import os
+    # simulate a keyword rule catching it later, at the current version
+    catalogue["mystery_shard"]["kind"] = "fire_crystal"
+    catalogue["mystery_shard"]["classifier_version"] = CLASSIFIER_VERSION
     write_table(os.path.join(d, "items.json"), {"_meta": {"source": "in-game backpack tooltips"}, "items": catalogue})
 
     r = ReaderResult("backpack")
@@ -217,6 +253,43 @@ def test_fold_prefers_the_item_catalogue_over_its_own_regex(tmp_path):
     r2 = ReaderResult("backpack")
     backpack.fold(r2, "Other", "Totally Unknown Thing", 3, "3", "frame.png", 1.0, True, directory=d)
     assert "fire_crystals" not in r2.doc.get("backpack", {})
+
+
+def test_fold_recomputes_kind_when_the_catalogues_classifier_version_is_stale(tmp_path):
+    """Fix round 1, item 2: before this fix, fold trusted a catalogued
+    `kind` forever, so a classify_kind rule change never reached an item
+    already recorded until the backpack reader saw that exact tile live
+    again -- a fix that silently did nothing for the whole existing
+    catalogue. Now a row whose `classifier_version` does not match
+    knowledge.util.CLASSIFIER_VERSION is treated as uncatalogued: this
+    plants a row for "Fire Crystal" with a wrong, stale `kind` ("other")
+    under an old version number and proves fold ignores it and recomputes
+    the correct "fire_crystal" from classify_kind(name) instead -- no live
+    re-sighting required. The companion assertion (current version, same
+    wrong kind) proves the gate is the version stamp specifically, not
+    fold simply ignoring the catalogue altogether."""
+    from knowledge.util import CLASSIFIER_VERSION, classify_kind, write_table
+    from native import kb
+    from native.readers import backpack, ReaderResult
+    import os
+
+    assert classify_kind("Fire Crystal") == "fire_crystal"
+    d = str(tmp_path)
+    kb.record_item("Fire Crystal", "Resources", "A rare crystal.", "sid", directory=d)
+    catalogue = kb.items(directory=d)
+    catalogue["fire_crystal"]["kind"] = "other"  # deliberately wrong, to detect which value fold used
+    catalogue["fire_crystal"]["classifier_version"] = CLASSIFIER_VERSION - 1  # stale
+    write_table(os.path.join(d, "items.json"), {"_meta": {"source": "in-game backpack tooltips"}, "items": catalogue})
+
+    stale = ReaderResult("backpack")
+    backpack.fold(stale, "Resources", "Fire Crystal", 12, "12", "frame.png", 1.0, True, directory=d)
+    assert stale.doc["backpack"]["fire_crystals"] == 12  # recomputed, not the stale "other"
+
+    catalogue["fire_crystal"]["classifier_version"] = CLASSIFIER_VERSION  # now current
+    write_table(os.path.join(d, "items.json"), {"_meta": {"source": "in-game backpack tooltips"}, "items": catalogue})
+    current = ReaderResult("backpack")
+    backpack.fold(current, "Resources", "Fire Crystal", 12, "12", "frame.png", 1.0, True, directory=d)
+    assert "fire_crystals" not in current.doc.get("backpack", {})  # trusted the (wrong) stored "other"
 
 
 def test_is_hero_card_rejects_other_screens():

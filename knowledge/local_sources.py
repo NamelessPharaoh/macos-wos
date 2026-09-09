@@ -46,6 +46,17 @@ WOSTOOLS_BUILDINGS = "https://wostools.net/building-calculator"
 # module's problem.
 FLOOR_ORDINAL = 26
 
+# D-T2: the overlay only ever wants the Fire Crystal rows the decision
+# specifies, ordinal 31-80 (FC1..FC10). `furnace_ordinal` will still happily
+# parse "FC10-1".."FC10-4" (ordinals 81-84) if a page ever lists them, so
+# `crosscheck` names this ceiling and applies it explicitly (finding 7,
+# 2026-09-09 fix round) rather than leaving the overlay branch open-ended at
+# `> 30`. An ordinal past the ceiling falls into neither `crosscheck` branch:
+# it is not in the committed table (which tops out at 30) and now excluded
+# from the overlay too, so it is silently skipped -- no report entry, no
+# overlay row, same as the two sub-floor levels the floor already excludes.
+OVERLAY_CEILING_ORDINAL = 80
+
 # `crosscheck()`'s report/disagree comparison uses exactly this tuple (D-T2:
 # "never a power copy" -- fire_crystals/refined_fire_crystals are pre-FC
 # zero on both sides for every level this compares anyway, ordinal
@@ -301,7 +312,8 @@ def crosscheck(committed_buildings, local_docs, tolerance=0.02):
                         continue
                     entry.setdefault("disagrees", []).append(f"{source}.{f}")
                     lines.append(f"furnace.{ordinal} {f}: committed {a:,} vs {source} {b:,}")
-            elif int(ordinal) > 30 and ordinal not in furnace_overlay and source == "whiteoutdata":
+            elif (30 < int(ordinal) <= OVERLAY_CEILING_ORDINAL and ordinal not in furnace_overlay
+                  and source == "whiteoutdata"):
                 furnace_overlay[ordinal] = {"source": source, "label": row.get("label"), "meat": row["meat"], "wood": row["wood"],
                                              "coal": row["coal"], "iron": row["iron"], "fire_crystals": row["fire_crystals"],
                                              "refined_fire_crystals": row["refined_fire_crystals"], "seconds": row["seconds"],

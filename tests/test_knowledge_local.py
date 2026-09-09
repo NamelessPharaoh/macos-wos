@@ -153,6 +153,29 @@ def test_crosscheck_applies_the_scope_floor():
     assert not any(l.startswith("furnace.11") for l in lines)
 
 
+def test_crosscheck_overlay_has_a_ceiling_matching_the_spec_range():
+    """Finding 7 (2026-09-09 fix round): the overlay only ever wants
+    ordinals 31-80 (FC1..FC10), the range D-T2 specifies, but the old code
+    tested only `> 30` with no upper bound -- furnace_ordinal will still
+    parse "FC10-1".."FC10-4" (81-84) if a page ever lists them. An ordinal
+    past OVERLAY_CEILING_ORDINAL now falls into neither branch: not in the
+    committed table (which tops out at 30) and excluded from the overlay
+    too, so it produces no report entry and no overlay row at all."""
+    assert ls.OVERLAY_CEILING_ORDINAL == 80
+    committed = {"furnace": {"28": _committed_row()}}
+    wd = {"furnace": {
+        "80": {"label": "FC 10", "meat": 1, "wood": 1, "coal": 1, "iron": 1, "fire_crystals": 1,
+               "refined_fire_crystals": 1, "seconds": 1, "power": 1},
+        "84": {"label": "FC10-4", "meat": 2, "wood": 2, "coal": 2, "iron": 2, "fire_crystals": 2,
+               "refined_fire_crystals": 2, "seconds": 2, "power": 2},
+    }}
+    report, overlay, lines = ls.crosscheck(committed, {"whiteoutdata": wd})
+    assert "80" in overlay["buildings"]["furnace"]
+    assert "84" not in overlay["buildings"]["furnace"]
+    assert "84" not in report["furnace"]
+    assert not any("furnace.84" in l for l in lines)
+
+
 def test_crosscheck_without_local_dir():
     """B10 (kept): no local docs at all -> an empty report/overlay and zero
     findings, not an error (this is what `--crosscheck` sees on a fresh

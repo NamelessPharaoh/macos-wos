@@ -120,3 +120,39 @@ def test_classifier_version_is_a_plain_int():
     classifier fix bumps this constant; nothing else should have to change
     for that bump to reach every already-catalogued item."""
     assert isinstance(ku.CLASSIFIER_VERSION, int) and ku.CLASSIFIER_VERSION >= 1
+
+
+def test_classify_kind_rules_are_fingerprinted_by_the_current_version():
+    """Fix round 2, item 1: the version gate only helps if something forces
+    CLASSIFIER_VERSION to move whenever classify_kind's rules actually
+    change. A test pinning four literal name -> kind pairs did not: a
+    wholly new rule for a wholly new family (e.g. the "resource box"/"chest"
+    rule this module's docstring used to invite) touches none of the four
+    pinned names, so that suite stayed green with the version left stale.
+
+    This pins a fingerprint of the RULES themselves (SPEEDUP_RE's pattern
+    plus the source of speedup_duration and classify_kind), not a sample of
+    their outputs, keyed by CLASSIFIER_VERSION. Editing a rule -- for any
+    input, not just a pre-selected few -- moves the fingerprint; the lookup
+    then finds the OLD fingerprint still pinned under the unbumped version
+    number and this test goes red. The only way back to green is to bump
+    CLASSIFIER_VERSION to a version this dict has no entry for and add one.
+
+    Verified by reproducing the original failure (2026-09-09): added the
+    exact docstring-invited rule
+        if "resource box" in n or "chest" in n:
+            return "resource_box"
+    to classify_kind, left CLASSIFIER_VERSION at 1, and reran the suite --
+    this test failed (fingerprint mismatch) while the old four-pair test
+    still passed, which is exactly the gap this test closes."""
+    fp = ku._classifier_fingerprint()
+    expected = ku.CLASSIFIER_RULES_FINGERPRINTS.get(ku.CLASSIFIER_VERSION)
+    assert expected is not None, (
+        f"CLASSIFIER_VERSION {ku.CLASSIFIER_VERSION!r} has no pinned fingerprint in "
+        "CLASSIFIER_RULES_FINGERPRINTS -- add one for the rules as they stand now"
+    )
+    assert fp == expected, (
+        "classify_kind's rules changed (SPEEDUP_RE, speedup_duration or classify_kind "
+        "itself) but CLASSIFIER_VERSION was not bumped -- bump it in knowledge/util.py "
+        "and pin a new fingerprint for the new version in CLASSIFIER_RULES_FINGERPRINTS"
+    )

@@ -142,6 +142,40 @@ _SPEEDUP_DUR = {"m": "m", "min": "m", "h": "h", "hr": "h", "d": "d"}
 # that silently does nothing for every item already recorded.
 CLASSIFIER_VERSION = 1
 
+# Fix round 2, item 1: the enforcement mechanism above only works if SOMETHING
+# forces a bump whenever classify_kind's rules actually change. The first
+# attempt at that -- a test pinning four literal name -> kind pairs -- did
+# not: a wholly new rule for a wholly new family (e.g. "resource box"/"chest"
+# -> "resource_box", the exact addition this module's own docstring used to
+# invite) touches none of the four pinned names, so the suite stayed green
+# with CLASSIFIER_VERSION left at 1 and every already-catalogued row silently
+# kept trusting its stale "other".
+#
+# A name-to-kind table can never close that gap for certain, because
+# classify_kind's input space is unbounded -- no finite set of pinned
+# examples proves nothing ELSE changed. What actually determines its output
+# for every input is the source of speedup_duration and classify_kind plus
+# SPEEDUP_RE's pattern; fingerprinting THAT (not a sample of outputs) is
+# sensitive to any edit that could change behaviour for any input, not just
+# the ones a test author thought to enumerate.
+#
+# CLASSIFIER_VERSION itself stays a plain, hand-bumped int rather than the
+# hash (native/kb.py stores it in items.json, and tests/native code diff it,
+# e.g. `CLASSIFIER_VERSION - 1`, which a hash-typed version would break) --
+# only the fingerprint used to police it is derived from the rules.
+# CLASSIFIER_RULES_FINGERPRINTS pins the fingerprint each CLASSIFIER_VERSION
+# was released with; tests/test_knowledge_util.py recomputes today's
+# fingerprint via `_classifier_fingerprint()` and asserts it equals
+# `CLASSIFIER_RULES_FINGERPRINTS[CLASSIFIER_VERSION]`. Edit a rule without
+# bumping the version and the lookup still finds the OLD fingerprint pinned
+# under the unchanged version number, so the test goes red; the only way
+# back to green is to bump CLASSIFIER_VERSION to a version this dict has no
+# entry for yet and add one -- which is the bump the whole mechanism exists
+# to force.
+CLASSIFIER_RULES_FINGERPRINTS = {
+    1: "93df932edaa3d077",
+}
+
 
 def speedup_duration(name):
     """(kind, "5m"/"1h"/...) for a name shaped like a speedup, else None.
@@ -172,6 +206,19 @@ def classify_kind(name):
     if "fire crystal" in n:
         return "fire_crystal"
     return "other"
+
+
+def _classifier_fingerprint():
+    """sha256 (first 16 hex chars) of everything classify_kind's output for
+    ANY input can depend on: SPEEDUP_RE's pattern and the full source of
+    speedup_duration and classify_kind (the fire-crystal keyword and any
+    future keyword rule live in classify_kind's own body). Used only by
+    tests/test_knowledge_util.py to police CLASSIFIER_VERSION -- see
+    CLASSIFIER_RULES_FINGERPRINTS above."""
+    import hashlib
+    import inspect
+    rules_src = SPEEDUP_RE.pattern + inspect.getsource(speedup_duration) + inspect.getsource(classify_kind)
+    return hashlib.sha256(rules_src.encode()).hexdigest()[:16]
 
 
 # ----------------------------------------------------------------------------- ordinal

@@ -91,6 +91,12 @@ terms-restricted and must never be written into a committed file, and
 disk. It stays irrelevant until the tracked furnace actually passes
 level 30.
 
+It reads the committed file, mutates the row and writes the whole document
+back; the write itself is atomic (`write_table`), but the read-modify-write
+is not a transaction. A `scripts/refresh_knowledge.py --write` landing
+between the read and the write here is silently clobbered -- don't run a
+refresh while marking a row verified.
+
 ## Knowledge freshness
 
 `native.kb.freshness(kb=None, now=None, stale_days=30)` returns

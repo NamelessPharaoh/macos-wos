@@ -337,6 +337,9 @@ def verify(kb_cost, screen_cost, tolerance=0.02):
     return True, "ok"
 
 
+_MARK_VERIFIED_FILES = {"buildings": "buildings.json", "research": "research.json"}
+
+
 def mark_verified(table, key, level, snapshot_id, directory=None):
     """Record that a screen read agreed with a row (`native.kb.verify`); the
     planner trusts verified rows first and the briefing lists unverified
@@ -349,9 +352,21 @@ def mark_verified(table, key, level, snapshot_id, directory=None):
     `mark_verified` returns False for it, same as any other unknown level.
     This is the only place in the knowledge base that writes to disk, which
     is exactly why it must never write overlay data into a committed file.
+
+    Not a transaction: this reads the file, mutates the in-memory doc and
+    writes the whole thing back (the write itself is atomic via
+    `write_table`, but the read-modify-write is not). A
+    `scripts/refresh_knowledge.py --write` run landing between the read and
+    the write here would be silently clobbered, re-serialized from this
+    call's own stale read. Fine for single-actor use (the executor calls
+    this, nothing else writes these files); don't run a refresh concurrently
+    with marking a row verified.
     """
     directory = directory or KNOWLEDGE_DIR
-    fname = {"buildings": "buildings.json", "research": "research.json"}[table]
+    try:
+        fname = _MARK_VERIFIED_FILES[table]
+    except KeyError:
+        raise KeyError(f"mark_verified: unsupported table {table!r}; expected one of {sorted(_MARK_VERIFIED_FILES)}") from None
     path = os.path.join(directory, fname)
     with open(path) as f:
         doc = json.load(f)

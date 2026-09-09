@@ -204,6 +204,29 @@ def test_mark_verified_writes_and_invalidates_cache(tmp_path):
     assert not kb.mark_verified("buildings", "furnace", 999, "x", directory=str(d))
 
 
+def test_mark_verified_writes_research_levels_and_survives_reload(tmp_path):
+    """The research branch nests one level deeper than buildings
+    (doc["research"][key]["levels"][level] vs doc["buildings"][key][level]);
+    the two shapes are the one place mark_verified's logic diverges by
+    table, so it needs its own test rather than riding on the buildings
+    coverage. Asserted through the public functions (mark_verified,
+    kb.load) so a future rename of the "levels" key would fail this."""
+    d = tmp_path / "kbdir"
+    shutil.copytree(FIX, d)
+    assert kb.mark_verified("research", "tooling_up_i", 1, "sidX", directory=str(d))
+    reloaded = kb.load(str(d))
+    assert reloaded["research"]["tooling_up_i"]["levels"]["1"]["verified_in_game"] == "sidX"
+
+
+def test_mark_verified_names_an_unsupported_table(tmp_path):
+    d = tmp_path / "kbdir"
+    shutil.copytree(FIX, d)
+    with pytest.raises(KeyError) as exc:
+        kb.mark_verified("training", "infantry", 9, "sid", directory=str(d))
+    msg = str(exc.value)
+    assert "training" in msg and "buildings" in msg and "research" in msg
+
+
 def test_mark_verified_returns_false_for_overlay_only_level(tmp_path):
     """C12: mark_verified opens the committed file directly, never the
     merged in-memory table, so an overlay-only level (ordinal > 30, added

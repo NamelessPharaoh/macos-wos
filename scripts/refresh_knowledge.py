@@ -69,7 +69,7 @@ SOURCES = {
 OPTIONAL_SOURCES = {
     "calendar": _raw("wosnerdwarriors/wos-data", "data/calendar-data.json"),
 }
-LOCAL = {}         # name -> callable(opener) -> (relative path, doc); filled by knowledge.local_sources (Task 4)
+from knowledge.local_sources import LOCAL, crosscheck  # noqa: E402  (Task 4)
 
 
 def source_commit(repo, opener=None):
@@ -238,8 +238,19 @@ def main(argv=None):
                      help="one of " + ", ".join(list(SOURCES) + list(OPTIONAL_SOURCES)) + " (default: the required sources)")
     ap.add_argument("--write", action="store_true", help="save the refreshed tables")
     ap.add_argument("--local", action="store_true", help="also run the gitignored cross-check fetchers")
+    ap.add_argument("--crosscheck", action="store_true",
+                     help="report disagreements and FC rows from knowledge/local/*.json into "
+                          "knowledge/local/overlay.json (needs --write to save; never touches knowledge/buildings.json)")
     a = ap.parse_args(argv)
-    tables = a.table or list(SOURCES)
+    # A standalone --local or --crosscheck run must not also refetch (and, with
+    # --write, re-timestamp) the required tables: `--crosscheck --write` writes
+    # ONLY knowledge/local/overlay.json (A5). `--table` still opts back in.
+    if a.table:
+        tables = a.table
+    elif a.local or a.crosscheck:
+        tables = []
+    else:
+        tables = list(SOURCES)
     unknown = [t for t in tables if t not in SOURCES and t not in OPTIONAL_SOURCES]
     if unknown:
         sys.exit(f"unknown table(s): {', '.join(unknown)}")
@@ -251,6 +262,23 @@ def main(argv=None):
     if a.local:
         for name in LOCAL:
             refresh_local(name, a.write)
+    if a.crosscheck:
+        bpath = os.path.join(KNOWLEDGE_DIR, "buildings.json")
+        committed = load_table(bpath)
+        local_docs = {}
+        for name, rel in (("whiteoutdata", "whiteoutdata-furnace.json"), ("wiki", "wiki-furnace.json"),
+                           ("wostools", "wostools-buildings.json")):
+            doc = load_table(os.path.join(LOCAL_DIR, rel))
+            if doc:
+                local_docs[name] = doc
+        overlay, lines = crosscheck(committed.get("buildings", {}), local_docs)
+        print(f"== crosscheck: {len(lines)} finding(s)" + ("" if a.write else " (dry run)"))
+        for line in lines[:100]:
+            print("  " + line)
+        if a.write:
+            opath = os.path.join(LOCAL_DIR, "overlay.json")
+            write_table(opath, overlay)
+            print(f"  wrote {opath} (gitignored)")
     if failed_required:
         sys.exit(f"{failed_required} required table(s) failed")
 

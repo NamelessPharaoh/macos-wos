@@ -24,8 +24,15 @@ fetch date and the data is treated as revocable.
 
 `knowledge/local/` (gitignored, never committed): cross-check tables fetched
 from whiteoutdata.com, whiteoutsurvival.wiki and wostools.net with
-`--local`. Their terms restrict reproduction, so they stay on this machine
-and only annotate committed rows as `disputed` when they disagree.
+`--local` (`knowledge/local_sources.py`). Their terms restrict reproduction,
+so they stay on this machine. `--crosscheck` diffs them against the
+committed furnace rows and writes `knowledge/local/overlay.json` -- it never
+edits `knowledge/buildings.json` itself (spec D8). The overlay holds only
+`power` (copied from whiteoutdata alone) and `disputed: {source: {field:
+value}}` for levels the committed table already has, plus full Fire
+Crystal rows (ordinal > 30, `"source": "whiteoutdata"`) for levels it
+lacks. `native/kb.py::load` merges it at read time; without it,
+`power_gain("building", ...)` is `None` and FC rows are absent.
 
 Refresh prints a diff and writes nothing without `--write`. A patch on one
 table never stops the others: each table's fetch and normalise step is

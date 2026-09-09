@@ -286,3 +286,44 @@ def test_unknown_table_name_exits_before_fetching(tmp_path, monkeypatch):
     monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
     with pytest.raises(SystemExit):
         rk.main(["--table", "not_a_real_table"])
+
+
+def test_crosscheck_without_local_dir(tmp_path, monkeypatch, capsys):
+    """B10: --crosscheck with no knowledge/local/ prints 0 finding(s) and
+    writes nothing -- this is what a fresh clone (or a run before --local)
+    sees."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "LOCAL_DIR", str(tmp_path / "local"))
+    monkeypatch.setattr(rk, "NORMALISERS", {t: (lambda raw: {}) for t in rk.SOURCES})
+    monkeypatch.setattr(rk, "source_commit", lambda repo, opener=None: "abc123")
+    monkeypatch.setattr(rk, "fetch_json", lambda url, opener=None: {})
+    (tmp_path / "buildings.json").write_text(json.dumps({"buildings": {"furnace": {}}}))
+    rk.main(["--crosscheck"])
+    out = capsys.readouterr().out
+    assert "crosscheck: 0 finding(s)" in out
+    assert not (tmp_path / "local").exists()
+
+
+def test_crosscheck_write_never_touches_buildings_json(tmp_path, monkeypatch):
+    """A5, the constraint that must not regress: --crosscheck --write writes
+    ONLY knowledge/local/overlay.json; knowledge/buildings.json is left
+    byte-for-byte unmodified. SOURCES is emptied so the ordinary per-table
+    refresh loop (which --crosscheck runs alongside, unrelated to this test)
+    has nothing to fetch or write, isolating the guarantee under test."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "LOCAL_DIR", str(tmp_path / "local"))
+    monkeypatch.setattr(rk, "SOURCES", {})
+    committed = {"buildings": {"furnace": {"28": {"meat": 1, "wood": 1, "coal": 1, "iron": 1, "seconds": 1,
+                                                   "fire_crystals": 0, "refined_fire_crystals": 0,
+                                                   "prerequisites": {}, "verified_in_game": None}}}}
+    (tmp_path / "buildings.json").write_text(json.dumps(committed))
+    before = (tmp_path / "buildings.json").read_text()
+    os.makedirs(tmp_path / "local")
+    (tmp_path / "local" / "whiteoutdata-furnace.json").write_text(json.dumps(
+        {"furnace": {"28": {"label": "28", "meat": 1, "wood": 1, "coal": 2, "iron": 1, "seconds": 1,
+                             "fire_crystals": 0, "refined_fire_crystals": 0, "power": 999, "prerequisites": {}}}}))
+    rk.main(["--crosscheck", "--write"])
+    assert (tmp_path / "buildings.json").read_text() == before
+    overlay = json.loads((tmp_path / "local" / "overlay.json").read_text())
+    assert overlay["buildings"]["furnace"]["28"]["power"] == 999
+    assert overlay["buildings"]["furnace"]["28"]["disputed"] == {"whiteoutdata": {"coal": 2}}

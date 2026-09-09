@@ -20,8 +20,13 @@ events all ship `available-after-age: "unknown"`, so it moves with the
 events reader in a later milestone rather than blocking this one.
 
 Licence: wosnerds.com states "All data is free to copy and use"; the repos
-carry no LICENSE file, so every `_meta` records the source URL, commit and
-fetch date and the data is treated as revocable.
+carry no LICENSE file, so every FETCHED table's `_meta` records the source
+URL, commit and fetch date and the data is treated as revocable. The one
+exception is `unlocks.json`: it is hand-maintained (community guides, not a
+wosnerds fetch), so its `_meta` has no `source_commit` -- there is no commit
+to point at. It is not checked by a refresh; its accuracy is instead the
+capability reporter's job, via each feature's `last_verified` date and the
+STALE flag `scripts/capability_report.py` raises past 180 days.
 
 `knowledge/local/` (gitignored, never committed): cross-check tables fetched
 from whiteoutdata.com, whiteoutsurvival.wiki and wostools.net with

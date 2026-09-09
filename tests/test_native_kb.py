@@ -218,6 +218,15 @@ def test_building_row_accepts_furnace_labels_and_next_label(k):
     assert kb.building_row("furnace", "28", kb=k)["meat"] == 190_000_000
     assert kb.building_row("furnace", 99, kb=k) is None
     assert [kb.next_level_label(x) for x in (27, 30, 34, 35, 79)] == ["28", "30-1", "FC1", "FC1-1", "FC10"]
+    # Finding 3 (2026-09-09 fix round): "28" and 99 above are both digit
+    # strings, so the label branch (`not key.isdigit()`) never runs -- this
+    # test stayed green with that branch deleted entirely. A real label form
+    # ("30-1", not a plain ordinal) must resolve through furnace_ordinal to
+    # the matching row, and an unparseable one must return None rather than
+    # raise (the documented contract building_row's docstring makes).
+    label_kb = {"buildings": {"furnace": {"31": {"meat": 67_000_000}}}}
+    assert kb.building_row("furnace", "30-1", kb=label_kb)["meat"] == 67_000_000
+    assert kb.building_row("furnace", "not-a-level", kb=label_kb) is None
 
 
 def test_mark_verified_writes_and_invalidates_cache(tmp_path):

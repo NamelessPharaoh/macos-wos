@@ -367,7 +367,7 @@ def test_unlocks_json_lives_in_the_knowledge_package_with_meta():
 
     assert raw["_meta"] == {
         "source_url": "community guides (see docs/designs/adaptive-automation.md)",
-        "fetched_at": "2026-09-01",
+        "fetched_at": "2026-09-01T00:00:00Z",
         "licence": "community guides; per-entry source and confidence kept",
     }
     assert "_schema" in raw

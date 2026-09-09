@@ -303,3 +303,22 @@ def test_freshness_uses_the_default_stale_threshold_of_30_days():
     now = datetime(2026, 9, 8, 12, 0, tzinfo=timezone.utc)
     edge_kb = {"_meta_buildings": {"fetched_at": _iso(now - timedelta(days=30))}}
     assert kb.freshness(kb=edge_kb, now=now) == [("buildings", 30, False)]
+
+
+def test_freshness_omits_a_table_with_an_unparseable_fetched_at():
+    """Finding 2 (2026-09-09 fix round): a bare date ("2026-09-01", the
+    shape knowledge/unlocks.json used to ship, every other table uses
+    "%Y-%m-%dT%H:%M:%SZ") raises TypeError subtracting offset-naive from
+    offset-aware once `now` is timezone-aware; a plain garbage string raises
+    ValueError out of fromisoformat. Neither may propagate -- this is a
+    report line (native/report.py calls it inside build()), and a bad
+    timestamp on one table must never take the whole report down."""
+    now = datetime(2026, 9, 8, 12, 0, tzinfo=timezone.utc)
+    bad_kb = {
+        "_meta_buildings": {"fetched_at": "2026-09-01"},  # bare date, offset-naive
+        "_meta_training": {"fetched_at": "not-a-timestamp"},
+        "_meta_research": {"fetched_at": _iso(now - timedelta(days=5))},
+    }
+    out = {t: (age, stale) for t, age, stale in kb.freshness(kb=bad_kb, now=now)}
+    assert "buildings" not in out and "training" not in out
+    assert out["research"] == (5, False)

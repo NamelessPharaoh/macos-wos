@@ -406,7 +406,15 @@ def freshness(kb=None, now=None, stale_days=30):
     (A9): the report line that tells the operator a vendored table hasn't
     been refreshed in a while. A table with no `_meta` or no `fetched_at`
     (an optional table that hasn't shipped yet, or a hand-built test kb) is
-    omitted rather than reported as either fresh or stale."""
+    omitted rather than reported as either fresh or stale.
+
+    Also omitted, rather than raising (finding 2, 2026-09-09 fix round): a
+    `fetched_at` that doesn't parse against a timezone-aware `now` -- a bare
+    date ("2026-09-01", every other table uses "%Y-%m-%dT%H:%M:%SZ") raises
+    TypeError subtracting offset-naive from offset-aware, and any other
+    malformed string raises ValueError out of fromisoformat. This is a
+    reporting line (native/report.py calls it inside build()); a hand-
+    maintained table's timestamp typo must never take the whole report down."""
     from datetime import datetime, timezone
     now = now or datetime.now(timezone.utc)
     out = []
@@ -414,7 +422,10 @@ def freshness(kb=None, now=None, stale_days=30):
         m = _kb(kb).get(f"_meta_{key}")
         if not m or not m.get("fetched_at"):
             continue
-        age = (now - datetime.fromisoformat(m["fetched_at"].replace("Z", "+00:00"))).days
+        try:
+            age = (now - datetime.fromisoformat(m["fetched_at"].replace("Z", "+00:00"))).days
+        except (ValueError, TypeError):
+            continue
         out.append((key, age, age > stale_days))
     return out
 

@@ -101,7 +101,11 @@ def has_modal_x(img):
     return _is_icy(_rgb(img, 0.868, 0.128))
 
 
-DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257))
+# The startup "Welcome back!" offline-income dialog sits higher and wider than
+# the two centred-card spots: its × measured (0.836, 0.224) on 2026-09-10, and
+# without it go_home spent all nine steps tapping (0.815, 0.257) into the header
+# bar 60px below and gave up on a cold launch.
+DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224))
 
 
 def _is_dialog_glyph(rgb):
@@ -117,9 +121,15 @@ def has_dialog_x(img):
     return _is_dialog_glyph(_rgb(img, *DIALOG_X_SPOTS[0]))
 
 
-def dialog_x_spot(img):
-    """The (fx, fy) of a dialog × on this frame, or None."""
+def dialog_x_spot(img, blocked=()):
+    """The (fx, fy) of a dialog × on this frame, or None.
+
+    `blocked` holds "dialog-x(fx, fy)" keys that go_home already tried without
+    the frame changing; those spots are skipped so a second candidate gets a
+    turn instead of the first one being retried forever."""
     for spot in DIALOG_X_SPOTS:
+        if f"dialog-x{spot}" in blocked:
+            continue
         if _is_dialog_glyph(_rgb(img, *spot)):
             return spot
     return None
@@ -342,31 +352,50 @@ class Screen:
           3. centred dialog ×                              -> tap it
           4. OCR-found close label                        -> tap it
           5. a reward reveal (almost no text)             -> tap its hint
+
+        A strategy that leaves the frame unchanged is retired for the rest of
+        the call. Without that, one mis-measured glyph spot eats the whole
+        budget: on 2026-09-10 the "Welcome back!" dialog matched a dialog-×
+        spot 60px off its real ×, and go_home tapped the same dead pixel eight
+        times and reported home-failed on a cold launch.
         """
+        blocked, last_sig, last_via = set(), None, None
         for step in range(max_steps):
             img, items, _ = self.frame("home-check")
             h, w = img.shape[:2]
             if self.at_home(items, h, w, img):
                 return True
             texts = [norm(i["text"]) for i in items]
-            if has_back_arrow(img):
-                self.log(event="home-exit", via="back-arrow")
+            sig = " ".join(sorted(texts))
+            if last_via is not None and sig == last_sig:
+                self.log(event="home-exit-blocked", via=last_via)
+                blocked.add(last_via)
+            last_sig = sig
+            if "back-arrow" not in blocked and has_back_arrow(img):
+                last_via = "back-arrow"
+                self.log(event="home-exit", via=last_via)
                 drv.tapf(0.148, 0.063) if not self.dry else None
-            elif has_modal_x(img):
-                self.log(event="home-exit", via="modal-x")
+            elif "modal-x" not in blocked and has_modal_x(img):
+                last_via = "modal-x"
+                self.log(event="home-exit", via=last_via)
                 drv.tapf(0.868, 0.128) if not self.dry else None
-            elif (spot := dialog_x_spot(img)) is not None:
+            elif (spot := dialog_x_spot(img, blocked)) is not None:
+                last_via = f"dialog-x{spot}"
                 self.log(event="home-exit", via="dialog-x", at=spot)
                 drv.tapf(*spot) if not self.dry else None
-            elif (ctl := close_control(items, h, w)) is not None:
-                self.log(event="home-exit", via=f"label:{ctl['text']}")
+            elif ((ctl := close_control(items, h, w)) is not None
+                  and f"label:{ctl['text']}" not in blocked):
+                last_via = f"label:{ctl['text']}"
+                self.log(event="home-exit", via=last_via)
                 self.tap_item(img, ctl)
-            elif len(texts) <= 3 or any(REVEAL_RE.search(t) for t in texts):
+            elif ("reveal" not in blocked
+                  and (len(texts) <= 3 or any(REVEAL_RE.search(t) for t in texts))):
                 # Reward reveals say so themselves ("Tap anywhere to exit") and
                 # can carry a whole grid of item icons, so the hint text is the
                 # tell AND the tap target: tapping an icon opens its tooltip
                 # instead of closing the overlay. Fall back to the strip just
                 # above the bottom edge where the hint always sits.
+                last_via = "reveal"
                 hint = next((i for i in items if REVEAL_RE.search(norm(i["text"]))), None)
                 if hint is not None:
                     self.log(event="home-exit", via="reveal-hint")
@@ -375,6 +404,7 @@ class Screen:
                     self.log(event="home-exit", via="reveal-tap")
                     drv.tapf(0.5, 0.93) if not self.dry else None
             else:
+                last_via = None   # nothing was tapped; an unchanged frame blames no strategy
                 self.log(event="home-exit", via="none-found", texts=texts[:6])
                 time.sleep(1.5)
             time.sleep(1.8)
@@ -454,13 +484,16 @@ class Screen:
         return False
 
     def _walk_strip(self, label, img, items, h, w, max_steps=24):
-        """Tab strips (cart, Deals, Events). This is the walk that reached all 12
-        cart pages on 2026-09-08: tap every visible label left to right (each tap
-        recentres the strip and reveals neighbours), re-read after each, and stop
-        when either a tab label or the PAGE TITLE (y 0.19-0.27) matches. When
-        nothing new is visible, nudge with the clipped right slot and a flick."""
+        """Tab strips (cart, Deals, Events): SCROLL the strip to find a named tab
+        and tap only that tab. Stops on a tab label or the PAGE TITLE (y .19-.27),
+        reversing once at the end of the strip since the tab may sit behind the
+        starting position. Until 2026-09-10 this tapped every visible label to
+        recentre; harmless on four-tab Deals, but the cart now runs ~15 tabs of
+        mostly paid packs, so it opened one €-pack page after another — it was
+        three deep in "Tech Storm Pack, €5,99" when the app died mid-screenshot,
+        and never reached "Weekly/Monthly Cards" in 24 steps."""
         want = norm(label)
-        done = set()
+        seen, direction, reversed_once = set(), -1, False
         for _ in range(max_steps):
             labels = sorted((i for i in items if 0.10 * h < centre(i["box"])[1] < 0.23 * h and i["text"].strip()),
                             key=lambda i: centre(i["box"])[0])
@@ -473,18 +506,15 @@ class Screen:
                 self.tap_item(img, hit)
                 time.sleep(2.5)
                 return True
-            todo = [i for i in labels if norm(i["text"]) not in done]
-            if todo:
-                done.add(norm(todo[0]["text"]))
-                self.tap_item(img, todo[0])
-                time.sleep(2.0)
-            else:
-                if not self.dry:
-                    drv.tapf(0.90, 0.16)
-                    time.sleep(1.8)
-                    drv.swipe(int(0.85 * w), int(0.16 * h), int(0.30 * w), int(0.16 * h), 450)
-                    time.sleep(1.5)
-                done.clear()
+            if not {norm(i["text"]) for i in labels} - seen:
+                if reversed_once:       # a second reversal only re-reads the same labels
+                    return False
+                reversed_once, direction = True, 1
+            seen |= {norm(i["text"]) for i in labels}
+            if not self.dry:
+                x0, x1 = (0.85, 0.30) if direction < 0 else (0.30, 0.85)
+                drv.swipef(x0, 0.16, x1, 0.16, 500)
+                time.sleep(1.8)
             img, items, _ = self.frame("strip")
             h, w = img.shape[:2]
         return False

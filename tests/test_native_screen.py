@@ -177,3 +177,63 @@ def test_dialog_x_spot_finds_the_gear_details_close():
     img = cv2.imread(p)
     assert s.dialog_x_spot(img) == (0.815, 0.257)
     assert s.has_dialog_x(img) is False
+
+
+def _light(img, fx, fy):
+    """Paint the 7x7 patch _rgb() averages, in BGR, to the dialog-glyph colour."""
+    h, w = img.shape[:2]
+    x, y = int(fx * w), int(fy * h)
+    img[y - 3:y + 4, x - 3:x + 4] = (250, 220, 200)   # BGR -> rgb(200, 220, 250)
+
+
+def test_dialog_x_spot_skips_a_blocked_spot():
+    """go_home retires a x spot that changed nothing, so the next candidate on
+    the same frame gets a turn instead of the first being retried forever."""
+    import numpy as np
+    img = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    for spot in s.DIALOG_X_SPOTS:
+        _light(img, *spot)
+    first, second = s.DIALOG_X_SPOTS[0], s.DIALOG_X_SPOTS[1]
+    assert s.dialog_x_spot(img) == first
+    assert s.dialog_x_spot(img, blocked={f"dialog-x{first}"}) == second
+    assert s.dialog_x_spot(img, blocked={f"dialog-x{sp}" for sp in s.DIALOG_X_SPOTS}) is None
+
+
+def test_dialog_x_spots_cover_the_welcome_back_dialog():
+    """The startup offline-income dialog draws its x at (0.836, 0.224); before
+    2026-09-10 the nearest known spot was (0.815, 0.257), 60px away and dead."""
+    import numpy as np
+    img = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    _light(img, 0.836, 0.224)
+    assert s.dialog_x_spot(img) == (0.836, 0.224)
+
+
+def test_go_home_retires_an_exit_that_never_changes_the_frame(tmp_path, monkeypatch):
+    """Regression, 2026-09-10: the "Welcome back!" dialog matched a x spot 60px
+    off its real x. go_home tapped that dead pixel on all nine steps and gave up.
+    An exit whose tap leaves the frame identical must not be tried twice."""
+    import numpy as np
+    frame = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    for spot in s.DIALOG_X_SPOTS:
+        _light(frame, *spot)
+
+    class Eng:
+        def recognize(self, img):
+            # Enough text that the <=3-item reveal branch does not swallow the
+            # frame, and no close label, so the dialog-x branch is the one tried.
+            return [_item("Welcome back", 400, 400, 800, 450),
+                    _item("Time Offline", 400, 500, 800, 550),
+                    _item("Offline Income", 400, 600, 800, 650),
+                    _item("Confirm", 500, 1500, 700, 1560)]
+
+    sc = s.Screen(str(tmp_path), dry_run=True, engine=Eng())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.cv2, "imread", lambda path: frame)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+
+    assert sc.go_home(max_steps=6) is False
+    log = open(os.path.join(str(tmp_path), "run.jsonl")).read()
+    assert "home-exit-blocked" in log
+    # Every dead spot is tried once and retired, never once per step.
+    for spot in s.DIALOG_X_SPOTS:
+        assert log.count('"at": [%s, %s]' % spot) == 1

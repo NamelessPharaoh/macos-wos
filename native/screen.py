@@ -15,6 +15,7 @@ Helpers moved here from ~/.claude/skills/wos-daily-collect/scripts/collect.py on
 2026-09-08; tests/fixtures/local/native_goldens.json pins their outputs (not
 the parsers, which moved on to knowledge/util.py the same day -- E1).
 """
+import difflib
 import json
 import math
 import os
@@ -483,6 +484,22 @@ class Screen:
                 return True
         return False
 
+    @staticmethod
+    def tab_matches(want, text):
+        """Is `text` this tab, allowing for how badly strip labels OCR?
+
+        Measured on one cart walk (2026-09-10): "Daily Deals" came back as
+        "Dailý Deals" on one frame and clipped to "Daily Deal" on the next, and
+        neither contains the wanted string, so an exact substring test walked
+        straight past a tab that was on screen twice. Squeeze to letters and
+        digits, then accept a containment, a prefix either way (clipping), or a
+        close ratio (a swapped glyph). The 5-char floor keeps stubs like "Te"
+        and "30" from matching everything."""
+        a, b = re.sub(r"[^a-z0-9]", "", want), re.sub(r"[^a-z0-9]", "", norm(text))
+        if len(a) < 5 or len(b) < 5:
+            return bool(a) and a == b
+        return a in b or b in a or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+
     def _walk_strip(self, label, img, items, h, w, max_steps=24):
         """Tab strips (cart, Deals, Events): SCROLL the strip to find a named tab
         and tap only that tab. Stops on a tab label or the PAGE TITLE (y .19-.27),
@@ -493,24 +510,30 @@ class Screen:
         three deep in "Tech Storm Pack, €5,99" when the app died mid-screenshot,
         and never reached "Weekly/Monthly Cards" in 24 steps."""
         want = norm(label)
-        seen, direction, reversed_once = set(), -1, False
+        prev, direction, reversed_once = None, -1, False
         for _ in range(max_steps):
             labels = sorted((i for i in items if 0.10 * h < centre(i["box"])[1] < 0.23 * h and i["text"].strip()),
                             key=lambda i: centre(i["box"])[0])
             title = next((i for i in items if 0.19 * h < centre(i["box"])[1] < 0.27 * h and len(i["text"]) > 3), None)
-            if title is not None and want in norm(title["text"]):
+            if title is not None and self.tab_matches(want, title["text"]):
                 return True
-            hit = next((i for i in labels if want in norm(i["text"])), None)
+            hit = next((i for i in labels if self.tab_matches(want, i["text"])), None)
             if hit is not None:
                 self.log(event="enter", label=f"strip:{hit['text']}")
                 self.tap_item(img, hit)
                 time.sleep(2.5)
                 return True
-            if not {norm(i["text"]) for i in labels} - seen:
-                if reversed_once:       # a second reversal only re-reads the same labels
+            # End of the strip is "the swipe did not move it", NOT "no new labels":
+            # every label on the journey back has been seen already, so a seen-set
+            # test turns around and then gives up one frame later (2026-09-10,
+            # Weekly/Monthly Cards missed whenever a previous item left the strip
+            # scrolled past it).
+            shown = tuple(norm(i["text"]) for i in labels)
+            if shown == prev:
+                if reversed_once:
                     return False
                 reversed_once, direction = True, 1
-            seen |= {norm(i["text"]) for i in labels}
+            prev = shown
             if not self.dry:
                 x0, x1 = (0.85, 0.30) if direction < 0 else (0.30, 0.85)
                 drv.swipef(x0, 0.16, x1, 0.16, 500)

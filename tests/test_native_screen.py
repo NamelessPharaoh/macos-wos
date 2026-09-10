@@ -237,3 +237,52 @@ def test_go_home_retires_an_exit_that_never_changes_the_frame(tmp_path, monkeypa
     # Every dead spot is tried once and retired, never once per step.
     for spot in s.DIALOG_X_SPOTS:
         assert log.count('"at": [%s, %s]' % spot) == 1
+
+
+def test_walk_strip_reverses_all_the_way_back_to_a_tab_behind_the_start(tmp_path, monkeypatch):
+    """Regression, 2026-09-10: a previous item leaves the strip scrolled past the
+    wanted tab, so the walk runs to the far end, turns around, and must traverse
+    the WHOLE strip back. Ending the walk on "no new labels" quit one frame after
+    turning around, because every label on the way back had been seen already."""
+    import numpy as np
+    TABS = ["Armament", "Pet", "Training", "Ice", "Weekly/Monthly Cards", "Regular", "Dawn"]
+    pos = {"i": 3}          # scrolled past "Armament"; it is only reachable backwards
+
+    def visible():
+        return TABS[pos["i"]:pos["i"] + 3]
+
+    class Eng:
+        def recognize(self, img):
+            return [_item(t, 100 + 300 * n, 250, 350 + 300 * n, 300)
+                    for n, t in enumerate(visible())]
+
+    def fake_swipe(fx0, fy0, fx1, fy1, ms=450):
+        # Dragging left (fx1 < fx0) pulls LATER tabs into view, as the game does.
+        pos["i"] = max(0, min(pos["i"] + (1 if fx1 < fx0 else -1), len(TABS) - 3))
+
+    sc = s.Screen(str(tmp_path), dry_run=False, engine=Eng())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.drv, "swipef", fake_swipe)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+    monkeypatch.setattr(s.cv2, "imread", lambda path: np.zeros((1902, 1284, 3), dtype=np.uint8))
+    monkeypatch.setattr(sc, "tap_item", lambda img, it: True)
+
+    img = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    items = Eng().recognize(img)
+    assert "Armament" not in [i["text"] for i in items]      # genuinely out of view at the start
+    assert sc._walk_strip("Armament", img, items, 1902, 1284) is True
+    assert "strip:Armament" in open(os.path.join(str(tmp_path), "run.jsonl")).read()
+
+
+def test_tab_matches_tolerates_how_badly_strip_labels_ocr():
+    """Real strings off one cart walk, 2026-09-10. "Daily Deals" came back as
+    "Dailý Deals" on one frame and clipped to "Daily Deal" on the next; an exact
+    substring test walked past a tab that was on screen twice."""
+    m = s.Screen.tab_matches
+    for text in ("Daily Deals", "Dailý Deals", "Daily Deal"):
+        assert m("daily deals", text) is True, text
+    assert m("weekly/monthly cards", "Weekly/Monthly Cards") is True
+    # Neighbours on the same strip must not collide, and clipped stubs match nothing.
+    for text in ("Dâwn Fund", "Get Gems", "Regular Pack", "Te", "30", ""):
+        assert m("daily deals", text) is False, text
+    assert m("custom pet chest", "Custom Armament Chest") is False

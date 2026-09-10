@@ -58,17 +58,35 @@ def popup_level(items, h, w):
     return None
 
 
-def _open_city_tab(sc):
-    img, items, _ = sc.frame("enter")
-    h, w = img.shape[:2]
-    if not sc.at_home(items, h, w, img):
-        sc.go_home()
+def _panel_is_open(items, h, w):
+    """The panel's own tab row -- City / Wilderness / Daily across y ~0.24."""
+    return sum(1 for i in items
+               if norm(i["text"]) in ("city", "wilderness", "daily")
+               and 0.20 < frac(i, h, w)[1] < 0.28) >= 2
+
+
+def _open_city_tab(sc, attempts=3):
+    """The handle is a TOGGLE, so a single blind tap is a coin flip: queues runs
+    immediately before buildings and can leave the panel open, and then the tap
+    that was meant to open it closes it. Verified 2026-09-10, when the frame
+    saved as "sidepanel" was the bare city map with the handle showing closed.
+    Tap, look, and tap again if the panel is not there."""
+    for _ in range(attempts):
         img, items, _ = sc.frame("enter")
-    if not sc.tapf(*HANDLE, items, img):
+        h, w = img.shape[:2]
+        if not sc.at_home(items, h, w, img):
+            sc.go_home()
+            img, items, _ = sc.frame("enter")
+            h, w = img.shape[:2]
+        if not sc.tapf(*HANDLE, items, img):
+            return None
+        time.sleep(1.6)
+        img, items, _ = sc.frame("sidepanel")
+        h, w = img.shape[:2]
+        if _panel_is_open(items, h, w):
+            break
+    else:
         return None
-    time.sleep(1.6)
-    img, items, _ = sc.frame("sidepanel")
-    h, w = img.shape[:2]
     tab = sc.find(items, "City", None, h)
     if tab is not None and 0.2 < frac(tab, h, w)[1] < 0.27:
         sc.tap_item(img, tab)
@@ -82,6 +100,9 @@ def read(sc):
     res = ReaderResult("buildings")
     first = _open_city_tab(sc)
     if first is None:
+        # Say why. A bare failed status sends whoever reads the summary hunting
+        # through frames for a reason the reader already knew.
+        res.notes.append("side panel would not open (handle tapped 3x, no City/Wilderness/Daily row)")
         return res
     img, items, path = first
     h, w = img.shape[:2]
@@ -138,7 +159,10 @@ def read(sc):
     missing = [k for k in WANTED if f"city.buildings.{k}" not in res.provenance]
     if missing:
         res.notes.append("no panel row today: " + ", ".join(missing))
-    # `rows` empty means the panel opened with nothing queued -- a true reading of
-    # an idle city, not a failure. A row that would not parse is a partial.
-    res.status = STATUS_PARTIAL if any("no building popup read" in n for n in res.notes) else STATUS_OK
+    # Having ARRIVED (the Building Queue tell above), reading nothing is a true
+    # reading of an idle city rather than a failure -- but it is never "ok",
+    # because ok has to mean a value was read. Partial says: I got there, and
+    # this note is what was on offer.
+    unparsed = any("no building popup read" in n for n in res.notes)
+    res.status = STATUS_PARTIAL if (unparsed or not res.provenance) else STATUS_OK
     return res

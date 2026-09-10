@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 
 from native import drive as drv
 from native import model
-from native.readers import STATUS_FAILED, STATUS_SKIPPED, ReaderResult
+from native.readers import STATUS_FAILED, STATUS_OK, STATUS_SKIPPED, ReaderResult
 from native.readers import alliance as r_alliance
 from native.readers import backpack as r_backpack
 from native.readers import buildings as r_buildings
@@ -249,6 +249,19 @@ def derive_furnace(doc, provenance):
 
 
 def _absorb(res, sections, doc, provenance, notes):
+    """Every reader result enters the snapshot here, so the one invariant that
+    matters is enforced here: OK MEANS IT READ SOMETHING.
+
+    On 2026-09-10 the buildings reader navigated to the wrong screen, read zero
+    fields and reported ok, and the sheet showed a confident section that was
+    entirely carried-forward values. A reader is the only thing that knows why
+    it read nothing, but nothing except this function sees every reader, so the
+    floor lives here. `partial` with no fields is allowed and says "I got to the
+    screen and there was nothing on it"; `ok` with no fields is a lie.
+    """
+    if res.status == STATUS_OK and not res.provenance:
+        res.notes.append("reported ok having read no field: downgraded to failed")
+        res.status = STATUS_FAILED
     sections[res.name] = res.status
     deep_merge(doc, res.doc)
     provenance.update(res.provenance)

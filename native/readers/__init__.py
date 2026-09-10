@@ -41,7 +41,20 @@ class ReaderResult:
                                  "score": score, "method": method, "exact": 1 if exact else 0}
 
     def settle(self, expected_paths):
-        """ok when every expected path was read, partial when some were, failed when none."""
+        """ok when every expected path was read, partial when some were, failed when none.
+
+        An EMPTY expectation list is refused rather than treated as satisfied.
+        `got == len(expected_paths)` is 0 == 0 for an empty list, so settle([])
+        would hand back an unconditional ok -- exactly the shape of the buildings
+        bug on 2026-09-10, where a reader that read nothing reported success.
+        backpack, events and heroes all declare EXPECTED = [] and set their own
+        status from a count of what they read; this stops anyone wiring one of
+        them, or a new reader, into settle() and getting a free green."""
+        expected_paths = list(expected_paths)
+        if not expected_paths:
+            raise ValueError(
+                f"{self.name}: settle() needs at least one expected path; a reader with "
+                "no fixed expectation must set res.status from what it actually read")
         got = sum(1 for p in expected_paths if p in self.provenance)
         if got == len(expected_paths):
             self.status = STATUS_OK

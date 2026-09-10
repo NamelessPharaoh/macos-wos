@@ -1,5 +1,6 @@
 """Reader parse functions against survey frames of the main account (local,
 gitignored fixture: the frames carry the player id and alliance chat)."""
+import inspect
 import json
 import os
 
@@ -518,5 +519,133 @@ def test_buildings_stays_failed_when_it_never_reached_the_city_tab(monkeypatch):
     monkeypatch.setattr(buildings.time, "sleep", lambda n: None)
     res = buildings.read(Stub())
     assert res.status == "failed"
-    assert "City tab did not show the Building Queue" in res.notes
     assert res.doc == {}
+    # Either honest refusal is fine -- the panel never opened, or it opened onto
+    # something that was not the City tab -- but it must say which.
+    assert any("would not open" in n or "did not show the Building Queue" in n
+               for n in res.notes), res.notes
+
+
+def test_settle_refuses_an_empty_expectation_instead_of_calling_it_success():
+    """got == len(expected) is 0 == 0 for an empty list, so settle([]) used to
+    hand back an unconditional ok. backpack, events and heroes all declare
+    EXPECTED = [], so this was one wiring mistake away from a free green."""
+    from native.readers import ReaderResult
+    with pytest.raises(ValueError, match="at least one expected path"):
+        ReaderResult("probe").settle([])
+    # A real expectation still behaves exactly as before.
+    r = ReaderResult("probe")
+    assert r.settle(["a.b"]).status == "failed"
+    r.put("a.b", 1, frame="f.png")
+    assert r.settle(["a.b"]).status == "ok"
+
+
+def test_absorb_downgrades_a_reader_that_reports_ok_having_read_nothing():
+    """The floor under every reader. 2026-09-10: buildings navigated to the wrong
+    screen, read zero fields and reported ok, and the sheet showed a confident
+    section that was entirely carried-forward values."""
+    from native.snapshot import _absorb
+    from native.readers import ReaderResult, STATUS_OK, STATUS_PARTIAL
+    sections, doc, prov, notes = {}, {}, {}, []
+
+    empty = ReaderResult("liar")
+    empty.status = STATUS_OK
+    _absorb(empty, sections, doc, prov, notes)
+    assert sections["liar"] == "failed"
+    assert any("read no field" in n for n in notes)
+
+    # partial with nothing read is allowed: "I arrived and there was nothing here".
+    idle = ReaderResult("idle")
+    idle.status = STATUS_PARTIAL
+    _absorb(idle, sections, doc, prov, notes)
+    assert sections["idle"] == "partial"
+
+    # An honest ok is untouched, and its fields still reach the doc.
+    good = ReaderResult("honest")
+    good.put("city.buildings.furnace", 27, frame="f.png")
+    good.status = STATUS_OK
+    _absorb(good, sections, doc, prov, notes)
+    assert sections["honest"] == "ok"
+    assert doc["city"]["buildings"]["furnace"] == 27
+
+
+def test_no_reader_reports_ok_from_the_wrong_screen(monkeypatch, tmp_path):
+    """The behavioural version of the 2026-09-10 buildings bug, applied to all of
+    them: drive every reader against a screen that is never where it wanted to
+    be, and assert not one of them claims success. Navigation always "succeeds",
+    so each reader must prove arrival from what it actually read."""
+    import numpy as np
+    from native import drive as drv
+    from native import snapshot
+    from native.readers import buildings, heroes, backpack
+
+    blank = np.zeros((1902, 1284, 3), dtype=np.uint8)
+
+    class WrongScreen:
+        """Taps land, frames come back, and nothing the reader wants is on them."""
+        dry = False
+        dir = str(tmp_path)
+
+        def frame(self, tag):
+            return blank, [], os.path.join(str(tmp_path), f"{tag}.png")
+
+        def at_home(self, *a, **k):
+            return True
+
+        def go_home(self, *a, **k):
+            return True
+
+        def tapf(self, *a, **k):
+            return True
+
+        def tap_item(self, *a, **k):
+            return True
+
+        def enter(self, *a, **k):
+            return True
+
+        def find(self, *a, **k):
+            return None
+
+        def walk_tabs(self, *a, **k):
+            return iter(())
+
+        def log(self, **k):
+            pass
+
+    for mod in (buildings, heroes, backpack):
+        monkeypatch.setattr(mod.time, "sleep", lambda n: None)
+    monkeypatch.setattr(drv, "swipe", lambda *a, **k: 0)
+    monkeypatch.setattr(drv, "swipef", lambda *a, **k: 0)
+    monkeypatch.setattr(drv, "tapf", lambda *a, **k: 0)
+
+    for name, fn in snapshot.READERS.items():
+        mod = inspect.getmodule(fn)
+        if hasattr(mod, "time"):
+            monkeypatch.setattr(mod.time, "sleep", lambda n: None)
+        res = fn(WrongScreen())
+        assert res.status != "ok", f"{name} reported ok from the wrong screen"
+        assert not res.provenance, f"{name} read fields off a blank frame"
+
+
+def test_buildings_retries_the_handle_because_it_is_a_toggle():
+    """The panel handle toggles. queues runs immediately before buildings and can
+    leave the panel open, so the tap meant to open it closes it instead -- on
+    2026-09-10 the frame saved as "sidepanel" was the bare city map. _open_city_tab
+    must look before it walks on."""
+    import cv2
+    from core.vision_engine import VisionEngine
+    from native.readers import buildings
+    frames = {
+        "open": "reader-queues-tech-research-header.png",
+        "closed": "reader-buildings-panel-closed.png",
+        "wrong": "reader-buildings-wrong-screen.png",
+    }
+    got = {}
+    for tag, fn in frames.items():
+        p = os.path.join(REPO, "tests", "fixtures", "local", "frames", fn)
+        if not os.path.exists(p):
+            pytest.skip("local frame not present")
+        img = cv2.imread(p)
+        got[tag] = buildings._panel_is_open(VisionEngine().recognize(img), *img.shape[:2])
+    assert got == {"open": True, "closed": False, "wrong": False}

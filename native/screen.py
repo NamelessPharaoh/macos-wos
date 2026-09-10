@@ -102,11 +102,12 @@ def has_modal_x(img):
     return _is_icy(_rgb(img, 0.868, 0.128))
 
 
-# The startup "Welcome back!" offline-income dialog sits higher and wider than
-# the two centred-card spots: its × measured (0.836, 0.224) on 2026-09-10, and
-# without it go_home spent all nine steps tapping (0.815, 0.257) into the header
-# bar 60px below and gave up on a cold launch.
-DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224))
+# Both trailing spots were measured on 2026-09-10, each after go_home burned all
+# nine steps on a dialog it could not close: "Welcome back!" offline income at
+# (0.836, 0.224), and the scallop-topped pack offers ("Charm Master Pack", €5,99)
+# at (0.779, 0.166), near-white rgb(255,253,247). That pixel reads 84-238 blue on
+# home, VIP, Deals, the cart, Intel and the City tab, so it does not false-fire.
+DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224), (0.779, 0.166))
 
 
 def _is_dialog_glyph(rgb):

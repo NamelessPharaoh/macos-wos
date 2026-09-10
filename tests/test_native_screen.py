@@ -199,13 +199,15 @@ def test_dialog_x_spot_skips_a_blocked_spot():
     assert s.dialog_x_spot(img, blocked={f"dialog-x{sp}" for sp in s.DIALOG_X_SPOTS}) is None
 
 
-def test_dialog_x_spots_cover_the_welcome_back_dialog():
-    """The startup offline-income dialog draws its x at (0.836, 0.224); before
-    2026-09-10 the nearest known spot was (0.815, 0.257), 60px away and dead."""
+def test_dialog_x_spots_cover_the_dialogs_that_stranded_go_home():
+    """Both were measured after go_home burned all nine steps failing to close
+    them: the startup offline-income dialog at (0.836, 0.224), and the pack
+    offers that interrupt the city at (0.779, 0.166)."""
     import numpy as np
-    img = np.zeros((1902, 1284, 3), dtype=np.uint8)
-    _light(img, 0.836, 0.224)
-    assert s.dialog_x_spot(img) == (0.836, 0.224)
+    for spot in ((0.836, 0.224), (0.779, 0.166)):
+        img = np.zeros((1902, 1284, 3), dtype=np.uint8)
+        _light(img, *spot)
+        assert s.dialog_x_spot(img) == spot
 
 
 def test_go_home_retires_an_exit_that_never_changes_the_frame(tmp_path, monkeypatch):

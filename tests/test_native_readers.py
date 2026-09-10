@@ -428,3 +428,95 @@ def test_resources_assigns_by_row_so_a_dropped_bullet_cannot_become_iron():
     assert d["resources"] == {"meat": 39_300_000, "wood": 34_000_000, "coal": 9_100_000, "iron": 1_900_000}
     assert d["protected"] == {"meat": 30_000_000, "wood": 23_000_000, "coal": 7_000_000, "iron": 1_300_000}
     assert r.settle(resources.EXPECTED).status == "ok"
+
+
+def test_queues_reads_the_tech_under_the_tech_research_header():
+    """2026-09-10: the panel's research row is a SECTION HEADER ("Tech Research")
+    with the tech's own name below it ("Weapons Prep IV" / "08:52:49"). The
+    parser looked for a row that named itself "... Research" and excluded
+    anything containing "tech", so research.current.name -- the reader's only
+    expected path -- was never produced and the whole reader reported failed
+    while the entire panel had OCR'd cleanly."""
+    import cv2
+    from core.vision_engine import VisionEngine
+    from native.readers import queues, ReaderResult
+    p = os.path.join(REPO, "tests", "fixtures", "local", "frames", "reader-queues-tech-research-header.png")
+    if not os.path.exists(p):
+        pytest.skip("local frame not present")
+    img = cv2.imread(p)
+    items = VisionEngine().recognize(img)
+    r = queues.parse(ReaderResult("queues"), img, items, p)
+    assert r.doc["research"]["current"]["name"] == "weapons_prep_iv"
+    assert r.doc["research"]["current"]["remaining_s"] == 8 * 3600 + 52 * 60 + 49
+    # The rest of the panel still parses: two builds and three training states.
+    assert r.doc["city"]["queues"]["1"]["building"] == "furnace"
+    assert r.doc["city"]["queues"]["2"]["building"] == "lancer_camp"
+    assert r.doc["city"]["queues"]["2"]["remaining_s"] == 23 * 3600 + 10 * 60 + 47
+    assert r.doc["troops"]["training"]["infantry"]["state"] == "completed"
+    assert r.settle(queues.EXPECTED).status == "ok"
+
+
+def test_buildings_is_ok_when_the_panel_simply_had_no_row_for_a_building():
+    """The City tab lists only what is queued right now. On 2026-09-10 it offered
+    Furnace and Lancer Camp; research_center had no row, and the reader reported
+    failed while holding a good furnace 27. Absent rows are unavailability, not
+    failure -- only a row whose popup will not parse is a partial."""
+    import cv2
+    from core.vision_engine import VisionEngine
+    from native.readers import buildings, ReaderResult
+    p = os.path.join(REPO, "tests", "fixtures", "local", "frames", "reader-buildings-furnace-popup.png")
+    if not os.path.exists(p):
+        pytest.skip("local frame not present")
+    img = cv2.imread(p)
+    items = VisionEngine().recognize(img)
+    assert buildings.popup_level(items, *img.shape[:2])[:2] == ("furnace", 27)
+
+    res = ReaderResult("buildings")
+    res.put("city.buildings.furnace", 27, frame=p)
+    missing = [k for k in buildings.WANTED if f"city.buildings.{k}" not in res.provenance]
+    assert "research_center" in missing and "furnace" not in missing
+
+
+def test_buildings_stays_failed_when_it_never_reached_the_city_tab(monkeypatch):
+    """2026-09-10: the handle tap landed on the city map, so the frame captured
+    as "city-tab" was really the Research Center popup. No ROWS labels matched,
+    the reader read nothing, and an unguarded status called that ok. An empty
+    read on the wrong screen is a failure, not an idle city."""
+    import cv2
+    from core.vision_engine import VisionEngine
+    from native.readers import buildings
+    from native.screen import norm
+    p = os.path.join(REPO, "tests", "fixtures", "local", "frames", "reader-buildings-wrong-screen.png")
+    if not os.path.exists(p):
+        pytest.skip("local frame not present")
+    img = cv2.imread(p)
+    items = VisionEngine().recognize(img)
+    # The popup is perfectly legible: this is the wrong screen, not bad OCR.
+    assert buildings.popup_level(items, *img.shape[:2])[:2] == ("research_center", 27)
+    assert not any("building queue" in norm(i["text"]) for i in items)
+
+    class Stub:
+        """Every navigation call succeeds; every frame is the wrong screen."""
+        def frame(self, tag):
+            return img, items, p
+
+        def at_home(self, *a, **k):
+            return True
+
+        def go_home(self, *a, **k):
+            return True
+
+        def tapf(self, *a, **k):
+            return True
+
+        def tap_item(self, *a, **k):
+            return True
+
+        def find(self, *a, **k):
+            return None
+
+    monkeypatch.setattr(buildings.time, "sleep", lambda n: None)
+    res = buildings.read(Stub())
+    assert res.status == "failed"
+    assert "City tab did not show the Building Queue" in res.notes
+    assert res.doc == {}

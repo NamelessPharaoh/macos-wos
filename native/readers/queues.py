@@ -22,12 +22,11 @@ def parse(res, img, items, path):
     rows = [i for i in items if 0.28 < frac(i, h, w)[0] < 0.42 and 0.28 < frac(i, h, w)[1] < 0.72]
     rows.sort(key=lambda i: frac(i, h, w)[1])
     builder = 0
-    section = None
-    for it in items:
-        t = norm(it["text"])
-        y = frac(it, h, w)[1]
-        if "building queue" in t:
-            section = ("build", y)
+    # "Tech Research" is a SECTION HEADER, not the research row: the row under it
+    # carries the tech's own name ("Weapons Prep IV" / "08:52:49"). Measured
+    # 2026-09-10, when the reader failed for want of research.current.name even
+    # though the whole panel had OCR'd cleanly.
+    tech_y = next((frac(i, h, w)[1] for i in items if "tech research" in norm(i["text"])), None)
     for it in rows:
         t = it["text"].strip()
         nt = norm(t)
@@ -50,7 +49,10 @@ def parse(res, img, items, path):
             res.put(f"troops.training.{nt}.remaining_s", secs if secs else 0, raw=state["text"] if state else None,
                     frame=path, score=it["score"])
             continue
-        if "research" in nt and "tech" not in nt:
+        # Either shape: a row that names itself ("Center Research" / "Idle"), or
+        # any row sitting under the Tech Research header.
+        under_tech = tech_y is not None and frac(it, h, w)[1] > tech_y
+        if ("research" in nt and "tech" not in nt) or under_tech:
             state = below(items, h, w, it, dy=(0.01, 0.03), dx=0.1)
             st = state["text"].strip() if state else None
             if st and norm(st) == "idle":

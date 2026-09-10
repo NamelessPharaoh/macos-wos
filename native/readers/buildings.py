@@ -18,7 +18,7 @@ import re
 import time
 
 from native import drive as drv
-from native.readers import ReaderResult, frac, norm
+from native.readers import ReaderResult, STATUS_OK, STATUS_PARTIAL, frac, norm
 from native.readers.queues import HANDLE, CITY_TAB
 from native.screen import slugify
 
@@ -29,7 +29,13 @@ ROWS = {  # normalised row label -> schema building key
     "war academy": "war_academy",
 }
 NEUTRAL = (0.5, 0.22)
-EXPECTED = ["city.buildings.research_center"]
+# The City tab lists only what is queued RIGHT NOW, so no building is promised a
+# row. On 2026-09-10 the panel offered Furnace and Lancer Camp and nothing else,
+# and the reader reported "failed" while holding a perfectly good furnace 27,
+# because research_center -- its one expected path -- had no row to tap. WANTED
+# is what we would like to see; the status below reflects what was actually on
+# offer, and names the rest as unavailable rather than as failure.
+WANTED = ["research_center", "furnace", "storehouse"]
 
 
 def popup_level(items, h, w):
@@ -79,6 +85,16 @@ def read(sc):
         return res
     img, items, path = first
     h, w = img.shape[:2]
+    res.frames.append(path)
+    # Arrival tell, same one queues uses. Without it the reader cannot tell "the
+    # City tab is open and nothing is queued" from "we never got there", and
+    # reports a confident empty read: on 2026-09-10 the handle tap landed on the
+    # city map instead and the "city-tab" frame was actually the Research Center
+    # popup. An empty read on the wrong screen must stay a failure.
+    if not any("building queue" in norm(i["text"]) for i in items):
+        res.notes.append("City tab did not show the Building Queue")
+        sc.go_home()
+        return res
     rows = []
     for it in items:
         t = norm(it["text"])
@@ -119,4 +135,10 @@ def read(sc):
     sc.tapf(*HANDLE, items, img)
     time.sleep(1.0)
     sc.go_home()
-    return res.settle(EXPECTED)
+    missing = [k for k in WANTED if f"city.buildings.{k}" not in res.provenance]
+    if missing:
+        res.notes.append("no panel row today: " + ", ".join(missing))
+    # `rows` empty means the panel opened with nothing queued -- a true reading of
+    # an idle city, not a failure. A row that would not parse is a partial.
+    res.status = STATUS_PARTIAL if any("no building popup read" in n for n in res.notes) else STATUS_OK
+    return res

@@ -288,3 +288,28 @@ def test_tab_matches_tolerates_how_badly_strip_labels_ocr():
     for text in ("Dâwn Fund", "Get Gems", "Regular Pack", "Te", "30", ""):
         assert m("daily deals", text) is False, text
     assert m("custom pet chest", "Custom Armament Chest") is False
+
+
+def test_tab_labels_are_told_apart_from_the_scrolling_news_banner():
+    """Real strings off one cart walk, 2026-09-11. The System News banner crosses
+    the tab band and OCRs in chunks that differ every frame, so while any of them
+    counted as a label the walk never saw a repeat, never concluded the strip had
+    ended and never turned around -- 72 frames, two missed cart claims. Length
+    alone does not separate them: the banner also yields "ng the period.\""""
+    for tab in ("Daily Deals", "Weekly/Monthly Cards", "Tundra Supply Station",
+                "Speedy Development Pack", "paily Deals", "Dawn Fund"):
+        assert s._is_tab_label(tab) is True, tab
+    for scrap in ("System News: We v", "ng the period.", "ections during the period.",
+                  "System News: We will be re", "   ", ""):
+        assert s._is_tab_label(scrap) is False, scrap
+
+
+def test_glyph_helpers_are_still_reachable_from_screen_after_the_split():
+    """native/glyphs.py was split out when screen.py hit its 600-line limit; the
+    readers and both skills import these from native.screen, so the re-export is
+    part of the contract, not a convenience."""
+    for name in ("_rgb", "_is_icy", "has_back_arrow", "has_modal_x", "has_dialog_x",
+                 "dialog_x_spot", "green_badges", "DIALOG_X_SPOTS"):
+        assert hasattr(s, name), name
+    import native.glyphs as g
+    assert s.dialog_x_spot is g.dialog_x_spot and s.DIALOG_X_SPOTS is g.DIALOG_X_SPOTS

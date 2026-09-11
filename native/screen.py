@@ -81,77 +81,27 @@ def centre(box):
     return (x1 + x2) // 2, (y1 + y2) // 2
 
 
-def _rgb(img, fx, fy):
-    h, w = img.shape[:2]
-    x, y = int(fx * w), int(fy * h)
-    b, g, r = img[y - 3:y + 4, x - 3:x + 4].reshape(-1, 3).mean(0)
-    return int(r), int(g), int(b)
+# Pixel cues live in native/glyphs.py (see its docstring); re-exported here
+# because the readers and both skills import them from native.screen.
+from native.glyphs import (  # noqa: E402,F401
+    DIALOG_X_SPOTS, _is_dialog_glyph, _is_icy, _rgb, dialog_x_spot,
+    green_badges, has_back_arrow, has_dialog_x, has_modal_x)
 
 
-def _is_icy(rgb):
-    """The game's back arrow and modal × are the same icy white-cyan glyph."""
-    r, g, b = rgb
-    return r > 190 and g > 225 and b > 225
+def _is_tab_label(text):
+    """Tab, or a scrap of the System News banner scrolling through the strip?
 
-
-def has_back_arrow(img):
-    return _is_icy(_rgb(img, 0.148, 0.063))
-
-
-def has_modal_x(img):
-    return _is_icy(_rgb(img, 0.868, 0.128))
-
-
-# Both trailing spots were measured on 2026-09-10, each after go_home burned all
-# nine steps on a dialog it could not close: "Welcome back!" offline income at
-# (0.836, 0.224), and the scallop-topped pack offers ("Charm Master Pack", €5,99)
-# at (0.779, 0.166), near-white rgb(255,253,247). That pixel reads 84-238 blue on
-# home, VIP, Deals, the cart, Intel and the City tab, so it does not false-fire.
-DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224), (0.779, 0.166))
-
-
-def _is_dialog_glyph(rgb):
-    r, g, b = rgb
-    return r > 180 and g > 200 and b > 235
-
-
-def has_dialog_x(img):
-    """Centred dialogs (Tech contribute, Tips, Daily Rewards) draw their × at
-    ~(0.814, 0.182); taller card dialogs (Gear Details) at ~(0.815, 0.257).
-    It is a bluer white than the page-header glyph — measured rgb(201,219,252)
-    — so the icy test is loosened here."""
-    return _is_dialog_glyph(_rgb(img, *DIALOG_X_SPOTS[0]))
-
-
-def dialog_x_spot(img, blocked=()):
-    """The (fx, fy) of a dialog × on this frame, or None.
-
-    `blocked` holds "dialog-x(fx, fy)" keys that go_home already tried without
-    the frame changing; those spots are skipped so a second candidate gets a
-    turn instead of the first one being retried forever."""
-    for spot in DIALOG_X_SPOTS:
-        if f"dialog-x{spot}" in blocked:
-            continue
-        if _is_dialog_glyph(_rgb(img, *spot)):
-            return spot
-    return None
-
-
-def green_badges(img, ymin=0.0, ymax=1.0):
-    """Bright green blobs of badge size. On Alliance → Tech the alliance's
-    recommended tech carries a green thumbs-up at the hexagon's top-left."""
-    h, w = img.shape[:2]
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-    m = cv2.inRange(hsv, (40, 120, 120), (80, 255, 255))
-    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
-    n, _, stats, cent = cv2.connectedComponentsWithStats(m)
-    out = []
-    for i in range(1, n):
-        x, y, bw, bh, a = stats[i]
-        fy = cent[i][1] / h
-        if 400 <= a <= 6000 and 0.6 <= bw / max(bh, 1) <= 1.6 and ymin <= fy <= ymax:
-            out.append((cent[i][0] / w, fy, int(a)))
-    return out
+    The banner ("System News: We will be restarting the servers at 06:00 - 09:00
+    UTC...") crosses the same band as the tabs and OCRs in chunks that differ
+    every frame. Length alone does not separate them -- it also yields short
+    scraps like "ng the period." -- and while any of them counted as a label the
+    walk never saw a repeat, so it never concluded the strip had ended, never
+    turned around, and spent its whole budget: 72 frames and two missed cart
+    claims on 2026-09-11. Tabs are short title-ish names; banner prose carries
+    sentence punctuation. The longest real tab is 23 chars.
+    """
+    t = text.strip()
+    return bool(t) and len(t) <= 26 and ":" not in t and not t.endswith(".")
 
 
 def close_glyph(items, h, w):
@@ -504,6 +454,12 @@ class Screen:
     def _walk_strip(self, label, img, items, h, w, max_steps=24):
         """Tab strips (cart, Deals, Events): SCROLL the strip to find a named tab
         and tap only that tab. Stops on a tab label or the PAGE TITLE (y .19-.27),
+        Over 26 chars is not a tab but the System News banner, which scrolls
+        THROUGH this band: its text differs every frame, so unfiltered the walk
+        never saw a repeat, never concluded the strip ended, and spent its whole
+        budget (72 frames, two missed cart claims, 2026-09-11).
+
+        Stops on a tab label or the PAGE TITLE (y .19-.27),
         reversing once at the end of the strip since the tab may sit behind the
         starting position. Until 2026-09-10 this tapped every visible label to
         recentre; harmless on four-tab Deals, but the cart now runs ~15 tabs of
@@ -513,7 +469,8 @@ class Screen:
         want = norm(label)
         prev, direction, reversed_once = None, -1, False
         for _ in range(max_steps):
-            labels = sorted((i for i in items if 0.10 * h < centre(i["box"])[1] < 0.23 * h and i["text"].strip()),
+            labels = sorted((i for i in items if 0.10 * h < centre(i["box"])[1] < 0.23 * h
+                             and _is_tab_label(i["text"])),
                             key=lambda i: centre(i["box"])[0])
             title = next((i for i in items if 0.19 * h < centre(i["box"])[1] < 0.27 * h and len(i["text"]) > 3), None)
             if title is not None and self.tab_matches(want, title["text"]):

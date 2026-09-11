@@ -345,3 +345,27 @@ def test_go_home_retires_an_exit_even_while_a_countdown_ticks(tmp_path, monkeypa
     assert "home-exit-blocked" in log, "a ticking timer must not defeat the retire"
     for spot in s.DIALOG_X_SPOTS[:3]:
         assert log.count('"at": [%s, %s]' % spot) == 1, spot
+
+
+def test_dialog_x_needs_an_isolated_glyph_not_just_a_pale_pixel():
+    """2026-09-11: Ally Treasure's white body is pale everywhere, so three of the
+    five spots "found" an x in the middle of the panel and go_home tapped all
+    three before the retire reached the real one at (0.843, 0.150). A x is pale
+    AND darker on every side; a panel body and a tab seam are not."""
+    import cv2
+    from native import glyphs as g
+    stuck = os.path.join(REPO, "tests", "fixtures", "local", "frames", "dialog-ally-treasure-stuck.png")
+    plain = os.path.join(REPO, "tests", "fixtures", "local", "frames", "dialog-none-events-calendar.png")
+    if not (os.path.exists(stuck) and os.path.exists(plain)):
+        pytest.skip("local frames not present")
+
+    img = cv2.imread(stuck)
+    # The three body spots pass the colour test and must fail the contrast test.
+    for spot in ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224)):
+        assert g._is_dialog_glyph(g._rgb(img, *spot)) is True, spot
+        assert g._glyph_contrast(img, *spot) < g.GLYPH_MIN_CONTRAST, spot
+    assert g.dialog_x_spot(img) == (0.843, 0.150)
+
+    # A tab seam is dark on one side only; a ring mean scored it 58.7 against a
+    # real-x floor of 61.6, which is why the minimum of four sides is used.
+    assert g.dialog_x_spot(cv2.imread(plain)) is None

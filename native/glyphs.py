@@ -59,6 +59,37 @@ def has_dialog_x(img):
     return _is_dialog_glyph(_rgb(img, *DIALOG_X_SPOTS[0]))
 
 
+
+def _glyph_contrast(img, fx, fy, r=0.022):
+    """How much brighter the spot is than the darkest of its four neighbours.
+
+    _is_dialog_glyph only asks whether a pixel is pale, and a dialog's white body
+    is pale everywhere -- so on Ally Treasure (2026-09-11) three of the five spots
+    "found" an x in the middle of the panel and go_home tapped all three before
+    the retire reached the real one. A x is a pale glyph ISOLATED on a darker
+    header: darker on every side. A tab edge or a panel seam is darker on one
+    side only, which is why the minimum is taken rather than a ring mean -- a
+    ring put the Events calendar's tab seam at 58.7 against a real-x floor of
+    61.6, too thin to trust. On the four-sided minimum, five real x's measure
+    70.7 to 110.8 and both known false positives are negative.
+    """
+    h, w = img.shape[:2]
+    x, y, d = int(fx * w), int(fy * h), int(r * w * 0.8)
+    core = float(np.mean(_rgb(img, fx, fy)))
+    worst = None
+    for dx, dy in ((-d, 0), (d, 0), (0, -d), (0, d)):
+        px, py = x + dx, y + dy
+        patch = img[max(0, py - 4):py + 5, max(0, px - 4):px + 5]
+        if patch.size == 0:
+            return 0.0
+        side = core - float(patch.mean())
+        worst = side if worst is None else min(worst, side)
+    return 0.0 if worst is None else worst
+
+
+GLYPH_MIN_CONTRAST = 35
+
+
 def dialog_x_spot(img, blocked=()):
     """The (fx, fy) of a dialog × on this frame, or None.
 
@@ -68,7 +99,8 @@ def dialog_x_spot(img, blocked=()):
     for spot in DIALOG_X_SPOTS:
         if f"dialog-x{spot}" in blocked:
             continue
-        if _is_dialog_glyph(_rgb(img, *spot)):
+        if (_is_dialog_glyph(_rgb(img, *spot))
+                and _glyph_contrast(img, *spot) >= GLYPH_MIN_CONTRAST):
             return spot
     return None
 

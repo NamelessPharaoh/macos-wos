@@ -318,7 +318,13 @@ class Screen:
             if self.at_home(items, h, w, img):
                 return True
             texts = [norm(i["text"]) for i in items]
-            sig = " ".join(sorted(texts))
+            # signature() strips digits, and must: the first version joined the raw
+            # text, so on any screen with a live countdown -- Ally Treasure's chest
+            # timers, 2026-09-11 -- the frame "changed" every second, nothing was
+            # ever retired, and go_home tapped one dead spot nine times. That dialog
+            # lights three of the five × spots on its white body, so the retire is
+            # the only thing that reaches its real × at (0.843, 0.150).
+            sig = signature(items)
             if last_via is not None and sig == last_sig:
                 self.log(event="home-exit-blocked", via=last_via)
                 blocked.add(last_via)

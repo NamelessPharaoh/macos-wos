@@ -204,7 +204,7 @@ def test_dialog_x_spots_cover_the_dialogs_that_stranded_go_home():
     them: the startup offline-income dialog at (0.836, 0.224), and the pack
     offers that interrupt the city at (0.779, 0.166)."""
     import numpy as np
-    for spot in ((0.836, 0.224), (0.779, 0.166)):
+    for spot in ((0.836, 0.224), (0.779, 0.166), (0.843, 0.150)):
         img = np.zeros((1902, 1284, 3), dtype=np.uint8)
         _light(img, *spot)
         assert s.dialog_x_spot(img) == spot
@@ -313,3 +313,35 @@ def test_glyph_helpers_are_still_reachable_from_screen_after_the_split():
         assert hasattr(s, name), name
     import native.glyphs as g
     assert s.dialog_x_spot is g.dialog_x_spot and s.DIALOG_X_SPOTS is g.DIALOG_X_SPOTS
+
+
+def test_go_home_retires_an_exit_even_while_a_countdown_ticks(tmp_path, monkeypatch):
+    """2026-09-11: Ally Treasure lights three of the five dialog-x spots on its
+    white body, so reaching its real x at (0.843, 0.150) depends entirely on the
+    retire. Its chest timers tick every second, and go_home's first signature
+    joined the raw text, so the frame "changed" every frame, nothing was ever
+    retired, and one dead spot got tapped nine times."""
+    import numpy as np
+    frame = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    for spot in s.DIALOG_X_SPOTS[:3]:          # the body lights the first three
+        _light(frame, *spot)
+    tick = {"n": 0}
+
+    class Eng:
+        def recognize(self, img):
+            tick["n"] += 1                      # a countdown that never repeats
+            return [_item("Ally Treasure", 400, 400, 800, 450),
+                    _item("My Shares", 300, 500, 600, 550),
+                    _item("Alliance Shares", 700, 500, 1000, 550),
+                    _item(f"06:3{tick['n'] % 10}:21", 200, 700, 350, 740)]
+
+    sc = s.Screen(str(tmp_path), dry_run=True, engine=Eng())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.cv2, "imread", lambda path: frame)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+
+    sc.go_home(max_steps=8)
+    log = open(os.path.join(str(tmp_path), "run.jsonl")).read()
+    assert "home-exit-blocked" in log, "a ticking timer must not defeat the retire"
+    for spot in s.DIALOG_X_SPOTS[:3]:
+        assert log.count('"at": [%s, %s]' % spot) == 1, spot

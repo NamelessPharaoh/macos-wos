@@ -36,7 +36,14 @@ def has_modal_x(img):
 # (0.836, 0.224), and the scallop-topped pack offers ("Charm Master Pack", €5,99)
 # at (0.779, 0.166), near-white rgb(255,253,247). That pixel reads 84-238 blue on
 # home, VIP, Deals, the cart, Intel and the City tab, so it does not false-fire.
-DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224), (0.779, 0.166))
+# Five spots now, each added after go_home spent its whole budget on a dialog it
+# could not close. A scan of this band instead of a list was tried and rejected
+# on 2026-09-11: the glyph colour also appears 9-40 times on ordinary pages
+# (home, Deals, the Events calendar), so a scan would tap white pixels at random.
+# Each spot below was checked against home, VIP, Deals, the cart, Intel, Sign-in
+# and the City tab before being added.
+DIALOG_X_SPOTS = ((0.814, 0.182), (0.815, 0.257), (0.836, 0.224), (0.779, 0.166),
+                  (0.843, 0.150))   # Ally Treasure, from pet_adventure
 
 
 def _is_dialog_glyph(rgb):

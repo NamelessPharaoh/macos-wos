@@ -85,7 +85,7 @@ def centre(box):
 # because the readers and both skills import them from native.screen.
 from native.glyphs import (  # noqa: E402,F401
     DIALOG_X_SPOTS, _is_dialog_glyph, _is_icy, _rgb, dialog_x_spot,
-    green_badges, has_back_arrow, has_dialog_x, has_modal_x)
+    green_badges, has_back_arrow, has_dialog_x, has_modal_x, thumbs_up_badges)
 
 
 def _is_tab_label(text):
@@ -306,10 +306,12 @@ class Screen:
           5. a reward reveal (almost no text)             -> tap its hint
 
         A strategy that leaves the frame unchanged is retired for the rest of
-        the call. Without that, one mis-measured glyph spot eats the whole
-        budget: on 2026-09-10 the "Welcome back!" dialog matched a dialog-×
-        spot 60px off its real ×, and go_home tapped the same dead pixel eight
-        times and reported home-failed on a cold launch.
+        the call -- except the back arrow and modal ×, which come back when
+        nothing else is left (see the retry branch). Without the retire, one
+        mis-measured glyph spot eats the whole budget: on 2026-09-10 the
+        "Welcome back!" dialog matched a dialog-× spot 60px off its real ×, and
+        go_home tapped the same dead pixel eight times and reported home-failed
+        on a cold launch.
         """
         blocked, last_sig, last_via = set(), None, None
         for step in range(max_steps):
@@ -361,6 +363,17 @@ class Screen:
                 else:
                     self.log(event="home-exit", via="reveal-tap")
                     drv.tapf(0.5, 0.93) if not self.dry else None
+            elif retry := blocked & {"back-arrow", "modal-x"}:
+                # The game drops an input now and then: on 2026-09-14 the Alliance
+                # hub ignored a back-arrow tap, the arrow was retired, and eight
+                # frames found nothing else to try. These two glyphs are read
+                # reliably, so when they are the only way out, retire means "try
+                # something else first", not "never again". Dialog-x spots stay
+                # retired; those are the ones that misfire on a pale dialog body.
+                blocked -= retry
+                last_via = None
+                self.log(event="home-exit-retry", via=sorted(retry))
+                continue
             else:
                 last_via = None   # nothing was tapped; an unchanged frame blames no strategy
                 self.log(event="home-exit", via="none-found", texts=texts[:6])
@@ -457,7 +470,7 @@ class Screen:
             return bool(a) and a == b
         return a in b or b in a or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
 
-    def _walk_strip(self, label, img, items, h, w, max_steps=24):
+    def _walk_strip(self, label, img, items, h, w, max_steps=32):
         """Tab strips (cart, Deals, Events): SCROLL the strip to find a named tab
         and tap only that tab. Stops on a tab label or the PAGE TITLE (y .19-.27),
         Over 26 chars is not a tab but the System News banner, which scrolls
@@ -473,7 +486,7 @@ class Screen:
         three deep in "Tech Storm Pack, €5,99" when the app died mid-screenshot,
         and never reached "Weekly/Monthly Cards" in 24 steps."""
         want = norm(label)
-        prev, direction, reversed_once = None, -1, False
+        prev, direction, reversed_once, stalls = None, -1, False, 0
         for _ in range(max_steps):
             labels = sorted((i for i in items if 0.10 * h < centre(i["box"])[1] < 0.23 * h
                              and _is_tab_label(i["text"])),
@@ -491,16 +504,22 @@ class Screen:
             # every label on the journey back has been seen already, so a seen-set
             # test turns around and then gives up one frame later (2026-09-10,
             # Weekly/Monthly Cards missed whenever a previous item left the strip
-            # scrolled past it).
+            # scrolled past it). And TWO still frames, not one: on 2026-09-14 the
+            # game ignored one drag mid-Deals, the walk took that for the end,
+            # turned round and never reached Hall of Heroes.
             shown = tuple(norm(i["text"]) for i in labels)
-            if shown == prev:
+            stalls = stalls + 1 if shown == prev else 0
+            if stalls >= 2:
                 if reversed_once:
                     return False
-                reversed_once, direction = True, 1
+                reversed_once, direction, stalls = True, 1, 0
             prev = shown
             if not self.dry:
-                x0, x1 = (0.85, 0.30) if direction < 0 else (0.30, 0.85)
-                drv.swipef(x0, 0.16, x1, 0.16, 500)
+                # 0.33 of the width over 600ms moves about two tabs. The old
+                # 0.55 over 500ms flung four or five, clean past a tab that had
+                # been clipped at the edge on the frame before (Hall of Heroes).
+                x0, x1 = (0.75, 0.42) if direction < 0 else (0.42, 0.75)
+                drv.swipef(x0, 0.16, x1, 0.16, 600)
                 time.sleep(1.8)
             img, items, _ = self.frame("strip")
             h, w = img.shape[:2]

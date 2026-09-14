@@ -6,6 +6,8 @@ Everything here works on an image and nothing else -- no OCR items, no labels,
 no driver -- which is why it is the clean seam. screen.py re-exports every name,
 so `from native.screen import green_badges` and friends keep working.
 """
+import os
+
 import cv2
 import numpy as np
 
@@ -106,8 +108,9 @@ def dialog_x_spot(img, blocked=()):
 
 
 def green_badges(img, ymin=0.0, ymax=1.0):
-    """Bright green blobs of badge size. On Alliance → Tech the alliance's
-    recommended tech carries a green thumbs-up at the hexagon's top-left."""
+    """Bright green blobs of badge size. Not specific: on Alliance → Tech this
+    also returns the up-arrow and the chevrons in tech icons; thumbs_up_badges
+    is the one that means "recommended"."""
     h, w = img.shape[:2]
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     m = cv2.inRange(hsv, (40, 120, 120), (80, 255, 255))
@@ -119,4 +122,41 @@ def green_badges(img, ymin=0.0, ymax=1.0):
         fy = cent[i][1] / h
         if 400 <= a <= 6000 and 0.6 <= bw / max(bh, 1) <= 1.6 and ymin <= fy <= ymax:
             out.append((cent[i][0] / w, fy, int(a)))
+    return out
+
+
+THUMBS_UP_PNG = os.path.join(os.path.dirname(__file__), "thumbs_up.png")
+THUMBS_UP_MIN_SCORE = 0.8
+_thumbs_up = []
+
+
+def thumbs_up_badges(img, ymin=0.0, ymax=1.0):
+    """The green blobs that are the thumbs-up on the alliance's recommended tech.
+
+    2026-09-14: a tech whose contribution bar is full wears a plain green
+    UP-ARROW at its top-right instead, green_badges took it for the thumbs-up,
+    and its dialog is "Research" -- starting the research on the alliance's
+    resources -- not Contribute. Colour, fill and area overlap between the
+    three greens on that page (arrow fill 0.59, thumb 0.70, icon chevrons
+    0.64-0.76), so each blob is matched against the badge sprite, cut from a
+    1284-wide frame: thumbs-up 0.94-1.00 on the page and in its dialog, the
+    chevrons beside it at most 0.59, the arrow under 0.5."""
+    if not _thumbs_up:
+        tpl = cv2.imread(THUMBS_UP_PNG)
+        if tpl is None:
+            raise FileNotFoundError(THUMBS_UP_PNG)
+        _thumbs_up.append(tpl)
+    h, w = img.shape[:2]
+    tpl = _thumbs_up[0]
+    if w != 1284:
+        tpl = cv2.resize(tpl, None, fx=w / 1284, fy=w / 1284)
+    th, tw = tpl.shape[:2]
+    out = []
+    for fx, fy, a in green_badges(img, ymin, ymax):
+        x, y = int(fx * w), int(fy * h)
+        crop = img[max(0, y - th):y + th, max(0, x - tw):x + tw]
+        if crop.shape[0] < th or crop.shape[1] < tw:
+            continue
+        if cv2.matchTemplate(crop, tpl, cv2.TM_CCOEFF_NORMED).max() >= THUMBS_UP_MIN_SCORE:
+            out.append((fx, fy, a))
     return out

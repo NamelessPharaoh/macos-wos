@@ -309,7 +309,7 @@ def test_glyph_helpers_are_still_reachable_from_screen_after_the_split():
     readers and both skills import these from native.screen, so the re-export is
     part of the contract, not a convenience."""
     for name in ("_rgb", "_is_icy", "has_back_arrow", "has_modal_x", "has_dialog_x",
-                 "dialog_x_spot", "green_badges", "DIALOG_X_SPOTS"):
+                 "dialog_x_spot", "green_badges", "thumbs_up_badges", "DIALOG_X_SPOTS"):
         assert hasattr(s, name), name
     import native.glyphs as g
     assert s.dialog_x_spot is g.dialog_x_spot and s.DIALOG_X_SPOTS is g.DIALOG_X_SPOTS
@@ -369,3 +369,91 @@ def test_dialog_x_needs_an_isolated_glyph_not_just_a_pale_pixel():
     # A tab seam is dark on one side only; a ring mean scored it 58.7 against a
     # real-x floor of 61.6, which is why the minimum of four sides is used.
     assert g.dialog_x_spot(cv2.imread(plain)) is None
+
+
+def test_go_home_retries_the_back_arrow_when_the_game_dropped_the_tap(tmp_path, monkeypatch):
+    """Regression, 2026-09-14: the Alliance hub ignored one back-arrow tap. The
+    frame did not change, so the arrow was retired, nothing else on the hub is an
+    exit, and go_home spent eight frames on "none-found" before home-failed --
+    while the very next item's back-arrow tap worked. A retired back arrow must
+    come back once nothing else is left."""
+    import numpy as np
+    frame = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    taps = []
+
+    class Eng:
+        def recognize(self, img):
+            return [_item("Alliance", 250, 90, 450, 150),
+                    _item("Chests", 850, 1000, 1050, 1050),
+                    _item("Territory", 400, 1200, 600, 1250),
+                    _item("Tech", 850, 1390, 1050, 1440)]
+
+    sc = s.Screen(str(tmp_path), dry_run=False, engine=Eng())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.drv, "tapf", lambda fx, fy: taps.append((fx, fy)))
+    monkeypatch.setattr(s.cv2, "imread", lambda path: frame)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+    monkeypatch.setattr(s, "has_back_arrow", lambda img: True)
+    # The first tap is dropped; the second one lands and the city comes back.
+    monkeypatch.setattr(sc, "at_home", lambda items, h, w, img=None: len(taps) >= 2)
+
+    assert sc.go_home(max_steps=9) is True
+    log = open(os.path.join(str(tmp_path), "run.jsonl")).read()
+    assert "home-exit-blocked" in log and "home-exit-retry" in log
+    assert taps == [(0.148, 0.063), (0.148, 0.063)]
+
+
+def test_thumbs_up_badges_tell_the_recommended_tech_from_the_research_arrow():
+    """2026-09-14: green_badges took a full tech's up-arrow for the recommended
+    thumbs-up, and that hexagon's dialog is Research, not Contribute. Frames:
+    the Battle tab with Rally Expansion III recommended (2026-09-08), its
+    contribute dialog, the Battle tab with only the arrow, and the arrow tech's
+    Research dialog (both 2026-09-14)."""
+    import cv2
+    frames = os.path.join(REPO, "tests", "fixtures", "local", "frames")
+    names = ("tech-battle-thumbs-up.png", "native-tech-dialog.png",
+             "tech-battle-research-arrow.png", "tech-research-dialog.png")
+    if not all(os.path.exists(os.path.join(frames, n)) for n in names):
+        pytest.skip("local frames not present")
+    page, dialog, arrow_page, research = (cv2.imread(os.path.join(frames, n)) for n in names)
+
+    # The page also has the icon's green chevrons; only the badge is the thumbs-up.
+    assert len(s.green_badges(page, 0.27, 0.97)) == 5
+    assert [(round(x, 3), round(y, 3)) for x, y, _ in s.thumbs_up_badges(page, 0.27, 0.97)] == [(0.454, 0.597)]
+    assert len(s.thumbs_up_badges(dialog, 0.20, 0.30)) == 1
+    # The arrow is a green badge and must not be a thumbs-up, on the page or after.
+    assert s.green_badges(arrow_page, 0.27, 0.97)
+    assert s.thumbs_up_badges(arrow_page, 0.27, 0.97) == []
+    assert s.thumbs_up_badges(research, 0.20, 0.30) == []
+
+
+def test_walk_strip_does_not_take_one_ignored_swipe_for_the_end(tmp_path, monkeypatch):
+    """Regression, 2026-09-14: on Deals the game ignored one drag, the strip
+    stood still for a frame, the walk decided it had hit the end, turned round,
+    and reported Hall of Heroes missing -- two tabs short of it."""
+    import numpy as np
+    TABS = ["Hero Ascension Training", "Tundra Trading Station", "Weekly Benefits Card",
+            "Hall of Heroes", "Intel Monthly Card", "Hero Rally", "Sign-in & Earn It"]
+    pos, swipes = {"i": 0}, []
+
+    class Eng:
+        def recognize(self, img):
+            return [_item(t, 100 + 300 * n, 250, 350 + 300 * n, 300)
+                    for n, t in enumerate(TABS[pos["i"]:pos["i"] + 3])]
+
+    def fake_swipe(fx0, fy0, fx1, fy1, ms=450):
+        swipes.append(fx1 < fx0)
+        if len(swipes) == 1:
+            return                                   # the drag the game dropped
+        pos["i"] = max(0, min(pos["i"] + (1 if fx1 < fx0 else -1), len(TABS) - 3))
+
+    sc = s.Screen(str(tmp_path), dry_run=False, engine=Eng())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.drv, "swipef", fake_swipe)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+    monkeypatch.setattr(s.cv2, "imread", lambda path: np.zeros((1902, 1284, 3), dtype=np.uint8))
+    monkeypatch.setattr(sc, "tap_item", lambda img, it: True)
+
+    img = np.zeros((1902, 1284, 3), dtype=np.uint8)
+    assert sc._walk_strip("Hall of Heroes", img, Eng().recognize(img), 1902, 1284) is True
+    assert all(swipes), "must keep walking forward, not turn round at the dropped drag"

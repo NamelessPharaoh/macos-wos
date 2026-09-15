@@ -301,3 +301,27 @@ def test_mission_items_select_their_own_tab_whichever_the_panel_reopens_on(tmp_p
         assert sc.enter(hop, ensure_home=False) is True
     assert at["tab"] == tab
     assert item["press"][0] in ("claim all", "claim") and "go" not in item["press"]
+
+
+# ----------------------------------------------------------------------------- alliance monuments
+def test_alliance_monuments_opens_the_mobilization_gift_and_presses_only_claim_all():
+    """2026-09-15: the gift icon on Alliance Mobilization carried a red dot for a
+    whole run. Behind it, Alliance Monuments held four reached alliance-point
+    tiers: 1h speedups x5, a book, 1h research speedups x5 and 1,000 gems (gems
+    3,295 -> 4,295). The right column needs personal points and is not a claim;
+    the task cards and the attempts "+" beside it are never pressed."""
+    item = _checklist("alliance_monuments")
+    strip, gift = item["path"]
+    assert strip == ("strip", "Alliance Mobilization")
+    assert gift[0] == "hud"
+    assert item["press"] == ["claim all"]
+
+
+def test_alliance_monuments_gift_hop_lands_on_the_gift_icon():
+    import cv2
+    frame = os.path.join(os.path.dirname(__file__), "fixtures", "local", "frames",
+                         "events-alliance-mobilization.png")
+    if not os.path.exists(frame):
+        pytest.skip("local frames not present")
+    _, fx, fy = _checklist("alliance_monuments")["path"][1]
+    assert min(s._rgb(cv2.imread(frame), fx, fy)) > 190     # the gift's pale glyph, measured (221,221,221)

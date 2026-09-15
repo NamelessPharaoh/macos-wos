@@ -418,9 +418,8 @@ class Screen(ScrollMixin):
             if kind == "home":
                 return True
             if kind == "hud":
-                if not self.tapf(alt[1], alt[2], items, img):
+                if not self._entry_tap_took(alt, img, items, checked=ensure_home and not self.dry):
                     continue
-                time.sleep(2.5)
                 return True
             if kind == "strip":
                 if self._walk_strip(alt[1], img, items, h, w):
@@ -457,6 +456,21 @@ class Screen(ScrollMixin):
                     continue
                 time.sleep(2.5)
                 return True
+        return False
+
+    def _entry_tap_took(self, alt, img, items, checked):
+        """Tap a ("hud", fx, fy) spot; when `checked` (an entry from home), the
+        frame must then change, else tap once more and give up. A dropped entry
+        tap left the city on screen for every later hop (Codex, 2026-09-15).
+        Whole-frame band_moved: city frames seconds apart 0.6-0.8, the side
+        panel sliding in 11.6 (the HUD stays, so at_home cannot tell), a page 38-60."""
+        for attempt in range(2 if checked else 1):
+            if not self.tapf(alt[1], alt[2], items, img):
+                return False
+            time.sleep(2.5)
+            if not checked or band_moved(img, self.frame("enter-check")[0], 0.0, 1.0):
+                return True
+            self.log(event="enter-retry" if attempt == 0 else "enter-no-effect", at=(alt[1], alt[2]))
         return False
 
     @staticmethod

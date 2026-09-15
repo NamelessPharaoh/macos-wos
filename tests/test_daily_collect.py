@@ -255,3 +255,49 @@ def test_tech_scan_drags_start_where_a_dropped_drag_presses_nothing():
             rgb = s._rgb(dialog, 0.5, fy)
             assert min(rgb) > 150 and max(rgb) - min(rgb) < 60, (fy, rgb)   # pale panel, not a button
         assert max(s._rgb(banner, 0.5, fy)) < 140, fy                          # dark tree, not the banner
+
+
+# ----------------------------------------------------------------------------- missions
+def test_mission_claims_run_after_every_item_that_completes_a_mission():
+    """2026-09-15: alliance_tech's 25 contributions completed "Make 5 Alliance
+    Contributions" AFTER daily_missions had run, so the claim waited for a person.
+    The mission items run last; only the home red-dot sweep comes after them."""
+    keys = [i["key"] for i in collect.CHECKLIST]
+    last = keys.index("free_claims")
+    for mission in ("growth_missions", "daily_missions"):
+        assert keys.index(mission) > max(n for n, k in enumerate(keys)
+                                         if k not in ("growth_missions", "daily_missions", "free_claims"))
+        assert keys.index(mission) < last
+
+
+def _missions(monkeypatch, tmp_path, opens_on):
+    """The quest panel reopens on whichever tab was used last. Tabs sit at
+    y 0.89: Growth at x 0.368, Daily at x 0.631 (frame of 2026-09-15)."""
+    at = {"tab": opens_on}
+
+    class Eng:
+        def recognize(self, img):
+            return [_item(f"{at['tab']} Missions", 460, 210, 830, 280),
+                    _item("Growth", 400, 1670, 545, 1720), _item("Daily", 760, 1670, 860, 1720)]
+
+    def fake_tapf(fx, fy):
+        if abs(fy - 0.89) < 0.03:
+            at["tab"] = "Growth" if fx < 0.5 else "Daily"
+
+    sc = collect.Collector(str(tmp_path), dry_run=False, engine=Eng())
+    _quiet(monkeypatch)
+    monkeypatch.setattr(s.drv, "tapf", fake_tapf)
+    return sc, at
+
+
+@pytest.mark.parametrize("opens_on", ["Growth", "Daily"])
+@pytest.mark.parametrize("key,tab", [("daily_missions", "Daily"), ("growth_missions", "Growth")])
+def test_mission_items_select_their_own_tab_whichever_the_panel_reopens_on(tmp_path, monkeypatch, opens_on, key, tab):
+    """Tapping a tab by its label would hit the panel title first ("Daily
+    Missions" starts with "Daily"), so each item taps its tab's fixed spot."""
+    sc, at = _missions(monkeypatch, tmp_path, opens_on)
+    item = _checklist(key)
+    for hop in item.get("path", []):
+        assert sc.enter(hop, ensure_home=False) is True
+    assert at["tab"] == tab
+    assert item["press"][0] in ("claim all", "claim") and "go" not in item["press"]

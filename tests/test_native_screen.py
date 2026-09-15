@@ -579,3 +579,14 @@ def test_is_selected_tab_reads_the_pale_tab():
     for frame, chosen in zip(_tech_frames("tech-growth-bottom-a.png", "tech-territory-top.png",
                                           "tech-battle-top.png"), range(3)):
         assert [g.is_selected_tab(frame, *t) for t in tabs] == [n == chosen for n in range(3)]
+
+
+def test_tab_matches_takes_no_clip_too_short_to_tell_two_tabs_apart():
+    """Review, 2026-09-15: any 5-8 letter clip of "Alliance" matched Alliance
+    Mobilization, so a clipped "Alliance Championship" caption could be tapped
+    for it. A clip must carry most of the wanted name."""
+    m = s.Screen.tab_matches
+    for clip in ("Allia", "Alliance", "Alliance Mob"):
+        assert m("alliance mobilization", clip) is False, clip
+    assert m("alliance mobilization", "Alliance Mobiliz") is True
+    assert m("hall of heroes", "Hall of He") is True

@@ -86,6 +86,7 @@ def centre(box):
 from native.glyphs import (  # noqa: E402,F401
     DIALOG_X_SPOTS, _is_dialog_glyph, _is_icy, _rgb, band_moved, dialog_x_spot,
     green_badges, has_back_arrow, has_dialog_x, has_modal_x, is_selected_tab, thumbs_up_badges)
+from native.entry import EntryMixin  # noqa: E402
 from native.scroll import ScrollMixin  # noqa: E402
 
 
@@ -205,7 +206,7 @@ def signature(items):
 
 
 # ----------------------------------------------------------------------------- screen
-class Screen(ScrollMixin):
+class Screen(EntryMixin, ScrollMixin):
     """Frames, logging, guarded taps and navigation. Runners subclass it."""
 
     def __init__(self, report_dir, dry_run=False, engine=None, never=()):
@@ -410,7 +411,8 @@ class Screen(ScrollMixin):
         img, items, _ = self.frame("enter")
         h, w = img.shape[:2]
         if ensure_home and not self.at_home(items, h, w, img) and not (alts and alts[0][0] == "home"):
-            self.go_home()
+            if not self.go_home():
+                return False    # an entry tap on an unknown screen is a blind tap
             img, items, _ = self.frame("enter")
             h, w = img.shape[:2]
         for alt in alts:
@@ -458,21 +460,6 @@ class Screen(ScrollMixin):
                 return True
         return False
 
-    def _entry_tap_took(self, alt, img, items, checked):
-        """Tap a ("hud", fx, fy) spot; when `checked` (an entry from home), the
-        frame must then change, else tap once more and give up. A dropped entry
-        tap left the city on screen for every later hop (Codex, 2026-09-15).
-        Whole-frame band_moved: city frames seconds apart 0.6-0.8, the side
-        panel sliding in 11.6 (the HUD stays, so at_home cannot tell), a page 38-60."""
-        for attempt in range(2 if checked else 1):
-            if not self.tapf(alt[1], alt[2], items, img):
-                return False
-            time.sleep(2.5)
-            if not checked or band_moved(img, self.frame("enter-check")[0], 0.0, 1.0):
-                return True
-            self.log(event="enter-retry" if attempt == 0 else "enter-no-effect", at=(alt[1], alt[2]))
-        return False
-
     @staticmethod
     def tab_matches(want, text):
         """Is `text` this tab, allowing for how badly strip labels OCR?
@@ -487,7 +474,10 @@ class Screen(ScrollMixin):
         a, b = re.sub(r"[^a-z0-9]", "", want), re.sub(r"[^a-z0-9]", "", norm(text))
         if len(a) < 5 or len(b) < 5:
             return bool(a) and a == b
-        return a in b or b in a or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85
+        # A clip must carry most of the wanted name: "Alliance" alone matched
+        # Alliance Mobilization and so any clipped "Alliance ..." tab (review, 2026-09-15).
+        return (a in b or (b in a and len(b) >= 0.6 * len(a))
+                or difflib.SequenceMatcher(None, a, b).ratio() >= 0.85)
 
     def _walk_strip(self, label, img, items, h, w, max_steps=32):
         """Tab strips (cart, Deals, Events): SCROLL the strip to find a named tab

@@ -281,8 +281,12 @@ def _missions(monkeypatch, tmp_path, opens_on):
                     _item("Growth", 400, 1670, 545, 1720), _item("Daily", 760, 1670, 860, 1720)]
 
     def fake_tapf(fx, fy):
-        if abs(fy - 0.89) < 0.03:
-            at["tab"] = "Growth" if fx < 0.5 else "Daily"
+        # Only a tap inside a tab's own box switches it (boxes in window fractions).
+        if abs(fy - 0.89) < 0.015:
+            if 0.31 <= fx <= 0.42:
+                at["tab"] = "Growth"
+            elif 0.59 <= fx <= 0.67:
+                at["tab"] = "Daily"
 
     sc = collect.Collector(str(tmp_path), dry_run=False, engine=Eng())
     _quiet(monkeypatch)
@@ -325,3 +329,37 @@ def test_alliance_monuments_gift_hop_lands_on_the_gift_icon():
         pytest.skip("local frames not present")
     _, fx, fy = _checklist("alliance_monuments")["path"][1]
     assert min(s._rgb(cv2.imread(frame), fx, fy)) > 190     # the gift's pale glyph, measured (221,221,221)
+
+
+def test_a_page_with_several_claims_is_emptied_although_each_claim_raises_an_overlay(tmp_path, monkeypatch):
+    """Review, 2026-09-15: every quest claim raises "Rewards / Tap anywhere to
+    exit", the press loop framed the overlay, found no Claim and stopped, so
+    growth_missions took one row per run however many were finished."""
+    rows = {"left": 3, "overlay": False}
+
+    class Eng:
+        def recognize(self, img):
+            if rows["overlay"]:
+                return [_item("Rewards", 500, 480, 780, 560), _item("Tap anywhere to exit", 450, 1740, 830, 1790)]
+            return [_item("Growth Missions", 460, 210, 830, 280)] + [
+                _item("Claim" if n < rows["left"] else "Go", 880, 520 + 240 * n, 1080, 590 + 240 * n) for n in range(4)]
+
+    sc = collect.Collector(str(tmp_path), dry_run=False, engine=Eng())
+    _quiet(monkeypatch)
+    monkeypatch.setattr(collect, "is_enabled", lambda img, box: True)
+
+    def fake_tap_item(img, it, extra=()):
+        if norm_text(it) == "claim":
+            rows["left"] -= 1
+            rows["overlay"] = True
+        elif "tap anywhere" in norm_text(it):
+            rows["overlay"] = False
+        return True
+
+    monkeypatch.setattr(sc, "tap_item", fake_tap_item)
+    presses, _ = sc._press_loop(_checklist("growth_missions"), gems_before=4295)
+    assert presses == 3 and rows["left"] == 0
+
+
+def norm_text(it):
+    return s.norm(it["text"])

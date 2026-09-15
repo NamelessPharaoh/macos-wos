@@ -309,7 +309,8 @@ def test_glyph_helpers_are_still_reachable_from_screen_after_the_split():
     readers and both skills import these from native.screen, so the re-export is
     part of the contract, not a convenience."""
     for name in ("_rgb", "_is_icy", "has_back_arrow", "has_modal_x", "has_dialog_x",
-                 "dialog_x_spot", "green_badges", "thumbs_up_badges", "DIALOG_X_SPOTS"):
+                 "dialog_x_spot", "green_badges", "thumbs_up_badges", "DIALOG_X_SPOTS",
+                 "band_moved", "is_selected_tab"):
         assert hasattr(s, name), name
     import native.glyphs as g
     assert s.dialog_x_spot is g.dialog_x_spot and s.DIALOG_X_SPOTS is g.DIALOG_X_SPOTS
@@ -457,3 +458,124 @@ def test_walk_strip_does_not_take_one_ignored_swipe_for_the_end(tmp_path, monkey
     img = np.zeros((1902, 1284, 3), dtype=np.uint8)
     assert sc._walk_strip("Hall of Heroes", img, Eng().recognize(img), 1902, 1284) is True
     assert all(swipes), "must keep walking forward, not turn round at the dropped drag"
+
+
+def test_enter_reads_a_fresh_frame_for_the_alternative_after_a_failed_walk(tmp_path, monkeypatch):
+    """Codex review, 2026-09-15: a strip walk that fails has scrolled the strip,
+    and enter() handed the NEXT alternative the frame from before the walk, so
+    its tap landed where the label used to be."""
+    import numpy as np
+    pos = {"i": 0}
+
+    class Eng:
+        def recognize(self, img):
+            return [_item("Regular Pack", 100 + 300 * pos["i"], 250, 350 + 300 * pos["i"], 300)]
+
+    def fake_swipe(fx0, fy0, fx1, fy1, ms=450):
+        pos["i"] = min(pos["i"] + 1, 1)             # moves once, then the strip is at its end
+
+    tapped = []
+    sc = s.Screen(str(tmp_path), dry_run=False, engine=Eng())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.drv, "swipef", fake_swipe)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+    monkeypatch.setattr(s.cv2, "imread", lambda path: np.zeros((1902, 1284, 3), dtype=np.uint8))
+    monkeypatch.setattr(sc, "tap_item", lambda img, it: tapped.append(it["box"][0]) or True)
+
+    assert sc.enter([("strip", "Nowhere Tab"), ("text", "Regular Pack")], ensure_home=False) is True
+    assert tapped == [400], "the text alternative must tap where the label is now"
+
+
+def _scan(tmp_path, monkeypatch, views, ok=lambda img, items: True, max_frames=12):
+    """A vertical view that shows views[k] after the k-th swipe (None: a dropped
+    drag, the view stays put). Frames are numpy arrays filled with the view id."""
+    import numpy as np
+    at, swipes = {"k": 0, "v": views[0]}, []
+
+    def fake_swipe(x0, y0, x1, y1, ms=450):
+        swipes.append((y0, y1))
+        at["k"] += 1
+        if at["k"] < len(views) and views[at["k"]] is not None:
+            at["v"] = views[at["k"]]
+
+    sc = s.Screen(str(tmp_path), dry_run=False, engine=type("E", (), {"recognize": lambda self, img: []})())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.drv, "swipe", fake_swipe)
+    monkeypatch.setattr(s.time, "sleep", lambda n: None)
+    monkeypatch.setattr(s.cv2, "imread", lambda path: np.full((1902, 1284, 3), at["v"], dtype=np.uint8))
+    seen = []
+    hit, complete = sc.scroll_scan("tree", lambda img, items, path: seen.append(int(img[0, 0, 0])),
+                                   lambda a, b: int(a[0, 0, 0]) != int(b[0, 0, 0]), ok, max_frames=max_frames)
+    return hit, complete, seen, swipes
+
+
+def test_scroll_scan_takes_two_still_frames_for_the_end(tmp_path, monkeypatch):
+    """One dropped drag is not the end of the view (the 2026-09-14 Deals lesson):
+    A, A(dropped), B, B(dropped), C, C, C -- the stall count resets on movement
+    and only two still frames in a row end the scan, which is then complete."""
+    hit, complete, seen, swipes = _scan(tmp_path, monkeypatch, [10, None, 20, None, 30, None, None])
+    assert (hit, complete) == (None, True)
+    assert seen == [10, 10, 20, 20, 30, 30, 30]
+    assert len(swipes) == 6, "no swipe after the frame that proved the end"
+
+
+def test_scroll_scan_reports_a_budget_run_out_as_incomplete_without_a_last_swipe(tmp_path, monkeypatch):
+    """A view still moving when the frames run out was NOT fully seen; saying
+    "nothing there" would repeat the 2026-09-15 tech miss. And a swipe after the
+    last frame moves the view without anyone looking at it."""
+    hit, complete, seen, swipes = _scan(tmp_path, monkeypatch, list(range(10, 200, 10)), max_frames=5)
+    assert (hit, complete) == (None, False)
+    assert len(seen) == 5 and len(swipes) == 4
+
+
+def test_scroll_scan_stops_at_a_frame_ok_rejects_before_swiping_again(tmp_path, monkeypatch):
+    """A drag the game takes as a tap opens a tech dialog, and the next drag
+    would start between its two Contribute buttons -- the left one costs gems.
+    A frame the caller rejects ends the scan, unlooked-at and incomplete."""
+    hit, complete, seen, swipes = _scan(tmp_path, monkeypatch, [10, 20, 99, 40],
+                                        ok=lambda img, items: int(img[0, 0, 0]) != 99)
+    assert (hit, complete) == (None, False)
+    assert seen == [10, 20] and len(swipes) == 2
+
+
+def test_scroll_scan_returns_what_look_found(tmp_path, monkeypatch):
+    import numpy as np
+    sc = s.Screen(str(tmp_path), dry_run=False, engine=type("E", (), {"recognize": lambda self, img: []})())
+    monkeypatch.setattr(s.drv, "shot", lambda path: None)
+    monkeypatch.setattr(s.drv, "swipe", lambda *a, **k: pytest.fail("found on the first frame, no swipe"))
+    monkeypatch.setattr(s.cv2, "imread", lambda path: np.zeros((1902, 1284, 3), dtype=np.uint8))
+    assert sc.scroll_scan("tree", lambda img, items, path: "badge", lambda a, b: True) == ("badge", True)
+
+
+def _tech_frames(*names):
+    import cv2
+    frames = os.path.join(REPO, "tests", "fixtures", "local", "frames")
+    if not all(os.path.exists(os.path.join(frames, n)) for n in names):
+        pytest.skip("local frames not present")
+    return [cv2.imread(os.path.join(frames, n)) for n in names]
+
+
+def test_band_moved_tells_a_swipe_from_a_still_tree():
+    """Alliance tech tree, 2026-09-15. Two captures of an unmoved tree differ by
+    0.00 (no animation on that page); the 39px nudge at the bottom of Growth by
+    7.5; a real half-page swipe on Territory by 15.6. OCR text was not used for
+    this because signature() drops every string with a digit and ignores where
+    a label sits, so different views can compare equal (Codex review)."""
+    from native import glyphs as g
+    a, b, nudged, top, swiped = _tech_frames("tech-growth-bottom-a.png", "tech-growth-bottom-b.png",
+                                             "tech-growth-nudged.png", "tech-territory-top.png",
+                                             "tech-territory-swiped.png")
+    assert g.band_moved(a, b, 0.27, 0.97) is False
+    assert g.band_moved(b, nudged, 0.27, 0.97) is True
+    assert g.band_moved(top, swiped, 0.27, 0.97) is True
+
+
+def test_is_selected_tab_reads_the_pale_tab():
+    """The selected tech tab is pale rgb(219,229,232), the others blue
+    rgb(118,158,211) -- measured on all three tabs, 2026-09-15. A tab tap the
+    game drops leaves the old tab pale."""
+    from native import glyphs as g
+    tabs = [(0.245, 0.248), (0.499, 0.25), (0.755, 0.242)]
+    for frame, chosen in zip(_tech_frames("tech-growth-bottom-a.png", "tech-territory-top.png",
+                                          "tech-battle-top.png"), range(3)):
+        assert [g.is_selected_tab(frame, *t) for t in tabs] == [n == chosen for n in range(3)]

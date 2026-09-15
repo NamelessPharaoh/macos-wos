@@ -84,8 +84,9 @@ def centre(box):
 # Pixel cues live in native/glyphs.py (see its docstring); re-exported here
 # because the readers and both skills import them from native.screen.
 from native.glyphs import (  # noqa: E402,F401
-    DIALOG_X_SPOTS, _is_dialog_glyph, _is_icy, _rgb, dialog_x_spot,
-    green_badges, has_back_arrow, has_dialog_x, has_modal_x, thumbs_up_badges)
+    DIALOG_X_SPOTS, _is_dialog_glyph, _is_icy, _rgb, band_moved, dialog_x_spot,
+    green_badges, has_back_arrow, has_dialog_x, has_modal_x, is_selected_tab, thumbs_up_badges)
+from native.scroll import ScrollMixin  # noqa: E402
 
 
 def _is_tab_label(text):
@@ -204,7 +205,7 @@ def signature(items):
 
 
 # ----------------------------------------------------------------------------- screen
-class Screen:
+class Screen(ScrollMixin):
     """Frames, logging, guarded taps and navigation. Runners subclass it."""
 
     def __init__(self, report_dir, dry_run=False, engine=None, never=()):
@@ -424,6 +425,10 @@ class Screen:
             if kind == "strip":
                 if self._walk_strip(alt[1], img, items, h, w):
                     return True
+                # The failed walk scrolled the strip: the next alternative must
+                # not tap where its label was before the walk (Codex, 2026-09-15).
+                img, items, _ = self.frame("enter")
+                h, w = img.shape[:2]
                 continue
             if kind == "row":
                 # The side panel prints each name twice: a section header at
@@ -559,19 +564,3 @@ class Screen:
             img, items, path = self.frame(tag)
             h, w = img.shape[:2]
 
-    def scroll_pages(self, tag, max_pages=40, fy_from=0.85, fy_to=0.35):
-        """Yield (img, items, path) per page of a vertical list, swiping up
-        between pages and stopping when the frame signature repeats (the end)."""
-        last_sig = None
-        for page in range(max_pages):
-            img, items, path = self.frame(f"{tag}-p{page}")
-            sig = signature(items)
-            if sig == last_sig:
-                return
-            last_sig = sig
-            yield img, items, path
-            if self.dry:
-                return
-            h, w = img.shape[:2]
-            drv.swipe(int(0.5 * w), int(fy_from * h), int(0.5 * w), int(fy_to * h), 600)
-            time.sleep(1.4)

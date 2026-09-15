@@ -107,6 +107,31 @@ def dialog_x_spot(img, blocked=()):
     return None
 
 
+BAND_MOVED_MIN = 2.0
+
+
+def band_moved(a, b, ymin, ymax):
+    """Did the view between ymin and ymax move from frame a to frame b?
+
+    Grey, area-averaged to 64x64, mean absolute difference. Measured on the
+    alliance tech tree, 2026-09-15: two captures of an unmoved tree 0.00 (the
+    page has no animation), the 39px nudge at the bottom of Growth 7.5, a real
+    half-page swipe 11.3-15.6. OCR text cannot answer this: signature() drops
+    every string with a digit and ignores where a label sits."""
+    h = a.shape[0]
+    y0, y1 = int(ymin * h), int(ymax * h)
+    small = [cv2.resize(cv2.cvtColor(f[y0:y1], cv2.COLOR_BGR2GRAY), (64, 64),
+                        interpolation=cv2.INTER_AREA).astype(np.float32) for f in (a, b)]
+    return bool(np.mean(np.abs(small[0] - small[1])) >= BAND_MOVED_MIN)
+
+
+def is_selected_tab(img, fx, fy):
+    """A selected page tab is pale, the others blue: rgb(219,229,232) against
+    rgb(118,158,211) on all three alliance tech tabs, 2026-09-15. Sampled 0.08
+    right of the tab's caption centre, off the caption's letters."""
+    return min(_rgb(img, fx + 0.08, fy)) > 190
+
+
 def green_badges(img, ymin=0.0, ymax=1.0):
     """Bright green blobs of badge size. Not specific: on Alliance → Tech this
     also returns the up-arrow and the chevrons in tech icons; thumbs_up_badges

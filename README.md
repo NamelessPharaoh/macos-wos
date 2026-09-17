@@ -19,6 +19,9 @@ got wrong, every review, decision, and finding — lives in
 
 ## Current state
 
+Protocol/MCP research has moved to the private [wos-mcp repository](https://github.com/NamelessPharaoh/wos-mcp).
+The local workspace is `/Users/melsawah1/Developer/wos-mcp`; captures and profile reports are kept there under ignored `logs/network/`.
+
 - **v1 daily loop verified live**: mail collected, gather deployed with an adaptive
   per-player node level, and an immediate re-run correctly skips on cooldown.
 - **Offline test suite**: `uv run pytest tests/ -q` → 146 passed. No emulator, no adb,

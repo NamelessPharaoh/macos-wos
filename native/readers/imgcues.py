@@ -34,8 +34,11 @@ def _clusters(img, band, lo, hi, amin, merge_dx):
     return clusters
 
 
-def hero_card_stars(img, band=(0.28, 0.66, 0.72, 0.72), full_area=2000):
-    """(full_stars, has_partial) from the star row of a hero detail card."""
+def hero_card_stars(img, band=(0.28, 0.66, 0.72, 0.72), full_area=2700):
+    """(full_stars, has_partial) from the star row of a hero detail card.
+
+    A full star is ~2986 px; a partial one grows ~495 px per step (1-5 of 6),
+    so step 5 is ~2469 px (2026-09-16 cards vs the op1801 star row)."""
     cl = _clusters(img, band, *CYAN, amin=150, merge_dx=0.08)
     full = sum(1 for _, a in cl if a >= full_area)
     partial = any(a < full_area for _, a in cl)

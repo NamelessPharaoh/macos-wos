@@ -649,3 +649,17 @@ def test_buildings_retries_the_handle_because_it_is_a_toggle():
         img = cv2.imread(p)
         got[tag] = buildings._panel_is_open(VisionEngine().recognize(img), *img.shape[:2])
     assert got == {"open": True, "closed": False, "wrong": False}
+
+
+def test_hero_card_star_at_step_five_is_not_full():
+    """Areas measured on 2026-09-16 cards against the op1801 star row: a full
+    star is ~2986 px, a partial one ~495 px per step, so step 5 is ~2469."""
+    import cv2
+    import numpy as np
+    from native.readers.imgcues import hero_card_stars
+    img = np.zeros((1902, 1284, 3), np.uint8)
+    cyan = cv2.cvtColor(np.uint8([[[90, 200, 230]]]), cv2.COLOR_HSV2BGR)[0][0].tolist()
+    for i, (w, h) in enumerate([(55, 54)] * 3 + [(50, 49)]):  # 2970 x3, then 2450
+        x, y = 420 + i * 110, 1290
+        cv2.rectangle(img, (x, y), (x + w - 1, y + h - 1), cyan, -1)
+    assert hero_card_stars(img) == (3, True)

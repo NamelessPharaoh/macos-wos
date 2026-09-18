@@ -4,6 +4,7 @@ Synthetic, account-free inputs shaped like `wos profile --out` and
 `wos hospital status`; every DB test uses its own tmp_path database.
 """
 import json
+from datetime import datetime
 
 import pytest
 
@@ -169,3 +170,60 @@ def test_main_needs_exactly_one_of_profile_or_heroes(tmp_path):
         cli_import.main(["--db", str(tmp_path / "x.sqlite")])
     with pytest.raises(SystemExit):
         cli_import.main(["--heroes", "r.json", "--hospital", "h.json", "--db", str(tmp_path / "x.sqlite")])
+
+
+# The wos CLI's store table, reduced to the columns the importer reads.
+_CLI_READS = ("CREATE TABLE cli_reads (id TEXT PRIMARY KEY, command TEXT, kind TEXT, player_id TEXT, "
+              "mode TEXT, finished_at TEXT, doc TEXT)")
+
+
+def _stored(conn, command, doc):
+    obs = doc["observation"]
+    read_id = f"{datetime.fromisoformat(obs['finished_at']).strftime('%Y%m%dT%H%M%SZ')}-{command.replace(' ', '-')}"
+    conn.execute(_CLI_READS.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS"))
+    conn.execute("INSERT INTO cli_reads VALUES (?, ?, 'read', ?, ?, ?, ?)",
+                 (read_id, command, str(obs["player_id"]), obs["mode"], obs["finished_at"], json.dumps(doc)))
+    conn.commit()
+    return read_id
+
+
+def test_from_db_matches_the_file_import(tmp_path):
+    files = model.connect(str(tmp_path / "files.sqlite"))
+    stored = model.connect(str(tmp_path / "stored.sqlite"))
+    for conn in (files, stored):
+        confirm_main(conn, "7")
+    by_file = cli_import.write(files, _profile(), "p.json", _hospital(), "h.json")
+    _stored(stored, "profile", _profile())
+    hospital_id = _stored(stored, "hospital status", _hospital())
+    by_db = cli_import.write_from_db(stored, "profile")
+    assert (by_db["snapshot_id"], by_db["doc"]) == (by_file["snapshot_id"], by_file["doc"])
+    frame = _field(stored, by_db["snapshot_id"], "economy.gems")["frame"]
+    assert frame == f"db:cli_reads/{hospital_id}"
+
+
+def test_from_db_leaves_out_a_hospital_read_from_another_moment(tmp_path):
+    conn = _conn(tmp_path)
+    confirm_main(conn, "7")
+    _stored(conn, "profile", _profile())
+    _stored(conn, "hospital status", _hospital(finished_at="2026-01-02T01:00:00+00:00"))
+    summary = cli_import.write_from_db(conn, "profile")
+    assert "economy" not in summary["doc"] or "gems" not in summary["doc"]["economy"]
+    assert summary["notes"][0].startswith("newest hospital read ")
+
+
+def test_from_db_heroes_and_refusals(tmp_path):
+    conn = _conn(tmp_path)
+    confirm_main(conn, "7")
+    with pytest.raises(cli_import.ImportRefused, match="cli_reads is missing"):
+        cli_import.write_from_db(conn, "heroes")
+    _stored(conn, "profile", _profile())
+    with pytest.raises(cli_import.ImportRefused, match="no stored live heroes read"):
+        cli_import.write_from_db(conn, "heroes")
+    _stored(conn, "heroes", _heroes())
+    summary = cli_import.write_from_db(conn, "heroes")
+    assert summary["snapshot_id"] == "20260103T000000Z"
+
+
+def test_main_from_db_excludes_file_inputs(tmp_path):
+    with pytest.raises(SystemExit):
+        cli_import.main(["--from-db", "profile", "--profile", "p.json", "--db", str(tmp_path / "x.sqlite")])

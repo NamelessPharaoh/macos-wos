@@ -4,6 +4,7 @@
     wos hospital status > H.json ─┴▶ build() ─▶ model.write_snapshot(source='wos-cli')
                                               ─▶ legacy db/players/<id>.json
     wos heroes --out R.json ──────▶ build_heroes() ─▶ its own snapshot at its read time
+    wos store: cli_reads ──(--from-db profile|heroes)──▶ the same build()/build_heroes() path
 
 The CLI reads the server's own values, so every mapped field is exact
 (method='protocol'). Only fields that mean the same thing as the screen
@@ -177,6 +178,38 @@ def write_heroes(conn, heroes, heroes_path):
     return summary
 
 
+def _stored(conn, command):
+    """(read id, doc) of the newest live `command` read the wos CLI stored, else None."""
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'cli_reads'").fetchone() is None:
+        raise ImportRefused("no stored wos CLI reads in this database (cli_reads is missing)")
+    row = conn.execute("SELECT id, doc FROM cli_reads WHERE command = ? AND kind = 'read' AND mode = 'live' "
+                       "ORDER BY id DESC LIMIT 1", (command,)).fetchone()
+    return (row["id"], json.loads(row["doc"])) if row else None
+
+
+def write_from_db(conn, what):
+    """Import the newest stored `what` ('profile' or 'heroes') read. A profile takes the newest
+    hospital read only when it is the same moment; otherwise gems and wounded carry."""
+    found = _stored(conn, what)
+    if found is None:
+        raise ImportRefused(f"no stored live {what} read")
+    read_id, doc = found
+    if what == "heroes":
+        return write_heroes(conn, doc, f"db:cli_reads/{read_id}")
+    notes, hospital, hospital_path = [], None, None
+    paired = _stored(conn, "hospital status")
+    if paired is not None:
+        _, profile_at = _observed(doc, "profile")
+        _, hospital_at = _observed(paired[1], "hospital")
+        if abs((hospital_at - profile_at).total_seconds()) <= HOSPITAL_WINDOW_S:
+            hospital, hospital_path = paired[1], f"db:cli_reads/{paired[0]}"
+        else:
+            notes.append(f"newest hospital read {paired[0]} is not the profile's moment; gems and wounded carry")
+    summary = write(conn, doc, f"db:cli_reads/{read_id}", hospital, hospital_path)
+    summary["notes"] = notes + summary["notes"]
+    return summary
+
+
 def _commit(conn, player, doc, prov, stamp, source_path, *, gems=None, power=None, sections_ok=()):
     from native.snapshot import derive_furnace, main_player_id, state_age_days
 
@@ -219,17 +252,23 @@ def main(argv=None):
     parser.add_argument("--profile", help="`wos profile --out` JSON")
     parser.add_argument("--heroes", help="`wos heroes --out` JSON, imported as its own snapshot")
     parser.add_argument("--hospital", help="`wos hospital status` JSON (gems, wounded)")
+    parser.add_argument("--from-db", choices=("profile", "heroes"), help="import the newest read the wos CLI stored in this database")
     parser.add_argument("--db", help="database path (default: WOS_DB_PATH or db/wos.sqlite)")
     parser.add_argument("--no-legacy", action="store_true", help="skip the db/players/<id>.json write-through")
     args = parser.parse_args(argv)
-    if bool(args.profile) == bool(args.heroes):
-        parser.error("give --profile (optionally with --hospital) or --heroes")
+    if args.from_db:
+        if args.profile or args.heroes or args.hospital:
+            parser.error("--from-db replaces --profile, --heroes and --hospital")
+    elif bool(args.profile) == bool(args.heroes):
+        parser.error("give --profile (optionally with --hospital), --heroes or --from-db")
     if args.hospital and not args.profile:
         parser.error("--hospital pairs with --profile")
 
     conn = model.connect(args.db)
     try:
-        if args.heroes:
+        if args.from_db:
+            summary = write_from_db(conn, args.from_db)
+        elif args.heroes:
             summary = write_heroes(conn, _load(args.heroes), args.heroes)
         else:
             summary = write(conn, _load(args.profile), args.profile,
@@ -238,7 +277,7 @@ def main(argv=None):
         print(f"refused: {exc}", file=sys.stderr)
         return 2
     notes = summary["notes"]
-    if not args.no_legacy and args.profile:
+    if not args.no_legacy and (args.profile or args.from_db == "profile"):
         from native.snapshot import write_through_profile
         summary["write_through"] = write_through_profile(conn, summary["player_id"], summary["doc"],
                                                          summary["snapshot_id"], notes)

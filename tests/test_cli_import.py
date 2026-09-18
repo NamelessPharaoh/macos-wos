@@ -224,6 +224,37 @@ def test_from_db_heroes_and_refusals(tmp_path):
     assert summary["snapshot_id"] == "20260103T000000Z"
 
 
+def test_from_db_profile_takes_a_same_moment_heroes_read_into_one_snapshot(tmp_path):
+    # One `wos snapshot` login: profile and heroes finish in the same second, so a
+    # second chief-sheet snapshot for heroes could never be newer.
+    conn = _conn(tmp_path)
+    confirm_main(conn, "7")
+    _stored(conn, "profile", _profile())
+    heroes_id = _stored(conn, "heroes", _heroes(finished_at="2026-01-02T00:00:00+00:00"))
+    summary = cli_import.write_from_db(conn, "profile")
+    sid = summary["snapshot_id"]
+    assert sid == "20260102T000000Z" and summary["doc"]["heroes"]["ling_xue"]["level"] == 71
+    sections = json.loads(conn.execute("SELECT sections FROM snapshots WHERE id = ?", (sid,)).fetchone()["sections"])
+    assert sections["heroes"] == "ok"
+    assert _field(conn, sid, "heroes.ling_xue.level")["frame"] == f"db:cli_reads/{heroes_id}"
+    assert model.latest_dynamic(conn, "7", "heroes")["heroes.ling_xue.level"]["value_num"] == 71
+
+
+def test_from_db_profile_leaves_out_a_heroes_read_from_another_moment(tmp_path):
+    conn = _conn(tmp_path)
+    confirm_main(conn, "7")
+    _stored(conn, "profile", _profile())
+    _stored(conn, "heroes", _heroes(finished_at="2026-01-03T00:00:00+00:00"))
+    summary = cli_import.write_from_db(conn, "profile")
+    assert "heroes" not in summary["doc"]
+    assert any(note.startswith("newest heroes read ") for note in summary["notes"])
+
+
+def test_heroes_from_another_player_are_refused():
+    with pytest.raises(cli_import.ImportRefused, match="different player"):
+        cli_import.build(_profile(), "p.json", heroes=_heroes(player_id=8), heroes_path="r.json")
+
+
 def test_main_from_db_excludes_file_inputs(tmp_path):
     with pytest.raises(SystemExit):
         cli_import.main(["--from-db", "profile", "--profile", "p.json", "--db", str(tmp_path / "x.sqlite")])

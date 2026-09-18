@@ -33,7 +33,7 @@ METHOD = "protocol"
 # rarity leaves tier/rank unwritten rather than guessed.
 RARITY_TIER = {"Rare": "blue", "Epic": "purple"}
 MAX_BASE_FURNACE = 30   # stove_lv above 30 is a Fire Crystal level whose encoding is unverified
-HOSPITAL_WINDOW_S = 600  # a hospital read further than this from the profile is another moment
+HOSPITAL_WINDOW_S = 600  # a hospital or heroes read further than this from the profile is another moment
 
 
 class ImportRefused(ValueError):
@@ -69,8 +69,11 @@ def _observed(data, label):
     return str(obs["player_id"]), stamp.astimezone(timezone.utc)
 
 
-def build(profile, profile_path, hospital=None, hospital_path=None):
-    """(player, doc, provenance, observed_at, gems, notes) from CLI outputs. Pure: no DB."""
+def build(profile, profile_path, hospital=None, hospital_path=None, heroes=None, heroes_path=None):
+    """(player, doc, provenance, observed_at, gems, notes) from CLI outputs. Pure: no DB.
+
+    A heroes read of the same login (one `wos snapshot`) joins the same snapshot: both finish in
+    the same second, so a separate heroes snapshot could never be newer."""
     player_id, observed_at = _observed(profile, "profile")
     if hospital is not None:
         hospital_player, hospital_at = _observed(hospital, "hospital")
@@ -80,6 +83,11 @@ def build(profile, profile_path, hospital=None, hospital_path=None):
         if gap > HOSPITAL_WINDOW_S:
             raise ImportRefused(f"hospital status is {gap:.0f} s from the profile read "
                                 f"(limit {HOSPITAL_WINDOW_S} s): not the same moment")
+    hero_doc = hero_prov = None
+    if heroes is not None:
+        hero_player, hero_doc, hero_prov, _ = build_heroes(heroes, heroes_path)
+        if hero_player["id"] != player_id:
+            raise ImportRefused("heroes read is for a different player than the profile")
 
     doc, prov, notes = {}, {}, []
     p = profile["profile"]
@@ -139,6 +147,10 @@ def build(profile, profile_path, hospital=None, hospital_path=None):
             total = sum(wounded.values())
             _put(doc, prov, "troops.wounded.value", total, json.dumps(wounded, sort_keys=True), hf)
 
+    if hero_doc is not None:
+        doc["heroes"] = hero_doc["heroes"]
+        prov.update(hero_prov)
+
     player = {"id": player_id, "name": p.get("name"), "state": p.get("state")}
     return player, doc, prov, observed_at, gems, notes
 
@@ -161,11 +173,13 @@ def build_heroes(heroes, heroes_path):
     return {"id": player_id}, doc, prov, observed_at
 
 
-def write(conn, profile, profile_path, hospital=None, hospital_path=None):
+def write(conn, profile, profile_path, hospital=None, hospital_path=None, heroes=None, heroes_path=None):
     """Validate against the sheet and write one snapshot. Returns a summary."""
-    player, doc, prov, stamp, gems, notes = build(profile, profile_path, hospital, hospital_path)
+    player, doc, prov, stamp, gems, notes = build(profile, profile_path, hospital, hospital_path,
+                                                  heroes, heroes_path)
     power = (doc.get("progress") or {}).get("power")
-    summary = _commit(conn, player, doc, prov, stamp, profile_path, gems=gems, power=power)
+    summary = _commit(conn, player, doc, prov, stamp, profile_path, gems=gems, power=power,
+                      sections_ok=("heroes",) if "heroes" in doc else ())
     summary["notes"] = notes
     return summary
 
@@ -187,25 +201,35 @@ def _stored(conn, command):
     return (row["id"], json.loads(row["doc"])) if row else None
 
 
+def _same_moment(conn, command, label, profile_at, notes, carries):
+    """(doc, provenance path) of the newest stored `command` read when it is the profile's moment;
+    otherwise (None, None) and a note saying what carries instead."""
+    found = _stored(conn, command)
+    if found is None:
+        return None, None
+    _, read_at = _observed(found[1], label)
+    if abs((read_at - profile_at).total_seconds()) <= HOSPITAL_WINDOW_S:
+        return found[1], f"db:cli_reads/{found[0]}"
+    notes.append(f"newest {label} read {found[0]} is not the profile's moment; {carries}")
+    return None, None
+
+
 def write_from_db(conn, what):
     """Import the newest stored `what` ('profile' or 'heroes') read. A profile takes the newest
-    hospital read only when it is the same moment; otherwise gems and wounded carry."""
+    hospital and heroes reads only when they are the same moment; otherwise those values carry."""
     found = _stored(conn, what)
     if found is None:
         raise ImportRefused(f"no stored live {what} read")
     read_id, doc = found
     if what == "heroes":
         return write_heroes(conn, doc, f"db:cli_reads/{read_id}")
-    notes, hospital, hospital_path = [], None, None
-    paired = _stored(conn, "hospital status")
-    if paired is not None:
-        _, profile_at = _observed(doc, "profile")
-        _, hospital_at = _observed(paired[1], "hospital")
-        if abs((hospital_at - profile_at).total_seconds()) <= HOSPITAL_WINDOW_S:
-            hospital, hospital_path = paired[1], f"db:cli_reads/{paired[0]}"
-        else:
-            notes.append(f"newest hospital read {paired[0]} is not the profile's moment; gems and wounded carry")
-    summary = write(conn, doc, f"db:cli_reads/{read_id}", hospital, hospital_path)
+    notes = []
+    _, profile_at = _observed(doc, "profile")
+    hospital, hospital_path = _same_moment(conn, "hospital status", "hospital", profile_at, notes,
+                                           "gems and wounded carry")
+    heroes, heroes_path = _same_moment(conn, "heroes", "heroes", profile_at, notes,
+                                       "import it with --from-db heroes")
+    summary = write(conn, doc, f"db:cli_reads/{read_id}", hospital, hospital_path, heroes, heroes_path)
     summary["notes"] = notes + summary["notes"]
     return summary
 

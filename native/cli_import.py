@@ -17,7 +17,7 @@ carry and --doctor never counts a CLI import as a failed reader.
 import argparse
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from native import model, schema
 
@@ -28,6 +28,7 @@ METHOD = "protocol"
 # rarity leaves tier/rank unwritten rather than guessed.
 RARITY_TIER = {"Rare": "blue", "Epic": "purple"}
 MAX_BASE_FURNACE = 30   # stove_lv above 30 is a Fire Crystal level whose encoding is unverified
+HOSPITAL_WINDOW_S = 600  # a hospital read further than this from the profile is another moment
 
 
 class ImportRefused(ValueError):
@@ -50,16 +51,32 @@ def _frame(file_path, evidence):
     return f"{file_path}#op{op}" if op is not None else str(file_path)
 
 
-def build(profile, profile_path, hospital=None, hospital_path=None):
-    """(player, doc, provenance, taken_at, gems) from CLI outputs. Pure: no DB."""
-    obs = profile.get("observation") or {}
+def _observed(data, label):
+    """(player id, UTC finished_at) of a live CLI observation, else ImportRefused."""
+    obs = data.get("observation") or {}
     if obs.get("mode") != "live":
-        raise ImportRefused(f"profile observation mode is {obs.get('mode')!r}, not 'live'")
-    player_id = str(obs["player_id"])
-    if hospital is not None and str((hospital.get("observation") or {}).get("player_id")) != player_id:
-        raise ImportRefused("hospital status is for a different player than the profile")
+        raise ImportRefused(f"{label} observation mode is {obs.get('mode')!r}, not 'live'")
+    if obs.get("player_id") is None or not obs.get("finished_at"):
+        raise ImportRefused(f"{label} observation has no player_id or finished_at")
+    stamp = datetime.fromisoformat(obs["finished_at"])
+    if stamp.tzinfo is None:
+        raise ImportRefused(f"{label} finished_at {obs['finished_at']!r} has no UTC offset")
+    return str(obs["player_id"]), stamp.astimezone(timezone.utc)
 
-    doc, prov = {}, {}
+
+def build(profile, profile_path, hospital=None, hospital_path=None):
+    """(player, doc, provenance, observed_at, gems, notes) from CLI outputs. Pure: no DB."""
+    player_id, observed_at = _observed(profile, "profile")
+    if hospital is not None:
+        hospital_player, hospital_at = _observed(hospital, "hospital")
+        if hospital_player != player_id:
+            raise ImportRefused("hospital status is for a different player than the profile")
+        gap = abs((hospital_at - observed_at).total_seconds())
+        if gap > HOSPITAL_WINDOW_S:
+            raise ImportRefused(f"hospital status is {gap:.0f} s from the profile read "
+                                f"(limit {HOSPITAL_WINDOW_S} s): not the same moment")
+
+    doc, prov, notes = {}, {}, []
     p = profile["profile"]
     pf = str(profile_path)
     _put(doc, prov, "identity.id", player_id, player_id, pf)
@@ -82,11 +99,15 @@ def build(profile, profile_path, hospital=None, hospital_path=None):
     for item in gear.get("items") or []:
         slot = item["slot"]
         raw = f"{item.get('rarity')} {item.get('stars')}* {item.get('name')}"
-        _put(doc, prov, f"gear.chief.{slot}.stars", item.get("stars"), raw, gf)
         tier = RARITY_TIER.get(item.get("rarity"))
-        if tier:
-            _put(doc, prov, f"gear.chief.{slot}.tier", tier, raw, gf)
-            _put(doc, prov, f"gear.chief.{slot}.rank", model.rank_of_tier(tier), raw, gf)
+        if tier is None:
+            # Stars restart on a tier-up: new stars under a carried old tier
+            # would read as a regression, so the slot is left whole.
+            notes.append(f"gear {slot}: rarity {item.get('rarity')!r} has no verified colour, slot not written")
+            continue
+        _put(doc, prov, f"gear.chief.{slot}.stars", item.get("stars"), raw, gf)
+        _put(doc, prov, f"gear.chief.{slot}.tier", tier, raw, gf)
+        _put(doc, prov, f"gear.chief.{slot}.rank", model.rank_of_tier(tier), raw, gf)
 
     al = profile.get("alliance") or {}
     info = al.get("alliance") or {}
@@ -105,27 +126,34 @@ def build(profile, profile_path, hospital=None, hospital_path=None):
         gems = hospital.get("gems")
         _put(doc, prov, "economy.gems", gems, str(gems), hf)
         wounded = hospital.get("wounded")
-        if wounded is not None:
+        if hospital.get("healing"):
+            # Troops in a running heal are outside `wounded`; whether the
+            # screen's Injured figure counts them is unverified.
+            notes.append("wounded not written: a heal was running during the read")
+        elif wounded is not None:
             total = sum(wounded.values())
             _put(doc, prov, "troops.wounded.value", total, json.dumps(wounded, sort_keys=True), hf)
 
     player = {"id": player_id, "name": p.get("name"), "state": p.get("state")}
-    return player, doc, prov, obs["finished_at"], gems
+    return player, doc, prov, observed_at, gems, notes
 
 
 def write(conn, profile, profile_path, hospital=None, hospital_path=None):
     """Validate against the sheet and write one snapshot. Returns a summary."""
     from native.snapshot import derive_furnace, main_player_id, state_age_days
 
-    player, doc, prov, taken_at, gems = build(profile, profile_path, hospital, hospital_path)
+    player, doc, prov, stamp, gems, notes = build(profile, profile_path, hospital, hospital_path)
     main = main_player_id(conn)
-    if main and str(main) != player["id"]:
+    if not main:
+        raise ImportRefused("no main account confirmed (snapshot.py --confirm-main ID)")
+    if str(main) != player["id"]:
         raise ImportRefused(f"player {player['id']} is not the confirmed main account {main}")
-    newest = conn.execute("SELECT MAX(taken_at) AS t FROM snapshots WHERE player_id = ?",
-                          (player["id"],)).fetchone()["t"]
-    stamp = datetime.fromisoformat(taken_at)
+    # The id is the observation's own UTC second (not new_snapshot_id's
+    # process clock), so history orders by when the server was read.
+    snapshot_id = stamp.strftime("%Y%m%dT%H%M%SZ")
     taken_at = stamp.isoformat().replace("+00:00", "Z")
-    if newest and model._parse_iso(newest) >= stamp:
+    newest = conn.execute("SELECT MAX(id) AS id FROM snapshots").fetchone()["id"]
+    if newest and snapshot_id <= newest:
         raise ImportRefused(f"observation {taken_at} is not newer than the latest snapshot {newest}")
 
     derive_furnace(doc, prov)
@@ -134,7 +162,6 @@ def write(conn, profile, profile_path, hospital=None, hospital_path=None):
         _put(doc, prov, "identity.state_age_days", age, str(age), None)
         prov["identity.state_age_days"]["method"] = "derived"
 
-    snapshot_id = model.new_snapshot_id(now=stamp)
     power = (doc.get("progress") or {}).get("power")
     sections = {name: "skipped" for name in schema.ALL_READERS}
     counts = model.write_snapshot(
@@ -143,7 +170,7 @@ def write(conn, profile, profile_path, hospital=None, hospital_path=None):
         gems_before=gems, gems_after=gems, power_before=power, power_after=power,
         power_rose=False, doc=doc, provenance=prov)
     return {"snapshot_id": snapshot_id, "taken_at": taken_at, "player_id": player["id"], "doc": doc,
-            "counts": counts}
+            "counts": counts, "notes": notes}
 
 
 def _load(path):
@@ -166,13 +193,12 @@ def main(argv=None):
     except ImportRefused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 2
-    notes = []
+    notes = summary["notes"]
     if not args.no_legacy:
         from native.snapshot import write_through_profile
         summary["write_through"] = write_through_profile(conn, summary["player_id"], summary["doc"],
                                                          summary["snapshot_id"], notes)
     summary.pop("doc")
-    summary["notes"] = notes
     print(json.dumps(summary, indent=2))
     return 0
 

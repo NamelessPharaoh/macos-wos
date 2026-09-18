@@ -126,7 +126,8 @@ def render_text(data):
                        f"{int(hv.get('power') or 0):>12,}")
     w = data["warnings"]
     out.append("\nWarnings")
-    bad = [f"  section {n}: {s}" for n, s in data["sections"].items() if s not in ("ok",)]
+    quiet = ("ok", "skipped") if (data["snapshot"] or {}).get("source") == "wos-cli" else ("ok",)
+    bad = [f"  section {n}: {s}" for n, s in data["sections"].items() if s not in quiet]
     out.extend(bad)
     for path, st, raw in w["rejected"]:
         out.append(f"  {path}: {st} (raw {raw!r})")
@@ -157,7 +158,9 @@ def doctor(conn, player_id, runs=3, kb_freshness=None):
     (A9) -- the same hint render_text prints, so a caller that only ever
     runs `doctor()` (not the full report) still sees a stale table.
     `kb_freshness` overrides the real `kb.freshness()` read, for tests."""
-    rows = conn.execute("SELECT id, sections FROM snapshots WHERE player_id = ? AND source != 'operator' "
+    # Only screen runs exercise readers; a wos-cli import skips them all.
+    rows = conn.execute("SELECT id, sections FROM snapshots WHERE player_id = ? "
+                        "AND source NOT IN ('operator', 'wos-cli') "
                         "ORDER BY id DESC LIMIT ?", (player_id, runs)).fetchall()
     if len(rows) < runs:
         return f"doctor: only {len(rows)} snapshot(s) so far, need {runs}"

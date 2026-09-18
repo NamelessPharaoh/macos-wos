@@ -6,6 +6,7 @@ Synthetic, account-free inputs shaped like `wos profile --out` and
 import pytest
 
 from native import cli_import, model
+from native.report import doctor
 from native.snapshot import confirm_main
 
 
@@ -27,9 +28,10 @@ def _profile(player_id=7, finished_at="2026-01-02T00:00:00+00:00", furnace=28, m
     }
 
 
-def _hospital(player_id=7):
-    return {"observation": {"player_id": player_id}, "gems": 9073,
-            "wounded": {"10900": 119, "30500": 4}, "resources": {"102": 5, "192": 50}}
+def _hospital(player_id=7, finished_at="2026-01-02T00:00:40+00:00", mode="live", healing=None):
+    return {"observation": {"mode": mode, "player_id": player_id, "finished_at": finished_at},
+            "gems": 9073, "wounded": {"10900": 119, "30500": 4}, "healing": healing,
+            "resources": {"102": 5, "192": 50}}
 
 
 def _conn(tmp_path):
@@ -41,7 +43,7 @@ def _field(conn, snapshot_id, path):
 
 
 def test_build_maps_same_meaning_fields_only():
-    player, doc, prov, _, gems = cli_import.build(_profile(), "p.json", _hospital(), "h.json")
+    player, doc, prov, _, gems, notes = cli_import.build(_profile(), "p.json", _hospital(), "h.json")
     flat = model.flatten(doc)
     assert player == {"id": "7", "name": "Bob", "state": 100}
     assert flat["progress.furnace.level"] == flat["city.buildings.furnace"] == 28
@@ -49,21 +51,36 @@ def test_build_maps_same_meaning_fields_only():
     assert flat["alliance.rank"] == "R4" and flat["alliance.state_rank"] == 3
     assert flat["troops.wounded.value"] == 123 and gems == flat["economy.gems"] == 9073
     assert (flat["gear.chief.pants.tier"], flat["gear.chief.pants.rank"], flat["gear.chief.pants.stars"]) == ("purple", 2, 0)
-    # an unverified rarity keeps its stars but never guesses a colour
-    assert flat["gear.chief.cane.stars"] == 1 and "gear.chief.cane.tier" not in flat
+    # an unverified rarity leaves the whole slot alone: fresh stars under a
+    # carried old tier would read as a regression
+    assert not any(p.startswith("gear.chief.cane.") for p in flat)
+    assert notes == ["gear cane: rarity 'Mythic' has no verified colour, slot not written"]
     # different meaning on the sheet: not mapped
     assert not any(p.startswith(("economy.resources.", "gear.charms.")) for p in flat)
     assert prov["gear.chief.pants.stars"]["frame"] == "p.json#op10476"
     assert all(v["method"] == "protocol" and v["exact"] == 1 for v in prov.values())
 
 
-def test_build_refusals_and_fire_crystal_furnace():
-    with pytest.raises(cli_import.ImportRefused):
-        cli_import.build(_profile(mode="offline"), "p.json")
-    with pytest.raises(cli_import.ImportRefused):
-        cli_import.build(_profile(), "p.json", _hospital(player_id=8), "h.json")
-    _, doc, _, _, _ = cli_import.build(_profile(furnace=31), "p.json")
+@pytest.mark.parametrize("profile, hospital, match", [
+    (_profile(mode="offline"), None, "profile observation mode"),
+    (_profile(finished_at=None), None, "no player_id or finished_at"),
+    (_profile(finished_at="2026-01-02T00:00:00"), None, "no UTC offset"),
+    (_profile(), _hospital(player_id=8), "different player"),
+    (_profile(), _hospital(mode="offline"), "hospital observation mode"),
+    (_profile(), _hospital(finished_at="2026-01-01T00:00:00+00:00"), "not the same moment"),
+])
+def test_build_refusals(profile, hospital, match):
+    with pytest.raises(cli_import.ImportRefused, match=match):
+        cli_import.build(profile, "p.json", hospital, "h.json")
+
+
+def test_build_skips_fire_crystal_furnace_and_wounded_mid_heal():
+    _, doc, _, observed_at, _, notes = cli_import.build(
+        _profile(furnace=31, finished_at="2026-01-02T04:00:00+04:00"), "p.json",
+        _hospital(healing={"soldiers": {"10900": 24}}), "h.json")
     assert "furnace" not in doc.get("progress", {})
+    assert "troops" not in doc and "a heal was running" in notes[-1]
+    assert observed_at.isoformat() == "2026-01-02T00:00:00+00:00"
 
 
 def test_write_carries_unmapped_and_accepts_tier_up_star_reset(tmp_path):
@@ -91,6 +108,8 @@ def test_write_carries_unmapped_and_accepts_tier_up_star_reset(tmp_path):
 
 def test_write_refuses_other_account_and_stale_observation(tmp_path):
     conn = _conn(tmp_path)
+    with pytest.raises(cli_import.ImportRefused, match="no main account"):
+        cli_import.write(conn, _profile(), "p.json")
     confirm_main(conn, "9")
     with pytest.raises(cli_import.ImportRefused, match="not the confirmed main"):
         cli_import.write(conn, _profile(), "p.json")
@@ -98,3 +117,11 @@ def test_write_refuses_other_account_and_stale_observation(tmp_path):
     cli_import.write(conn, _profile(), "p.json")
     with pytest.raises(cli_import.ImportRefused, match="not newer"):
         cli_import.write(conn, _profile(), "p.json")
+
+
+def test_imports_never_count_as_reader_runs_for_doctor(tmp_path):
+    conn = _conn(tmp_path)
+    confirm_main(conn, "7")
+    for second in ("00", "01", "02"):
+        cli_import.write(conn, _profile(finished_at=f"2026-01-02T00:00:{second}+00:00"), "p.json")
+    assert doctor(conn, "7", kb_freshness=[]).startswith("doctor: only 0 snapshot(s)")

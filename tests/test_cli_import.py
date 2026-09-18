@@ -3,6 +3,8 @@
 Synthetic, account-free inputs shaped like `wos profile --out` and
 `wos hospital status`; every DB test uses its own tmp_path database.
 """
+import json
+
 import pytest
 
 from native import cli_import, model
@@ -125,3 +127,45 @@ def test_imports_never_count_as_reader_runs_for_doctor(tmp_path):
     for second in ("00", "01", "02"):
         cli_import.write(conn, _profile(finished_at=f"2026-01-02T00:00:{second}+00:00"), "p.json")
     assert doctor(conn, "7", kb_freshness=[]).startswith("doctor: only 0 snapshot(s)")
+
+
+def _heroes(player_id=7, finished_at="2026-01-03T00:00:00+00:00", mode="live"):
+    return {"format": "wos-hero-roster-v1", "source": "live",
+            "observation": {"mode": mode, "player_id": player_id, "finished_at": finished_at},
+            "heroes": [{"id": 50007, "name": "Ling Xue", "rarity": "epic", "level": 71, "star_row": 23,
+                        "stars": 3, "star_step": 5, "exploration_skills": [3, 4, 3],
+                        "expedition_skills": [4, 3, None]}]}
+
+
+def test_build_heroes_maps_protocol_roster_and_refuses_offline_reads():
+    player, doc, prov, _ = cli_import.build_heroes(_heroes(), "r.json")
+    hero = doc["heroes"]["ling_xue"]
+    assert player == {"id": "7"}
+    assert (hero["level"], hero["stars"], hero["star_step"], hero["rarity"]) == (71, 3, 5, "epic")
+    assert (hero["exploration_skill_2"], hero["expedition_skill_1"]) == (4, 4)
+    assert "expedition_skill_3" not in hero  # not configured for this hero
+    assert prov["heroes.ling_xue.level"]["method"] == "protocol"
+    with pytest.raises(cli_import.ImportRefused, match="not 'live'"):
+        cli_import.build_heroes(_heroes(mode=None), "r.json")
+
+
+def test_write_heroes_is_its_own_snapshot_with_only_heroes_ok(tmp_path):
+    conn = _conn(tmp_path)
+    confirm_main(conn, "7")
+    cli_import.write(conn, _profile(), "p.json")
+    summary = cli_import.write_heroes(conn, _heroes(), "r.json")
+    sid = summary["snapshot_id"]
+    snap = conn.execute("SELECT * FROM snapshots WHERE id = ?", (sid,)).fetchone()
+    assert (sid, snap["source"]) == ("20260103T000000Z", "wos-cli")
+    sections = json.loads(snap["sections"])
+    assert sections["heroes"] == "ok" and {v for k, v in sections.items() if k != "heroes"} == {"skipped"}
+    assert _field(conn, sid, "progress.furnace.level")["status"] == "carried"
+    latest = model.latest_dynamic(conn, "7", "heroes")
+    assert latest["heroes.ling_xue.expedition_skill_1"]["value_num"] == 4
+
+
+def test_main_needs_exactly_one_of_profile_or_heroes(tmp_path):
+    with pytest.raises(SystemExit):
+        cli_import.main(["--db", str(tmp_path / "x.sqlite")])
+    with pytest.raises(SystemExit):
+        cli_import.main(["--heroes", "r.json", "--hospital", "h.json", "--db", str(tmp_path / "x.sqlite")])

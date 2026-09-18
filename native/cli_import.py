@@ -3,6 +3,7 @@
     wos profile --out P.json  ─┐
     wos hospital status > H.json ─┴▶ build() ─▶ model.write_snapshot(source='wos-cli')
                                               ─▶ legacy db/players/<id>.json
+    wos heroes --out R.json ──────▶ build_heroes() ─▶ its own snapshot at its read time
 
 The CLI reads the server's own values, so every mapped field is exact
 (method='protocol'). Only fields that mean the same thing as the screen
@@ -12,7 +13,10 @@ readers' are mapped; the rest carry forward:
   - charms are not mapped: the sheet stores the charm border colour rank, the
     protocol has the charm level.
 Every reader section is 'skipped' (no screen reader ran), so unmapped paths
-carry and --doctor never counts a CLI import as a failed reader.
+carry and --doctor never counts a CLI import as a failed reader. A heroes
+import marks only 'heroes' ok: hero paths are dynamic, so readers of the
+newest hero section see exactly the protocol roster (level, stars, star step,
+rarity and every skill level).
 """
 import argparse
 import json
@@ -138,11 +142,44 @@ def build(profile, profile_path, hospital=None, hospital_path=None):
     return player, doc, prov, observed_at, gems, notes
 
 
+def build_heroes(heroes, heroes_path):
+    """(player, doc, provenance, observed_at) from `wos heroes --out`. Pure: no DB."""
+    player_id, observed_at = _observed(heroes, "heroes")
+    rows = heroes.get("heroes")
+    if not rows:
+        raise ImportRefused("heroes read holds no heroes")
+    doc, prov, hf = {}, {}, str(heroes_path)
+    for hero in rows:
+        base = f"heroes.{model.slug(hero['name'])}"
+        raw = f"{hero['name']} (hero {hero['id']}, star row {hero['star_row']})"
+        for key in ("name", "level", "stars", "star_step", "rarity"):
+            _put(doc, prov, f"{base}.{key}", hero.get(key), raw, hf)
+        for kind in ("exploration", "expedition"):
+            for n, level in enumerate(hero.get(f"{kind}_skills") or [], 1):
+                _put(doc, prov, f"{base}.{kind}_skill_{n}", level, raw, hf)
+    return {"id": player_id}, doc, prov, observed_at
+
+
 def write(conn, profile, profile_path, hospital=None, hospital_path=None):
     """Validate against the sheet and write one snapshot. Returns a summary."""
+    player, doc, prov, stamp, gems, notes = build(profile, profile_path, hospital, hospital_path)
+    power = (doc.get("progress") or {}).get("power")
+    summary = _commit(conn, player, doc, prov, stamp, profile_path, gems=gems, power=power)
+    summary["notes"] = notes
+    return summary
+
+
+def write_heroes(conn, heroes, heroes_path):
+    """Write one heroes-only snapshot: section 'heroes' ok, the rest skipped and carried."""
+    player, doc, prov, stamp = build_heroes(heroes, heroes_path)
+    summary = _commit(conn, player, doc, prov, stamp, heroes_path, sections_ok=("heroes",))
+    summary["notes"] = []
+    return summary
+
+
+def _commit(conn, player, doc, prov, stamp, source_path, *, gems=None, power=None, sections_ok=()):
     from native.snapshot import derive_furnace, main_player_id, state_age_days
 
-    player, doc, prov, stamp, gems, notes = build(profile, profile_path, hospital, hospital_path)
     main = main_player_id(conn)
     if not main:
         raise ImportRefused("no main account confirmed (snapshot.py --confirm-main ID)")
@@ -162,15 +199,14 @@ def write(conn, profile, profile_path, hospital=None, hospital_path=None):
         _put(doc, prov, "identity.state_age_days", age, str(age), None)
         prov["identity.state_age_days"]["method"] = "derived"
 
-    power = (doc.get("progress") or {}).get("power")
-    sections = {name: "skipped" for name in schema.ALL_READERS}
+    sections = {name: "ok" if name in sections_ok else "skipped" for name in schema.ALL_READERS}
     counts = model.write_snapshot(
         conn, player=player, snapshot_id=snapshot_id, taken_at=taken_at, source=SOURCE,
-        run_dir=str(profile_path), status="ok", sections=sections, duration_s=None,
+        run_dir=str(source_path), status="ok", sections=sections, duration_s=None,
         gems_before=gems, gems_after=gems, power_before=power, power_after=power,
         power_rose=False, doc=doc, provenance=prov)
     return {"snapshot_id": snapshot_id, "taken_at": taken_at, "player_id": player["id"], "doc": doc,
-            "counts": counts, "notes": notes}
+            "counts": counts}
 
 
 def _load(path):
@@ -180,21 +216,29 @@ def _load(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Import live wos CLI output into the chief sheet")
-    parser.add_argument("--profile", required=True, help="`wos profile --out` JSON")
+    parser.add_argument("--profile", help="`wos profile --out` JSON")
+    parser.add_argument("--heroes", help="`wos heroes --out` JSON, imported as its own snapshot")
     parser.add_argument("--hospital", help="`wos hospital status` JSON (gems, wounded)")
     parser.add_argument("--db", help="database path (default: WOS_DB_PATH or db/wos.sqlite)")
     parser.add_argument("--no-legacy", action="store_true", help="skip the db/players/<id>.json write-through")
     args = parser.parse_args(argv)
+    if bool(args.profile) == bool(args.heroes):
+        parser.error("give --profile (optionally with --hospital) or --heroes")
+    if args.hospital and not args.profile:
+        parser.error("--hospital pairs with --profile")
 
     conn = model.connect(args.db)
     try:
-        summary = write(conn, _load(args.profile), args.profile,
-                        _load(args.hospital) if args.hospital else None, args.hospital)
+        if args.heroes:
+            summary = write_heroes(conn, _load(args.heroes), args.heroes)
+        else:
+            summary = write(conn, _load(args.profile), args.profile,
+                            _load(args.hospital) if args.hospital else None, args.hospital)
     except ImportRefused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 2
     notes = summary["notes"]
-    if not args.no_legacy:
+    if not args.no_legacy and args.profile:
         from native.snapshot import write_through_profile
         summary["write_through"] = write_through_profile(conn, summary["player_id"], summary["doc"],
                                                          summary["snapshot_id"], notes)

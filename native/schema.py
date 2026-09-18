@@ -104,7 +104,9 @@ GEAR_SLOTS = ("helmet", "watch", "jacket", "pants", "ring", "cane")
 for _slot in GEAR_SLOTS:
     _add(f"gear.chief.{_slot}.tier", "volatile", "text")
     _add(f"gear.chief.{_slot}.rank", "monotonic", "int")
-    _add(f"gear.chief.{_slot}.stars", "monotonic", "int")
+    # Stars restart at 0 when the piece moves up a tier (pants and ring went
+    # blue 3* -> purple 0* between 2026-09-16 and 09-18); rank guards regress.
+    _add(f"gear.chief.{_slot}.stars", "volatile", "int")
     for _charm in range(3):
         _add(f"gear.charms.{_slot}.{_charm}", "monotonic", "int")
 

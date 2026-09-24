@@ -1,9 +1,13 @@
 # Game knowledge base
 
-Tables the planner computes with. Every table but `items.json` is fetched
-from the web, not read from the game; the readers in `native/` verify rows
-against the screen (`verified_in_game`). `items.json` (below) is the one
-exception: it is built entirely from in-game backpack tooltips.
+Tables the planner computes with. The four required tables -- `buildings`,
+`troops`, `troop_stats`, `research` -- come from the game client's own
+config tables, via wos-mcp's `extract_knowledge` (see "Client-sourced
+tables" below), not from the web. `items.json` is built entirely from
+in-game backpack tooltips (see "Item catalogue" below). Only the optional
+`calendar` table and the gitignored local cross-checks (`knowledge/local/`,
+below) are fetched from the web. The readers in `native/` still verify
+rows against the screen (`verified_in_game`), whatever a table's source.
 
 | file | source | refresh |
 |---|---|---|
@@ -54,12 +58,15 @@ it still fetches and diffs against the wosnerds source and prints
 to overwrite it with the wosnerds fetch` -- unless `--replace-client-tables`
 is also passed.
 
-Required (fetched by a plain `refresh_knowledge.py` run, no `--table` given):
-`buildings`, `troops`, `troop_stats`, `research`. A failure on any of these
-ends the run with exit code 1 after every table has been attempted; this is
-still true even though `--write` on these tables now refuses to land
-without `--replace-client-tables` -- the diff and the exit code are
-unaffected by the guard.
+Required (fetched by a plain `refresh_knowledge.py` run, no `--table`
+given): `buildings`, `troops`, `troop_stats`, `research`. These are still
+the four tables `refresh_knowledge.py`'s `SOURCES` fetches from wosnerds
+for the cross-check diff -- not the source of truth for the committed
+files any more (see "Client-sourced tables" above) -- so a failure on any
+of these still ends the run with exit code 1 after every table has been
+attempted, and `--write` on them now refuses to land without
+`--replace-client-tables`; the diff and the exit code are unaffected by
+the guard.
 
 Optional (fetched only with `--table <name>`, a failure never changes the
 exit code): `calendar` (`wos-data` `data/calendar-data.json`) -- its five

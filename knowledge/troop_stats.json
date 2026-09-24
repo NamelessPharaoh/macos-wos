@@ -1,15 +1,25 @@
 {
   "_meta": {
-    "source_url": "https://raw.githubusercontent.com/wosnerdwarriors/wos-data/main/data/troop-stats.json",
-    "source_commit": "6ba9547c62ba",
-    "fetched_at": "2026-09-08T15:01:58Z",
-    "licence": "wosnerds.com: 'All data is free to copy and use'; no LICENSE file in the repo; treated as revocable, attribution kept in _meta",
-    "normaliser_version": 1
+    "source": "client-config",
+    "source_url": "decompiled Whiteout Survival client 1.33.9 config tables (1.33.9-304)",
+    "source_commit": "0ec6fc83c764",
+    "fetched_at": "2026-09-24T10:03:58Z",
+    "licence": "game client config tables, read from the owner's own installed client; the same numbers wosnerds publishes",
+    "normaliser_version": 2,
+    "client_version": "1.33.9",
+    "client_patch": "1.33.9-304",
+    "sources": [
+      "luapackage64/game_config_default_soldiers.lua",
+      "luapackage64/game_config_default_soldiers_starlv.lua",
+      "luapackage64/game_languages_local_en.lua",
+      "luapackage64/game_languages_ext_local_en.lua",
+      "luapatch64/game_languages_ext_local_en.lua"
+    ]
   },
   "stats": {
     "infantry": {
       "1-fc0": {
-        "name": "Rookie",
+        "name": "Rookie Infantry",
         "power": 3,
         "attack": 1,
         "defense": 4,
@@ -18,8 +28,108 @@
         "load": 108,
         "speed": 11
       },
+      "1-fc1": {
+        "name": "Rookie Infantry",
+        "power": 3,
+        "attack": 1,
+        "defense": 4,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc2": {
+        "name": "Rookie Infantry",
+        "power": 3,
+        "attack": 1,
+        "defense": 5,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc3": {
+        "name": "Rookie Infantry",
+        "power": 3,
+        "attack": 1,
+        "defense": 5,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc4": {
+        "name": "Rookie Infantry",
+        "power": 3,
+        "attack": 1,
+        "defense": 5,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc5": {
+        "name": "Rookie Infantry",
+        "power": 4,
+        "attack": 1,
+        "defense": 6,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc6": {
+        "name": "Rookie Infantry",
+        "power": 4,
+        "attack": 1,
+        "defense": 6,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc7": {
+        "name": "Rookie Infantry",
+        "power": 4,
+        "attack": 1,
+        "defense": 7,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc8": {
+        "name": "Rookie Infantry",
+        "power": 5,
+        "attack": 1,
+        "defense": 7,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc9": {
+        "name": "Rookie Infantry",
+        "power": 5,
+        "attack": 1,
+        "defense": 7,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc10": {
+        "name": "Rookie Infantry",
+        "power": 5,
+        "attack": 1,
+        "defense": 7,
+        "lethality": 1,
+        "health": 6,
+        "load": 108,
+        "speed": 11
+      },
       "2-fc0": {
-        "name": "Trained",
+        "name": "Trained Infantry",
         "power": 4,
         "attack": 2,
         "defense": 5,
@@ -28,8 +138,108 @@
         "load": 124,
         "speed": 11
       },
+      "2-fc1": {
+        "name": "Trained Infantry",
+        "power": 4,
+        "attack": 2,
+        "defense": 5,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc2": {
+        "name": "Trained Infantry",
+        "power": 4,
+        "attack": 2,
+        "defense": 6,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc3": {
+        "name": "Trained Infantry",
+        "power": 4,
+        "attack": 2,
+        "defense": 6,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc4": {
+        "name": "Trained Infantry",
+        "power": 4,
+        "attack": 2,
+        "defense": 6,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc5": {
+        "name": "Trained Infantry",
+        "power": 5,
+        "attack": 2,
+        "defense": 7,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc6": {
+        "name": "Trained Infantry",
+        "power": 5,
+        "attack": 2,
+        "defense": 7,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc7": {
+        "name": "Trained Infantry",
+        "power": 5,
+        "attack": 2,
+        "defense": 7,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc8": {
+        "name": "Trained Infantry",
+        "power": 6,
+        "attack": 2,
+        "defense": 8,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc9": {
+        "name": "Trained Infantry",
+        "power": 6,
+        "attack": 2,
+        "defense": 8,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc10": {
+        "name": "Trained Infantry",
+        "power": 6,
+        "attack": 2,
+        "defense": 8,
+        "lethality": 2,
+        "health": 7,
+        "load": 124,
+        "speed": 11
+      },
       "3-fc0": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 6,
         "attack": 3,
         "defense": 6,
@@ -38,218 +248,18 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc0": {
-        "name": "Vetern",
-        "power": 9,
-        "attack": 4,
-        "defense": 7,
-        "lethality": 4,
-        "health": 9,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc0": {
-        "name": "Hardy",
-        "power": 13,
-        "attack": 5,
-        "defense": 8,
-        "lethality": 5,
-        "health": 10,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc0": {
-        "name": "Heroic",
-        "power": 20,
-        "attack": 6,
-        "defense": 9,
-        "lethality": 6,
-        "health": 11,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc0": {
-        "name": "Brave",
-        "power": 28,
-        "attack": 7,
-        "defense": 10,
-        "lethality": 7,
-        "health": 12,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc0": {
-        "name": "Elite",
-        "power": 38,
-        "attack": 8,
-        "defense": 11,
-        "lethality": 8,
-        "health": 13,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc0": {
-        "name": "Supreme",
-        "power": 50,
-        "attack": 9,
-        "defense": 12,
-        "lethality": 9,
-        "health": 14,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc0": {
-        "name": "Apex",
-        "power": 66,
-        "attack": 10,
-        "defense": 13,
-        "lethality": 10,
-        "health": 15,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc0": {
-        "name": "Helios",
-        "power": 80,
-        "attack": 12,
-        "defense": 15,
-        "lethality": 12,
-        "health": 17,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc1": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 1,
-        "defense": 4,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc1": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 2,
-        "defense": 5,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc1": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 6,
         "attack": 3,
         "defense": 6,
         "lethality": 3,
         "health": 9,
         "load": 142,
-        "speed": 11
-      },
-      "4-fc1": {
-        "name": "Vetern",
-        "power": 10,
-        "attack": 4,
-        "defense": 8,
-        "lethality": 4,
-        "health": 10,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc1": {
-        "name": "Hardy",
-        "power": 14,
-        "attack": 6,
-        "defense": 9,
-        "lethality": 5,
-        "health": 11,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc1": {
-        "name": "Heroic",
-        "power": 21,
-        "attack": 7,
-        "defense": 10,
-        "lethality": 6,
-        "health": 12,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc1": {
-        "name": "Brave",
-        "power": 30,
-        "attack": 8,
-        "defense": 11,
-        "lethality": 7,
-        "health": 13,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc1": {
-        "name": "Elite",
-        "power": 41,
-        "attack": 9,
-        "defense": 12,
-        "lethality": 8,
-        "health": 14,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc1": {
-        "name": "Supreme",
-        "power": 54,
-        "attack": 10,
-        "defense": 13,
-        "lethality": 9,
-        "health": 15,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc1": {
-        "name": "Apex",
-        "power": 71,
-        "attack": 11,
-        "defense": 14,
-        "lethality": 10,
-        "health": 16,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc1": {
-        "name": "Helios",
-        "power": 86,
-        "attack": 13,
-        "defense": 16,
-        "lethality": 12,
-        "health": 18,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc2": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 1,
-        "defense": 5,
-        "lethality": 1,
-        "health": 7,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc2": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 2,
-        "defense": 6,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
         "speed": 11
       },
       "3-fc2": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 6,
         "attack": 3,
         "defense": 7,
@@ -258,108 +268,8 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc2": {
-        "name": "Vetern",
-        "power": 10,
-        "attack": 4,
-        "defense": 9,
-        "lethality": 4,
-        "health": 11,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc2": {
-        "name": "Hardy",
-        "power": 15,
-        "attack": 7,
-        "defense": 10,
-        "lethality": 6,
-        "health": 12,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc2": {
-        "name": "Heroic",
-        "power": 22,
-        "attack": 8,
-        "defense": 11,
-        "lethality": 7,
-        "health": 13,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc2": {
-        "name": "Brave",
-        "power": 32,
-        "attack": 9,
-        "defense": 13,
-        "lethality": 8,
-        "health": 14,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc2": {
-        "name": "Elite",
-        "power": 44,
-        "attack": 10,
-        "defense": 14,
-        "lethality": 9,
-        "health": 15,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc2": {
-        "name": "Supreme",
-        "power": 58,
-        "attack": 11,
-        "defense": 15,
-        "lethality": 10,
-        "health": 16,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc2": {
-        "name": "Apex",
-        "power": 76,
-        "attack": 12,
-        "defense": 16,
-        "lethality": 11,
-        "health": 17,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc2": {
-        "name": "Helios",
-        "power": 92,
-        "attack": 14,
-        "defense": 17,
-        "lethality": 13,
-        "health": 19,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc3": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 1,
-        "defense": 5,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc3": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 2,
-        "defense": 6,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc3": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 6,
         "attack": 3,
         "defense": 7,
@@ -368,108 +278,8 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc3": {
-        "name": "Vetern",
-        "power": 11,
-        "attack": 4,
-        "defense": 10,
-        "lethality": 4,
-        "health": 12,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc3": {
-        "name": "Hardy",
-        "power": 16,
-        "attack": 8,
-        "defense": 11,
-        "lethality": 7,
-        "health": 13,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc3": {
-        "name": "Heroic",
-        "power": 24,
-        "attack": 9,
-        "defense": 12,
-        "lethality": 8,
-        "health": 14,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc3": {
-        "name": "Brave",
-        "power": 34,
-        "attack": 10,
-        "defense": 14,
-        "lethality": 9,
-        "health": 15,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc3": {
-        "name": "Elite",
-        "power": 47,
-        "attack": 11,
-        "defense": 15,
-        "lethality": 10,
-        "health": 16,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc3": {
-        "name": "Supreme",
-        "power": 62,
-        "attack": 12,
-        "defense": 16,
-        "lethality": 11,
-        "health": 17,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc3": {
-        "name": "Apex",
-        "power": 83,
-        "attack": 13,
-        "defense": 17,
-        "lethality": 12,
-        "health": 18,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc3": {
-        "name": "Helios",
-        "power": 100,
-        "attack": 15,
-        "defense": 18,
-        "lethality": 14,
-        "health": 20,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc4": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 1,
-        "defense": 5,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc4": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 2,
-        "defense": 6,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc4": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 8,
         "attack": 3,
         "defense": 7,
@@ -478,218 +288,18 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc4": {
-        "name": "Vetern",
-        "power": 12,
-        "attack": 4,
-        "defense": 11,
-        "lethality": 4,
-        "health": 13,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc4": {
-        "name": "Hardy",
-        "power": 17,
-        "attack": 8,
-        "defense": 12,
-        "lethality": 8,
-        "health": 14,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc4": {
-        "name": "Heroic",
-        "power": 26,
-        "attack": 9,
-        "defense": 13,
-        "lethality": 9,
-        "health": 15,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc4": {
-        "name": "Brave",
-        "power": 37,
-        "attack": 10,
-        "defense": 15,
-        "lethality": 10,
-        "health": 16,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc4": {
-        "name": "Elite",
-        "power": 51,
-        "attack": 11,
-        "defense": 16,
-        "lethality": 11,
-        "health": 17,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc4": {
-        "name": "Supreme",
-        "power": 67,
-        "attack": 12,
-        "defense": 17,
-        "lethality": 12,
-        "health": 18,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc4": {
-        "name": "Apex",
-        "power": 88,
-        "attack": 13,
-        "defense": 18,
-        "lethality": 13,
-        "health": 19,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc4": {
-        "name": "Helios",
-        "power": 106,
-        "attack": 15,
-        "defense": 19,
-        "lethality": 15,
-        "health": 21,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc5": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 1,
-        "defense": 6,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc5": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 2,
-        "defense": 7,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc5": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 9,
         "attack": 3,
         "defense": 8,
         "lethality": 3,
         "health": 13,
         "load": 142,
-        "speed": 11
-      },
-      "4-fc5": {
-        "name": "Vetern",
-        "power": 13,
-        "attack": 4,
-        "defense": 12,
-        "lethality": 4,
-        "health": 14,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc5": {
-        "name": "Hardy",
-        "power": 18,
-        "attack": 9,
-        "defense": 13,
-        "lethality": 8,
-        "health": 15,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc5": {
-        "name": "Heroic",
-        "power": 28,
-        "attack": 10,
-        "defense": 14,
-        "lethality": 9,
-        "health": 16,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc5": {
-        "name": "Brave",
-        "power": 40,
-        "attack": 11,
-        "defense": 17,
-        "lethality": 10,
-        "health": 17,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc5": {
-        "name": "Elite",
-        "power": 54,
-        "attack": 12,
-        "defense": 18,
-        "lethality": 11,
-        "health": 18,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc5": {
-        "name": "Supreme",
-        "power": 72,
-        "attack": 13,
-        "defense": 19,
-        "lethality": 12,
-        "health": 19,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc5": {
-        "name": "Apex",
-        "power": 94,
-        "attack": 14,
-        "defense": 20,
-        "lethality": 13,
-        "health": 20,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc5": {
-        "name": "Helios",
-        "power": 114,
-        "attack": 16,
-        "defense": 22,
-        "lethality": 15,
-        "health": 22,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc6": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 1,
-        "defense": 6,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc6": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 2,
-        "defense": 7,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
         "speed": 11
       },
       "3-fc6": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 9,
         "attack": 3,
         "defense": 8,
@@ -698,108 +308,8 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc6": {
-        "name": "Vetern",
-        "power": 14,
-        "attack": 4,
-        "defense": 13,
-        "lethality": 4,
-        "health": 15,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc6": {
-        "name": "Hardy",
-        "power": 19,
-        "attack": 9,
-        "defense": 14,
-        "lethality": 8,
-        "health": 16,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc6": {
-        "name": "Heroic",
-        "power": 30,
-        "attack": 10,
-        "defense": 15,
-        "lethality": 9,
-        "health": 17,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc6": {
-        "name": "Brave",
-        "power": 43,
-        "attack": 11,
-        "defense": 18,
-        "lethality": 10,
-        "health": 18,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc6": {
-        "name": "Elite",
-        "power": 57,
-        "attack": 12,
-        "defense": 19,
-        "lethality": 11,
-        "health": 19,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc6": {
-        "name": "Supreme",
-        "power": 77,
-        "attack": 13,
-        "defense": 20,
-        "lethality": 12,
-        "health": 20,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc6": {
-        "name": "Apex",
-        "power": 99,
-        "attack": 14,
-        "defense": 21,
-        "lethality": 13,
-        "health": 21,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc6": {
-        "name": "Helios",
-        "power": 120,
-        "attack": 17,
-        "defense": 23,
-        "lethality": 16,
-        "health": 23,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc7": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 1,
-        "defense": 7,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc7": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 2,
-        "defense": 7,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc7": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 10,
         "attack": 3,
         "defense": 9,
@@ -808,218 +318,18 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc7": {
-        "name": "Vetern",
-        "power": 15,
-        "attack": 4,
-        "defense": 14,
-        "lethality": 4,
-        "health": 16,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc7": {
-        "name": "Hardy",
-        "power": 20,
-        "attack": 10,
-        "defense": 15,
-        "lethality": 9,
-        "health": 17,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc7": {
-        "name": "Heroic",
-        "power": 32,
-        "attack": 11,
-        "defense": 16,
-        "lethality": 10,
-        "health": 18,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc7": {
-        "name": "Brave",
-        "power": 46,
-        "attack": 12,
-        "defense": 19,
-        "lethality": 11,
-        "health": 19,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc7": {
-        "name": "Elite",
-        "power": 60,
-        "attack": 13,
-        "defense": 20,
-        "lethality": 12,
-        "health": 20,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc7": {
-        "name": "Supreme",
-        "power": 82,
-        "attack": 14,
-        "defense": 21,
-        "lethality": 13,
-        "health": 21,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc7": {
-        "name": "Apex",
-        "power": 104,
-        "attack": 15,
-        "defense": 22,
-        "lethality": 14,
-        "health": 22,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc7": {
-        "name": "Helios",
-        "power": 126,
-        "attack": 17,
-        "defense": 24,
-        "lethality": 16,
-        "health": 24,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc8": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 1,
-        "defense": 7,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc8": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 2,
-        "defense": 8,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc8": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 11,
         "attack": 3,
         "defense": 9,
         "lethality": 3,
         "health": 16,
         "load": 142,
-        "speed": 11
-      },
-      "4-fc8": {
-        "name": "Vetern",
-        "power": 16,
-        "attack": 4,
-        "defense": 15,
-        "lethality": 4,
-        "health": 17,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc8": {
-        "name": "Hardy",
-        "power": 21,
-        "attack": 10,
-        "defense": 16,
-        "lethality": 9,
-        "health": 18,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc8": {
-        "name": "Heroic",
-        "power": 34,
-        "attack": 11,
-        "defense": 17,
-        "lethality": 10,
-        "health": 19,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc8": {
-        "name": "Brave",
-        "power": 49,
-        "attack": 12,
-        "defense": 20,
-        "lethality": 11,
-        "health": 20,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc8": {
-        "name": "Elite",
-        "power": 63,
-        "attack": 13,
-        "defense": 21,
-        "lethality": 12,
-        "health": 21,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc8": {
-        "name": "Supreme",
-        "power": 87,
-        "attack": 14,
-        "defense": 22,
-        "lethality": 13,
-        "health": 22,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc8": {
-        "name": "Apex",
-        "power": 110,
-        "attack": 15,
-        "defense": 23,
-        "lethality": 15,
-        "health": 23,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc8": {
-        "name": "Helios",
-        "power": 135,
-        "attack": 18,
-        "defense": 25,
-        "lethality": 17,
-        "health": 25,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc9": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 1,
-        "defense": 7,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc9": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 2,
-        "defense": 8,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
         "speed": 11
       },
       "3-fc9": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 11,
         "attack": 3,
         "defense": 9,
@@ -1028,108 +338,8 @@
         "load": 142,
         "speed": 11
       },
-      "4-fc9": {
-        "name": "Vetern",
-        "power": 16,
-        "attack": 4,
-        "defense": 15,
-        "lethality": 4,
-        "health": 17,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc9": {
-        "name": "Hardy",
-        "power": 22,
-        "attack": 11,
-        "defense": 16,
-        "lethality": 10,
-        "health": 18,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc9": {
-        "name": "Heroic",
-        "power": 35,
-        "attack": 12,
-        "defense": 17,
-        "lethality": 11,
-        "health": 19,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc9": {
-        "name": "Brave",
-        "power": 51,
-        "attack": 13,
-        "defense": 22,
-        "lethality": 12,
-        "health": 21,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc9": {
-        "name": "Elite",
-        "power": 66,
-        "attack": 14,
-        "defense": 23,
-        "lethality": 13,
-        "health": 22,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc9": {
-        "name": "Supreme",
-        "power": 91,
-        "attack": 15,
-        "defense": 24,
-        "lethality": 14,
-        "health": 23,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc9": {
-        "name": "Apex",
-        "power": 115,
-        "attack": 16,
-        "defense": 25,
-        "lethality": 15,
-        "health": 24,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc9": {
-        "name": "Helios",
-        "power": 141,
-        "attack": 18,
-        "defense": 27,
-        "lethality": 17,
-        "health": 26,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc10": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 1,
-        "defense": 7,
-        "lethality": 1,
-        "health": 6,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc10": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 2,
-        "defense": 8,
-        "lethality": 2,
-        "health": 7,
-        "load": 124,
-        "speed": 11
-      },
       "3-fc10": {
-        "name": "Senior",
+        "name": "Senior Infantry",
         "power": 12,
         "attack": 3,
         "defense": 10,
@@ -1138,8 +348,108 @@
         "load": 142,
         "speed": 11
       },
+      "4-fc0": {
+        "name": "Veteran Infantry",
+        "power": 9,
+        "attack": 4,
+        "defense": 7,
+        "lethality": 4,
+        "health": 9,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc1": {
+        "name": "Veteran Infantry",
+        "power": 10,
+        "attack": 4,
+        "defense": 8,
+        "lethality": 4,
+        "health": 10,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc2": {
+        "name": "Veteran Infantry",
+        "power": 10,
+        "attack": 4,
+        "defense": 9,
+        "lethality": 4,
+        "health": 11,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc3": {
+        "name": "Veteran Infantry",
+        "power": 11,
+        "attack": 4,
+        "defense": 10,
+        "lethality": 4,
+        "health": 12,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc4": {
+        "name": "Veteran Infantry",
+        "power": 12,
+        "attack": 4,
+        "defense": 11,
+        "lethality": 4,
+        "health": 13,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc5": {
+        "name": "Veteran Infantry",
+        "power": 13,
+        "attack": 4,
+        "defense": 12,
+        "lethality": 4,
+        "health": 14,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc6": {
+        "name": "Veteran Infantry",
+        "power": 14,
+        "attack": 4,
+        "defense": 13,
+        "lethality": 4,
+        "health": 15,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc7": {
+        "name": "Veteran Infantry",
+        "power": 15,
+        "attack": 4,
+        "defense": 14,
+        "lethality": 4,
+        "health": 16,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc8": {
+        "name": "Veteran Infantry",
+        "power": 16,
+        "attack": 4,
+        "defense": 15,
+        "lethality": 4,
+        "health": 17,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc9": {
+        "name": "Veteran Infantry",
+        "power": 16,
+        "attack": 4,
+        "defense": 15,
+        "lethality": 4,
+        "health": 17,
+        "load": 164,
+        "speed": 11
+      },
       "4-fc10": {
-        "name": "Vetern",
+        "name": "Veteran Infantry",
         "power": 17,
         "attack": 4,
         "defense": 16,
@@ -1148,8 +458,108 @@
         "load": 164,
         "speed": 11
       },
+      "5-fc0": {
+        "name": "Hardy Infantry",
+        "power": 13,
+        "attack": 5,
+        "defense": 8,
+        "lethality": 5,
+        "health": 10,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc1": {
+        "name": "Hardy Infantry",
+        "power": 14,
+        "attack": 6,
+        "defense": 9,
+        "lethality": 5,
+        "health": 11,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc2": {
+        "name": "Hardy Infantry",
+        "power": 15,
+        "attack": 7,
+        "defense": 10,
+        "lethality": 6,
+        "health": 12,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc3": {
+        "name": "Hardy Infantry",
+        "power": 16,
+        "attack": 8,
+        "defense": 11,
+        "lethality": 7,
+        "health": 13,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc4": {
+        "name": "Hardy Infantry",
+        "power": 17,
+        "attack": 8,
+        "defense": 12,
+        "lethality": 8,
+        "health": 14,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc5": {
+        "name": "Hardy Infantry",
+        "power": 18,
+        "attack": 9,
+        "defense": 13,
+        "lethality": 8,
+        "health": 15,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc6": {
+        "name": "Hardy Infantry",
+        "power": 19,
+        "attack": 9,
+        "defense": 14,
+        "lethality": 8,
+        "health": 16,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc7": {
+        "name": "Hardy Infantry",
+        "power": 20,
+        "attack": 10,
+        "defense": 15,
+        "lethality": 9,
+        "health": 17,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc8": {
+        "name": "Hardy Infantry",
+        "power": 21,
+        "attack": 10,
+        "defense": 16,
+        "lethality": 9,
+        "health": 18,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc9": {
+        "name": "Hardy Infantry",
+        "power": 22,
+        "attack": 11,
+        "defense": 16,
+        "lethality": 10,
+        "health": 18,
+        "load": 188,
+        "speed": 11
+      },
       "5-fc10": {
-        "name": "Hardy",
+        "name": "Hardy Infantry",
         "power": 23,
         "attack": 12,
         "defense": 17,
@@ -1158,8 +568,108 @@
         "load": 188,
         "speed": 11
       },
+      "6-fc0": {
+        "name": "Heroic Infantry",
+        "power": 20,
+        "attack": 6,
+        "defense": 9,
+        "lethality": 6,
+        "health": 11,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc1": {
+        "name": "Heroic Infantry",
+        "power": 21,
+        "attack": 7,
+        "defense": 10,
+        "lethality": 6,
+        "health": 12,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc2": {
+        "name": "Heroic Infantry",
+        "power": 22,
+        "attack": 8,
+        "defense": 11,
+        "lethality": 7,
+        "health": 13,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc3": {
+        "name": "Heroic Infantry",
+        "power": 24,
+        "attack": 9,
+        "defense": 12,
+        "lethality": 8,
+        "health": 14,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc4": {
+        "name": "Heroic Infantry",
+        "power": 26,
+        "attack": 9,
+        "defense": 13,
+        "lethality": 9,
+        "health": 15,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc5": {
+        "name": "Heroic Infantry",
+        "power": 28,
+        "attack": 10,
+        "defense": 14,
+        "lethality": 9,
+        "health": 16,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc6": {
+        "name": "Heroic Infantry",
+        "power": 30,
+        "attack": 10,
+        "defense": 15,
+        "lethality": 9,
+        "health": 17,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc7": {
+        "name": "Heroic Infantry",
+        "power": 32,
+        "attack": 11,
+        "defense": 16,
+        "lethality": 10,
+        "health": 18,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc8": {
+        "name": "Heroic Infantry",
+        "power": 34,
+        "attack": 11,
+        "defense": 17,
+        "lethality": 10,
+        "health": 19,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc9": {
+        "name": "Heroic Infantry",
+        "power": 35,
+        "attack": 12,
+        "defense": 17,
+        "lethality": 11,
+        "health": 19,
+        "load": 217,
+        "speed": 11
+      },
       "6-fc10": {
-        "name": "Heroic",
+        "name": "Heroic Infantry",
         "power": 37,
         "attack": 13,
         "defense": 19,
@@ -1168,8 +678,108 @@
         "load": 217,
         "speed": 11
       },
+      "7-fc0": {
+        "name": "Brave Infantry",
+        "power": 28,
+        "attack": 7,
+        "defense": 10,
+        "lethality": 7,
+        "health": 12,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc1": {
+        "name": "Brave Infantry",
+        "power": 30,
+        "attack": 8,
+        "defense": 11,
+        "lethality": 7,
+        "health": 13,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc2": {
+        "name": "Brave Infantry",
+        "power": 32,
+        "attack": 9,
+        "defense": 13,
+        "lethality": 8,
+        "health": 14,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc3": {
+        "name": "Brave Infantry",
+        "power": 34,
+        "attack": 10,
+        "defense": 14,
+        "lethality": 9,
+        "health": 15,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc4": {
+        "name": "Brave Infantry",
+        "power": 37,
+        "attack": 10,
+        "defense": 15,
+        "lethality": 10,
+        "health": 16,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc5": {
+        "name": "Brave Infantry",
+        "power": 40,
+        "attack": 11,
+        "defense": 17,
+        "lethality": 10,
+        "health": 17,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc6": {
+        "name": "Brave Infantry",
+        "power": 43,
+        "attack": 11,
+        "defense": 18,
+        "lethality": 10,
+        "health": 18,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc7": {
+        "name": "Brave Infantry",
+        "power": 46,
+        "attack": 12,
+        "defense": 19,
+        "lethality": 11,
+        "health": 19,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc8": {
+        "name": "Brave Infantry",
+        "power": 49,
+        "attack": 12,
+        "defense": 20,
+        "lethality": 11,
+        "health": 20,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc9": {
+        "name": "Brave Infantry",
+        "power": 51,
+        "attack": 13,
+        "defense": 22,
+        "lethality": 12,
+        "health": 21,
+        "load": 249,
+        "speed": 11
+      },
       "7-fc10": {
-        "name": "Brave",
+        "name": "Brave Infantry",
         "power": 54,
         "attack": 14,
         "defense": 23,
@@ -1178,8 +788,108 @@
         "load": 249,
         "speed": 11
       },
+      "8-fc0": {
+        "name": "Elite Infantry",
+        "power": 38,
+        "attack": 8,
+        "defense": 11,
+        "lethality": 8,
+        "health": 13,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc1": {
+        "name": "Elite Infantry",
+        "power": 41,
+        "attack": 9,
+        "defense": 12,
+        "lethality": 8,
+        "health": 14,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc2": {
+        "name": "Elite Infantry",
+        "power": 44,
+        "attack": 10,
+        "defense": 14,
+        "lethality": 9,
+        "health": 15,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc3": {
+        "name": "Elite Infantry",
+        "power": 47,
+        "attack": 11,
+        "defense": 15,
+        "lethality": 10,
+        "health": 16,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc4": {
+        "name": "Elite Infantry",
+        "power": 51,
+        "attack": 11,
+        "defense": 16,
+        "lethality": 11,
+        "health": 17,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc5": {
+        "name": "Elite Infantry",
+        "power": 54,
+        "attack": 12,
+        "defense": 18,
+        "lethality": 11,
+        "health": 18,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc6": {
+        "name": "Elite Infantry",
+        "power": 57,
+        "attack": 12,
+        "defense": 19,
+        "lethality": 11,
+        "health": 19,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc7": {
+        "name": "Elite Infantry",
+        "power": 60,
+        "attack": 13,
+        "defense": 20,
+        "lethality": 12,
+        "health": 20,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc8": {
+        "name": "Elite Infantry",
+        "power": 63,
+        "attack": 13,
+        "defense": 21,
+        "lethality": 12,
+        "health": 21,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc9": {
+        "name": "Elite Infantry",
+        "power": 66,
+        "attack": 14,
+        "defense": 23,
+        "lethality": 13,
+        "health": 22,
+        "load": 287,
+        "speed": 11
+      },
       "8-fc10": {
-        "name": "Elite",
+        "name": "Elite Infantry",
         "power": 69,
         "attack": 15,
         "defense": 24,
@@ -1188,8 +898,108 @@
         "load": 287,
         "speed": 11
       },
+      "9-fc0": {
+        "name": "Supreme Infantry",
+        "power": 50,
+        "attack": 9,
+        "defense": 12,
+        "lethality": 9,
+        "health": 14,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc1": {
+        "name": "Supreme Infantry",
+        "power": 54,
+        "attack": 10,
+        "defense": 13,
+        "lethality": 9,
+        "health": 15,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc2": {
+        "name": "Supreme Infantry",
+        "power": 58,
+        "attack": 11,
+        "defense": 15,
+        "lethality": 10,
+        "health": 16,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc3": {
+        "name": "Supreme Infantry",
+        "power": 62,
+        "attack": 12,
+        "defense": 16,
+        "lethality": 11,
+        "health": 17,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc4": {
+        "name": "Supreme Infantry",
+        "power": 67,
+        "attack": 12,
+        "defense": 17,
+        "lethality": 12,
+        "health": 18,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc5": {
+        "name": "Supreme Infantry",
+        "power": 72,
+        "attack": 13,
+        "defense": 19,
+        "lethality": 12,
+        "health": 19,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc6": {
+        "name": "Supreme Infantry",
+        "power": 77,
+        "attack": 13,
+        "defense": 20,
+        "lethality": 12,
+        "health": 20,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc7": {
+        "name": "Supreme Infantry",
+        "power": 82,
+        "attack": 14,
+        "defense": 21,
+        "lethality": 13,
+        "health": 21,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc8": {
+        "name": "Supreme Infantry",
+        "power": 87,
+        "attack": 14,
+        "defense": 22,
+        "lethality": 13,
+        "health": 22,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc9": {
+        "name": "Supreme Infantry",
+        "power": 91,
+        "attack": 15,
+        "defense": 24,
+        "lethality": 14,
+        "health": 23,
+        "load": 330,
+        "speed": 11
+      },
       "9-fc10": {
-        "name": "Supreme",
+        "name": "Supreme Infantry",
         "power": 95,
         "attack": 16,
         "defense": 25,
@@ -1198,8 +1008,108 @@
         "load": 330,
         "speed": 11
       },
+      "10-fc0": {
+        "name": "Apex Infantry",
+        "power": 66,
+        "attack": 10,
+        "defense": 13,
+        "lethality": 10,
+        "health": 15,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc1": {
+        "name": "Apex Infantry",
+        "power": 71,
+        "attack": 11,
+        "defense": 14,
+        "lethality": 10,
+        "health": 16,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc2": {
+        "name": "Apex Infantry",
+        "power": 76,
+        "attack": 12,
+        "defense": 16,
+        "lethality": 11,
+        "health": 17,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc3": {
+        "name": "Apex Infantry",
+        "power": 83,
+        "attack": 13,
+        "defense": 17,
+        "lethality": 12,
+        "health": 18,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc4": {
+        "name": "Apex Infantry",
+        "power": 88,
+        "attack": 13,
+        "defense": 18,
+        "lethality": 13,
+        "health": 19,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc5": {
+        "name": "Apex Infantry",
+        "power": 94,
+        "attack": 14,
+        "defense": 20,
+        "lethality": 13,
+        "health": 20,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc6": {
+        "name": "Apex Infantry",
+        "power": 99,
+        "attack": 14,
+        "defense": 21,
+        "lethality": 13,
+        "health": 21,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc7": {
+        "name": "Apex Infantry",
+        "power": 104,
+        "attack": 15,
+        "defense": 22,
+        "lethality": 14,
+        "health": 22,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc8": {
+        "name": "Apex Infantry",
+        "power": 110,
+        "attack": 15,
+        "defense": 23,
+        "lethality": 15,
+        "health": 23,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc9": {
+        "name": "Apex Infantry",
+        "power": 115,
+        "attack": 16,
+        "defense": 25,
+        "lethality": 15,
+        "health": 24,
+        "load": 379,
+        "speed": 11
+      },
       "10-fc10": {
-        "name": "Apex",
+        "name": "Apex Infantry",
         "power": 121,
         "attack": 18,
         "defense": 26,
@@ -1208,8 +1118,108 @@
         "load": 379,
         "speed": 11
       },
+      "11-fc0": {
+        "name": "Helios Infantry",
+        "power": 80,
+        "attack": 12,
+        "defense": 15,
+        "lethality": 12,
+        "health": 17,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc1": {
+        "name": "Helios Infantry",
+        "power": 86,
+        "attack": 13,
+        "defense": 16,
+        "lethality": 12,
+        "health": 18,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc2": {
+        "name": "Helios Infantry",
+        "power": 92,
+        "attack": 14,
+        "defense": 17,
+        "lethality": 13,
+        "health": 19,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc3": {
+        "name": "Helios Infantry",
+        "power": 100,
+        "attack": 15,
+        "defense": 18,
+        "lethality": 14,
+        "health": 20,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc4": {
+        "name": "Helios Infantry",
+        "power": 106,
+        "attack": 15,
+        "defense": 19,
+        "lethality": 15,
+        "health": 21,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc5": {
+        "name": "Helios Infantry",
+        "power": 114,
+        "attack": 16,
+        "defense": 22,
+        "lethality": 15,
+        "health": 22,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc6": {
+        "name": "Helios Infantry",
+        "power": 120,
+        "attack": 17,
+        "defense": 23,
+        "lethality": 16,
+        "health": 23,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc7": {
+        "name": "Helios Infantry",
+        "power": 126,
+        "attack": 17,
+        "defense": 24,
+        "lethality": 16,
+        "health": 24,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc8": {
+        "name": "Helios Infantry",
+        "power": 135,
+        "attack": 18,
+        "defense": 25,
+        "lethality": 17,
+        "health": 25,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc9": {
+        "name": "Helios Infantry",
+        "power": 141,
+        "attack": 18,
+        "defense": 27,
+        "lethality": 17,
+        "health": 26,
+        "load": 400,
+        "speed": 11
+      },
       "11-fc10": {
-        "name": "Helios",
+        "name": "Helios Infantry",
         "power": 148,
         "attack": 19,
         "defense": 28,
@@ -1217,11 +1227,121 @@
         "health": 27,
         "load": 400,
         "speed": 11
+      },
+      "12-fc0": {
+        "name": "Exalted Infantry",
+        "power": 96,
+        "attack": 15,
+        "defense": 18,
+        "lethality": 15,
+        "health": 20,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc1": {
+        "name": "Exalted Infantry",
+        "power": 103,
+        "attack": 16,
+        "defense": 19,
+        "lethality": 15,
+        "health": 21,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc2": {
+        "name": "Exalted Infantry",
+        "power": 110,
+        "attack": 17,
+        "defense": 20,
+        "lethality": 16,
+        "health": 22,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc3": {
+        "name": "Exalted Infantry",
+        "power": 120,
+        "attack": 18,
+        "defense": 21,
+        "lethality": 17,
+        "health": 23,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc4": {
+        "name": "Exalted Infantry",
+        "power": 127,
+        "attack": 18,
+        "defense": 22,
+        "lethality": 18,
+        "health": 24,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc5": {
+        "name": "Exalted Infantry",
+        "power": 137,
+        "attack": 19,
+        "defense": 25,
+        "lethality": 18,
+        "health": 25,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc6": {
+        "name": "Exalted Infantry",
+        "power": 145,
+        "attack": 20,
+        "defense": 26,
+        "lethality": 19,
+        "health": 26,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc7": {
+        "name": "Exalted Infantry",
+        "power": 154,
+        "attack": 20,
+        "defense": 27,
+        "lethality": 19,
+        "health": 27,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc8": {
+        "name": "Exalted Infantry",
+        "power": 162,
+        "attack": 21,
+        "defense": 28,
+        "lethality": 20,
+        "health": 28,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc9": {
+        "name": "Exalted Infantry",
+        "power": 170,
+        "attack": 21,
+        "defense": 30,
+        "lethality": 20,
+        "health": 29,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc10": {
+        "name": "Exalted Infantry",
+        "power": 178,
+        "attack": 22,
+        "defense": 31,
+        "lethality": 21,
+        "health": 30,
+        "load": 420,
+        "speed": 11
       }
     },
     "lancer": {
       "1-fc0": {
-        "name": "Rookie",
+        "name": "Rookie Lancer",
         "power": 3,
         "attack": 4,
         "defense": 2,
@@ -1230,8 +1350,108 @@
         "load": 108,
         "speed": 11
       },
+      "1-fc1": {
+        "name": "Rookie Lancer",
+        "power": 3,
+        "attack": 4,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc2": {
+        "name": "Rookie Lancer",
+        "power": 3,
+        "attack": 5,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc3": {
+        "name": "Rookie Lancer",
+        "power": 3,
+        "attack": 5,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc4": {
+        "name": "Rookie Lancer",
+        "power": 3,
+        "attack": 5,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc5": {
+        "name": "Rookie Lancer",
+        "power": 4,
+        "attack": 6,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc6": {
+        "name": "Rookie Lancer",
+        "power": 4,
+        "attack": 6,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc7": {
+        "name": "Rookie Lancer",
+        "power": 4,
+        "attack": 6,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc8": {
+        "name": "Rookie Lancer",
+        "power": 5,
+        "attack": 7,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc9": {
+        "name": "Rookie Lancer",
+        "power": 5,
+        "attack": 7,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc10": {
+        "name": "Rookie Lancer",
+        "power": 5,
+        "attack": 7,
+        "defense": 2,
+        "lethality": 5,
+        "health": 2,
+        "load": 108,
+        "speed": 11
+      },
       "2-fc0": {
-        "name": "Trained",
+        "name": "Trained Lancer",
         "power": 4,
         "attack": 5,
         "defense": 3,
@@ -1240,8 +1460,108 @@
         "load": 124,
         "speed": 11
       },
+      "2-fc1": {
+        "name": "Trained Lancer",
+        "power": 4,
+        "attack": 5,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc2": {
+        "name": "Trained Lancer",
+        "power": 4,
+        "attack": 6,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc3": {
+        "name": "Trained Lancer",
+        "power": 4,
+        "attack": 6,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc4": {
+        "name": "Trained Lancer",
+        "power": 4,
+        "attack": 6,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc5": {
+        "name": "Trained Lancer",
+        "power": 5,
+        "attack": 7,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc6": {
+        "name": "Trained Lancer",
+        "power": 5,
+        "attack": 7,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc7": {
+        "name": "Trained Lancer",
+        "power": 5,
+        "attack": 7,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc8": {
+        "name": "Trained Lancer",
+        "power": 6,
+        "attack": 8,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc9": {
+        "name": "Trained Lancer",
+        "power": 6,
+        "attack": 8,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc10": {
+        "name": "Trained Lancer",
+        "power": 6,
+        "attack": 8,
+        "defense": 3,
+        "lethality": 6,
+        "health": 3,
+        "load": 124,
+        "speed": 11
+      },
       "3-fc0": {
-        "name": "Senior",
+        "name": "Senior Lancer",
         "power": 6,
         "attack": 6,
         "defense": 4,
@@ -1250,8 +1570,108 @@
         "load": 142,
         "speed": 11
       },
+      "3-fc1": {
+        "name": "Senior Lancer",
+        "power": 6,
+        "attack": 6,
+        "defense": 4,
+        "lethality": 8,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc2": {
+        "name": "Senior Lancer",
+        "power": 6,
+        "attack": 7,
+        "defense": 4,
+        "lethality": 9,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc3": {
+        "name": "Senior Lancer",
+        "power": 6,
+        "attack": 7,
+        "defense": 4,
+        "lethality": 10,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc4": {
+        "name": "Senior Lancer",
+        "power": 8,
+        "attack": 7,
+        "defense": 4,
+        "lethality": 11,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc5": {
+        "name": "Senior Lancer",
+        "power": 9,
+        "attack": 8,
+        "defense": 4,
+        "lethality": 12,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc6": {
+        "name": "Senior Lancer",
+        "power": 9,
+        "attack": 8,
+        "defense": 4,
+        "lethality": 13,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc7": {
+        "name": "Senior Lancer",
+        "power": 10,
+        "attack": 8,
+        "defense": 4,
+        "lethality": 14,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc8": {
+        "name": "Senior Lancer",
+        "power": 11,
+        "attack": 9,
+        "defense": 4,
+        "lethality": 15,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc9": {
+        "name": "Senior Lancer",
+        "power": 11,
+        "attack": 9,
+        "defense": 4,
+        "lethality": 15,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc10": {
+        "name": "Senior Lancer",
+        "power": 12,
+        "attack": 10,
+        "defense": 4,
+        "lethality": 16,
+        "health": 4,
+        "load": 142,
+        "speed": 11
+      },
       "4-fc0": {
-        "name": "Vetern",
+        "name": "Veteran Lancer",
         "power": 9,
         "attack": 7,
         "defense": 5,
@@ -1260,218 +1680,18 @@
         "load": 164,
         "speed": 11
       },
-      "5-fc0": {
-        "name": "Hardy",
-        "power": 13,
-        "attack": 8,
-        "defense": 6,
-        "lethality": 9,
-        "health": 6,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc0": {
-        "name": "Heroic",
-        "power": 20,
-        "attack": 9,
-        "defense": 7,
-        "lethality": 10,
-        "health": 7,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc0": {
-        "name": "Brave",
-        "power": 28,
-        "attack": 10,
-        "defense": 8,
-        "lethality": 11,
-        "health": 8,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc0": {
-        "name": "Elite",
-        "power": 38,
-        "attack": 11,
-        "defense": 9,
-        "lethality": 12,
-        "health": 9,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc0": {
-        "name": "Supreme",
-        "power": 50,
-        "attack": 12,
-        "defense": 10,
-        "lethality": 13,
-        "health": 10,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc0": {
-        "name": "Apex",
-        "power": 66,
-        "attack": 13,
-        "defense": 11,
-        "lethality": 14,
-        "health": 11,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc0": {
-        "name": "Helios",
-        "power": 80,
-        "attack": 15,
-        "defense": 13,
-        "lethality": 16,
-        "health": 13,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc1": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 4,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc1": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 5,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc1": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 6,
-        "defense": 4,
-        "lethality": 8,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
       "4-fc1": {
-        "name": "Vetern",
+        "name": "Veteran Lancer",
         "power": 10,
         "attack": 8,
         "defense": 5,
         "lethality": 9,
         "health": 5,
         "load": 164,
-        "speed": 11
-      },
-      "5-fc1": {
-        "name": "Hardy",
-        "power": 14,
-        "attack": 9,
-        "defense": 7,
-        "lethality": 10,
-        "health": 6,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc1": {
-        "name": "Heroic",
-        "power": 21,
-        "attack": 10,
-        "defense": 8,
-        "lethality": 11,
-        "health": 7,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc1": {
-        "name": "Brave",
-        "power": 30,
-        "attack": 11,
-        "defense": 9,
-        "lethality": 12,
-        "health": 8,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc1": {
-        "name": "Elite",
-        "power": 41,
-        "attack": 12,
-        "defense": 10,
-        "lethality": 13,
-        "health": 9,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc1": {
-        "name": "Supreme",
-        "power": 54,
-        "attack": 13,
-        "defense": 11,
-        "lethality": 14,
-        "health": 10,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc1": {
-        "name": "Apex",
-        "power": 71,
-        "attack": 14,
-        "defense": 12,
-        "lethality": 15,
-        "health": 11,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc1": {
-        "name": "Helios",
-        "power": 86,
-        "attack": 16,
-        "defense": 14,
-        "lethality": 17,
-        "health": 13,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc2": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 5,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc2": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 6,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc2": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 7,
-        "defense": 4,
-        "lethality": 9,
-        "health": 4,
-        "load": 142,
         "speed": 11
       },
       "4-fc2": {
-        "name": "Vetern",
+        "name": "Veteran Lancer",
         "power": 10,
         "attack": 9,
         "defense": 5,
@@ -1480,108 +1700,8 @@
         "load": 164,
         "speed": 11
       },
-      "5-fc2": {
-        "name": "Hardy",
-        "power": 15,
-        "attack": 10,
-        "defense": 8,
-        "lethality": 11,
-        "health": 7,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc2": {
-        "name": "Heroic",
-        "power": 22,
-        "attack": 11,
-        "defense": 9,
-        "lethality": 12,
-        "health": 8,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc2": {
-        "name": "Brave",
-        "power": 32,
-        "attack": 13,
-        "defense": 10,
-        "lethality": 13,
-        "health": 9,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc2": {
-        "name": "Elite",
-        "power": 44,
-        "attack": 14,
-        "defense": 11,
-        "lethality": 14,
-        "health": 10,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc2": {
-        "name": "Supreme",
-        "power": 58,
-        "attack": 15,
-        "defense": 12,
-        "lethality": 15,
-        "health": 11,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc2": {
-        "name": "Apex",
-        "power": 76,
-        "attack": 16,
-        "defense": 13,
-        "lethality": 16,
-        "health": 12,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc2": {
-        "name": "Helios",
-        "power": 92,
-        "attack": 18,
-        "defense": 15,
-        "lethality": 18,
-        "health": 14,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc3": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 5,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc3": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 6,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc3": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 7,
-        "defense": 4,
-        "lethality": 10,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
       "4-fc3": {
-        "name": "Vetern",
+        "name": "Veteran Lancer",
         "power": 11,
         "attack": 10,
         "defense": 5,
@@ -1590,328 +1710,28 @@
         "load": 164,
         "speed": 11
       },
-      "5-fc3": {
-        "name": "Hardy",
-        "power": 16,
-        "attack": 11,
-        "defense": 9,
-        "lethality": 12,
-        "health": 8,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc3": {
-        "name": "Heroic",
-        "power": 24,
-        "attack": 12,
-        "defense": 10,
-        "lethality": 13,
-        "health": 9,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc3": {
-        "name": "Brave",
-        "power": 34,
-        "attack": 14,
-        "defense": 11,
-        "lethality": 14,
-        "health": 10,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc3": {
-        "name": "Elite",
-        "power": 47,
-        "attack": 15,
-        "defense": 12,
-        "lethality": 15,
-        "health": 11,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc3": {
-        "name": "Supreme",
-        "power": 62,
-        "attack": 16,
-        "defense": 13,
-        "lethality": 16,
-        "health": 12,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc3": {
-        "name": "Apex",
-        "power": 83,
-        "attack": 17,
-        "defense": 14,
-        "lethality": 17,
-        "health": 13,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc3": {
-        "name": "Helios",
-        "power": 100,
-        "attack": 19,
-        "defense": 16,
-        "lethality": 19,
-        "health": 15,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc4": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 5,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc4": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 6,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc4": {
-        "name": "Senior",
-        "power": 8,
-        "attack": 7,
-        "defense": 4,
-        "lethality": 11,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
       "4-fc4": {
-        "name": "Vetern",
+        "name": "Veteran Lancer",
         "power": 12,
         "attack": 11,
         "defense": 5,
         "lethality": 12,
         "health": 5,
         "load": 164,
-        "speed": 11
-      },
-      "5-fc4": {
-        "name": "Hardy",
-        "power": 17,
-        "attack": 12,
-        "defense": 9,
-        "lethality": 13,
-        "health": 8,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc4": {
-        "name": "Heroic",
-        "power": 26,
-        "attack": 13,
-        "defense": 10,
-        "lethality": 14,
-        "health": 9,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc4": {
-        "name": "Brave",
-        "power": 37,
-        "attack": 15,
-        "defense": 11,
-        "lethality": 15,
-        "health": 10,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc4": {
-        "name": "Elite",
-        "power": 51,
-        "attack": 16,
-        "defense": 12,
-        "lethality": 16,
-        "health": 11,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc4": {
-        "name": "Supreme",
-        "power": 67,
-        "attack": 17,
-        "defense": 13,
-        "lethality": 17,
-        "health": 12,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc4": {
-        "name": "Apex",
-        "power": 88,
-        "attack": 18,
-        "defense": 14,
-        "lethality": 18,
-        "health": 13,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc4": {
-        "name": "Helios",
-        "power": 106,
-        "attack": 20,
-        "defense": 16,
-        "lethality": 20,
-        "health": 15,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc5": {
-        "name": "Rookie",
-        "power": 3,
-        "attack": 5,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc5": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 6,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc5": {
-        "name": "Senior",
-        "power": 8,
-        "attack": 7,
-        "defense": 4,
-        "lethality": 11,
-        "health": 4,
-        "load": 142,
         "speed": 11
       },
       "4-fc5": {
-        "name": "Vetern",
-        "power": 12,
-        "attack": 11,
+        "name": "Veteran Lancer",
+        "power": 13,
+        "attack": 12,
         "defense": 5,
-        "lethality": 12,
+        "lethality": 13,
         "health": 5,
         "load": 164,
         "speed": 11
       },
-      "5-fc5": {
-        "name": "Hardy",
-        "power": 17,
-        "attack": 12,
-        "defense": 9,
-        "lethality": 13,
-        "health": 8,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc5": {
-        "name": "Heroic",
-        "power": 26,
-        "attack": 13,
-        "defense": 10,
-        "lethality": 14,
-        "health": 9,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc5": {
-        "name": "Brave",
-        "power": 37,
-        "attack": 15,
-        "defense": 11,
-        "lethality": 15,
-        "health": 10,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc5": {
-        "name": "Elite",
-        "power": 54,
-        "attack": 18,
-        "defense": 13,
-        "lethality": 17,
-        "health": 12,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc5": {
-        "name": "Supreme",
-        "power": 72,
-        "attack": 19,
-        "defense": 14,
-        "lethality": 18,
-        "health": 13,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc5": {
-        "name": "Apex",
-        "power": 94,
-        "attack": 20,
-        "defense": 15,
-        "lethality": 19,
-        "health": 14,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc5": {
-        "name": "Helios",
-        "power": 114,
-        "attack": 22,
-        "defense": 17,
-        "lethality": 21,
-        "health": 16,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc6": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 6,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc6": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 7,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc6": {
-        "name": "Senior",
-        "power": 9,
-        "attack": 8,
-        "defense": 4,
-        "lethality": 13,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
       "4-fc6": {
-        "name": "Vetern",
+        "name": "Veteran Lancer",
         "power": 14,
         "attack": 13,
         "defense": 5,
@@ -1920,8 +1740,108 @@
         "load": 164,
         "speed": 11
       },
+      "4-fc7": {
+        "name": "Veteran Lancer",
+        "power": 15,
+        "attack": 14,
+        "defense": 5,
+        "lethality": 15,
+        "health": 5,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc8": {
+        "name": "Veteran Lancer",
+        "power": 16,
+        "attack": 15,
+        "defense": 5,
+        "lethality": 16,
+        "health": 5,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc9": {
+        "name": "Veteran Lancer",
+        "power": 16,
+        "attack": 15,
+        "defense": 5,
+        "lethality": 16,
+        "health": 5,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc10": {
+        "name": "Veteran Lancer",
+        "power": 17,
+        "attack": 16,
+        "defense": 5,
+        "lethality": 17,
+        "health": 5,
+        "load": 164,
+        "speed": 11
+      },
+      "5-fc0": {
+        "name": "Hardy Lancer",
+        "power": 13,
+        "attack": 8,
+        "defense": 6,
+        "lethality": 9,
+        "health": 6,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc1": {
+        "name": "Hardy Lancer",
+        "power": 14,
+        "attack": 9,
+        "defense": 7,
+        "lethality": 10,
+        "health": 6,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc2": {
+        "name": "Hardy Lancer",
+        "power": 15,
+        "attack": 10,
+        "defense": 8,
+        "lethality": 11,
+        "health": 7,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc3": {
+        "name": "Hardy Lancer",
+        "power": 16,
+        "attack": 11,
+        "defense": 9,
+        "lethality": 12,
+        "health": 8,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc4": {
+        "name": "Hardy Lancer",
+        "power": 17,
+        "attack": 12,
+        "defense": 9,
+        "lethality": 13,
+        "health": 8,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc5": {
+        "name": "Hardy Lancer",
+        "power": 18,
+        "attack": 13,
+        "defense": 10,
+        "lethality": 14,
+        "health": 9,
+        "load": 188,
+        "speed": 11
+      },
       "5-fc6": {
-        "name": "Hardy",
+        "name": "Hardy Lancer",
         "power": 19,
         "attack": 14,
         "defense": 11,
@@ -1930,108 +1850,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc6": {
-        "name": "Heroic",
-        "power": 30,
-        "attack": 15,
-        "defense": 11,
-        "lethality": 15,
-        "health": 10,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc6": {
-        "name": "Brave",
-        "power": 43,
-        "attack": 18,
-        "defense": 12,
-        "lethality": 17,
-        "health": 11,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc6": {
-        "name": "Elite",
-        "power": 57,
-        "attack": 19,
-        "defense": 13,
-        "lethality": 18,
-        "health": 12,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc6": {
-        "name": "Supreme",
-        "power": 77,
-        "attack": 20,
-        "defense": 15,
-        "lethality": 19,
-        "health": 13,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc6": {
-        "name": "Apex",
-        "power": 99,
-        "attack": 21,
-        "defense": 15,
-        "lethality": 20,
-        "health": 14,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc6": {
-        "name": "Helios",
-        "power": 120,
-        "attack": 22,
-        "defense": 16,
-        "lethality": 21,
-        "health": 15,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc7": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 6,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc7": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 7,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc7": {
-        "name": "Senior",
-        "power": 10,
-        "attack": 8,
-        "defense": 4,
-        "lethality": 14,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc7": {
-        "name": "Vetern",
-        "power": 15,
-        "attack": 14,
-        "defense": 5,
-        "lethality": 15,
-        "health": 5,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc7": {
-        "name": "Hardy",
+        "name": "Hardy Lancer",
         "power": 20,
         "attack": 15,
         "defense": 12,
@@ -2040,218 +1860,18 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc7": {
-        "name": "Heroic",
-        "power": 32,
-        "attack": 16,
-        "defense": 12,
-        "lethality": 16,
-        "health": 11,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc7": {
-        "name": "Brave",
-        "power": 46,
-        "attack": 19,
-        "defense": 13,
-        "lethality": 18,
-        "health": 12,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc7": {
-        "name": "Elite",
-        "power": 60,
-        "attack": 20,
-        "defense": 14,
-        "lethality": 19,
-        "health": 12,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc7": {
-        "name": "Supreme",
-        "power": 82,
-        "attack": 21,
-        "defense": 16,
-        "lethality": 20,
-        "health": 14,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc7": {
-        "name": "Apex",
-        "power": 104,
-        "attack": 22,
-        "defense": 16,
-        "lethality": 21,
-        "health": 15,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc7": {
-        "name": "Helios",
-        "power": 126,
-        "attack": 24,
-        "defense": 18,
-        "lethality": 23,
-        "health": 17,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc8": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 8,
-        "defense": 1,
-        "lethality": 6,
-        "health": 1,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc8": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 9,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc8": {
-        "name": "Senior",
-        "power": 11,
-        "attack": 15,
-        "defense": 3,
-        "lethality": 16,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc8": {
-        "name": "Vetern",
-        "power": 16,
-        "attack": 16,
-        "defense": 4,
-        "lethality": 17,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc8": {
-        "name": "Hardy",
+        "name": "Hardy Lancer",
         "power": 21,
-        "attack": 17,
-        "defense": 11,
-        "lethality": 18,
+        "attack": 16,
+        "defense": 13,
+        "lethality": 17,
         "health": 10,
         "load": 188,
         "speed": 11
       },
-      "6-fc8": {
-        "name": "Heroic",
-        "power": 34,
-        "attack": 18,
-        "defense": 11,
-        "lethality": 19,
-        "health": 11,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc8": {
-        "name": "Brave",
-        "power": 49,
-        "attack": 21,
-        "defense": 13,
-        "lethality": 20,
-        "health": 12,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc8": {
-        "name": "Elite",
-        "power": 63,
-        "attack": 22,
-        "defense": 14,
-        "lethality": 21,
-        "health": 13,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc8": {
-        "name": "Supreme",
-        "power": 87,
-        "attack": 23,
-        "defense": 15,
-        "lethality": 22,
-        "health": 14,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc8": {
-        "name": "Apex",
-        "power": 110,
-        "attack": 23,
-        "defense": 17,
-        "lethality": 22,
-        "health": 15,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc8": {
-        "name": "Helios",
-        "power": 135,
-        "attack": 25,
-        "defense": 19,
-        "lethality": 24,
-        "health": 17,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc9": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 7,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc9": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 8,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc9": {
-        "name": "Senior",
-        "power": 11,
-        "attack": 8,
-        "defense": 4,
-        "lethality": 15,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc9": {
-        "name": "Vetern",
-        "power": 16,
-        "attack": 15,
-        "defense": 5,
-        "lethality": 16,
-        "health": 5,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc9": {
-        "name": "Hardy",
+        "name": "Hardy Lancer",
         "power": 22,
         "attack": 16,
         "defense": 12,
@@ -2260,108 +1880,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc9": {
-        "name": "Heroic",
-        "power": 35,
-        "attack": 17,
-        "defense": 12,
-        "lethality": 18,
-        "health": 12,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc9": {
-        "name": "Brave",
-        "power": 51,
-        "attack": 22,
-        "defense": 14,
-        "lethality": 19,
-        "health": 13,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc9": {
-        "name": "Elite",
-        "power": 66,
-        "attack": 23,
-        "defense": 15,
-        "lethality": 21,
-        "health": 14,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc9": {
-        "name": "Supreme",
-        "power": 91,
-        "attack": 24,
-        "defense": 16,
-        "lethality": 22,
-        "health": 15,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc9": {
-        "name": "Apex",
-        "power": 115,
-        "attack": 25,
-        "defense": 17,
-        "lethality": 23,
-        "health": 16,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc9": {
-        "name": "Helios",
-        "power": 141,
-        "attack": 27,
-        "defense": 19,
-        "lethality": 25,
-        "health": 18,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc10": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 7,
-        "defense": 2,
-        "lethality": 5,
-        "health": 2,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc10": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 8,
-        "defense": 3,
-        "lethality": 6,
-        "health": 3,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc10": {
-        "name": "Senior",
-        "power": 12,
-        "attack": 10,
-        "defense": 4,
-        "lethality": 16,
-        "health": 4,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc10": {
-        "name": "Vetern",
-        "power": 17,
-        "attack": 16,
-        "defense": 5,
-        "lethality": 17,
-        "health": 5,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc10": {
-        "name": "Hardy",
+        "name": "Hardy Lancer",
         "power": 23,
         "attack": 17,
         "defense": 13,
@@ -2370,8 +1890,108 @@
         "load": 188,
         "speed": 11
       },
+      "6-fc0": {
+        "name": "Heroic Lancer",
+        "power": 20,
+        "attack": 9,
+        "defense": 7,
+        "lethality": 10,
+        "health": 7,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc1": {
+        "name": "Heroic Lancer",
+        "power": 21,
+        "attack": 10,
+        "defense": 8,
+        "lethality": 11,
+        "health": 7,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc2": {
+        "name": "Heroic Lancer",
+        "power": 22,
+        "attack": 11,
+        "defense": 9,
+        "lethality": 12,
+        "health": 8,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc3": {
+        "name": "Heroic Lancer",
+        "power": 24,
+        "attack": 12,
+        "defense": 10,
+        "lethality": 13,
+        "health": 9,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc4": {
+        "name": "Heroic Lancer",
+        "power": 26,
+        "attack": 13,
+        "defense": 10,
+        "lethality": 14,
+        "health": 9,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc5": {
+        "name": "Heroic Lancer",
+        "power": 28,
+        "attack": 14,
+        "defense": 11,
+        "lethality": 15,
+        "health": 10,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc6": {
+        "name": "Heroic Lancer",
+        "power": 30,
+        "attack": 15,
+        "defense": 11,
+        "lethality": 15,
+        "health": 10,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc7": {
+        "name": "Heroic Lancer",
+        "power": 32,
+        "attack": 16,
+        "defense": 12,
+        "lethality": 16,
+        "health": 11,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc8": {
+        "name": "Heroic Lancer",
+        "power": 34,
+        "attack": 17,
+        "defense": 13,
+        "lethality": 17,
+        "health": 11,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc9": {
+        "name": "Heroic Lancer",
+        "power": 35,
+        "attack": 17,
+        "defense": 12,
+        "lethality": 18,
+        "health": 12,
+        "load": 217,
+        "speed": 11
+      },
       "6-fc10": {
-        "name": "Heroic",
+        "name": "Heroic Lancer",
         "power": 37,
         "attack": 19,
         "defense": 14,
@@ -2380,8 +2000,108 @@
         "load": 217,
         "speed": 11
       },
+      "7-fc0": {
+        "name": "Brave Lancer",
+        "power": 28,
+        "attack": 10,
+        "defense": 8,
+        "lethality": 11,
+        "health": 8,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc1": {
+        "name": "Brave Lancer",
+        "power": 30,
+        "attack": 11,
+        "defense": 9,
+        "lethality": 12,
+        "health": 8,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc2": {
+        "name": "Brave Lancer",
+        "power": 32,
+        "attack": 13,
+        "defense": 10,
+        "lethality": 13,
+        "health": 9,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc3": {
+        "name": "Brave Lancer",
+        "power": 34,
+        "attack": 14,
+        "defense": 11,
+        "lethality": 14,
+        "health": 10,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc4": {
+        "name": "Brave Lancer",
+        "power": 37,
+        "attack": 15,
+        "defense": 11,
+        "lethality": 15,
+        "health": 10,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc5": {
+        "name": "Brave Lancer",
+        "power": 40,
+        "attack": 17,
+        "defense": 12,
+        "lethality": 16,
+        "health": 11,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc6": {
+        "name": "Brave Lancer",
+        "power": 43,
+        "attack": 18,
+        "defense": 12,
+        "lethality": 17,
+        "health": 11,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc7": {
+        "name": "Brave Lancer",
+        "power": 46,
+        "attack": 19,
+        "defense": 13,
+        "lethality": 18,
+        "health": 12,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc8": {
+        "name": "Brave Lancer",
+        "power": 49,
+        "attack": 20,
+        "defense": 13,
+        "lethality": 19,
+        "health": 12,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc9": {
+        "name": "Brave Lancer",
+        "power": 51,
+        "attack": 22,
+        "defense": 14,
+        "lethality": 19,
+        "health": 13,
+        "load": 249,
+        "speed": 11
+      },
       "7-fc10": {
-        "name": "Brave",
+        "name": "Brave Lancer",
         "power": 54,
         "attack": 23,
         "defense": 15,
@@ -2390,8 +2110,108 @@
         "load": 249,
         "speed": 11
       },
+      "8-fc0": {
+        "name": "Elite Lancer",
+        "power": 38,
+        "attack": 11,
+        "defense": 9,
+        "lethality": 12,
+        "health": 9,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc1": {
+        "name": "Elite Lancer",
+        "power": 41,
+        "attack": 12,
+        "defense": 10,
+        "lethality": 13,
+        "health": 9,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc2": {
+        "name": "Elite Lancer",
+        "power": 44,
+        "attack": 14,
+        "defense": 11,
+        "lethality": 14,
+        "health": 10,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc3": {
+        "name": "Elite Lancer",
+        "power": 47,
+        "attack": 15,
+        "defense": 12,
+        "lethality": 15,
+        "health": 11,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc4": {
+        "name": "Elite Lancer",
+        "power": 51,
+        "attack": 16,
+        "defense": 12,
+        "lethality": 16,
+        "health": 11,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc5": {
+        "name": "Elite Lancer",
+        "power": 54,
+        "attack": 18,
+        "defense": 13,
+        "lethality": 17,
+        "health": 12,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc6": {
+        "name": "Elite Lancer",
+        "power": 57,
+        "attack": 19,
+        "defense": 13,
+        "lethality": 18,
+        "health": 12,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc7": {
+        "name": "Elite Lancer",
+        "power": 60,
+        "attack": 20,
+        "defense": 14,
+        "lethality": 19,
+        "health": 12,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc8": {
+        "name": "Elite Lancer",
+        "power": 63,
+        "attack": 21,
+        "defense": 14,
+        "lethality": 20,
+        "health": 13,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc9": {
+        "name": "Elite Lancer",
+        "power": 66,
+        "attack": 23,
+        "defense": 15,
+        "lethality": 21,
+        "health": 14,
+        "load": 287,
+        "speed": 11
+      },
       "8-fc10": {
-        "name": "Elite",
+        "name": "Elite Lancer",
         "power": 69,
         "attack": 24,
         "defense": 16,
@@ -2400,8 +2220,108 @@
         "load": 287,
         "speed": 11
       },
+      "9-fc0": {
+        "name": "Supreme Lancer",
+        "power": 50,
+        "attack": 12,
+        "defense": 10,
+        "lethality": 13,
+        "health": 10,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc1": {
+        "name": "Supreme Lancer",
+        "power": 54,
+        "attack": 13,
+        "defense": 11,
+        "lethality": 14,
+        "health": 10,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc2": {
+        "name": "Supreme Lancer",
+        "power": 58,
+        "attack": 15,
+        "defense": 12,
+        "lethality": 15,
+        "health": 11,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc3": {
+        "name": "Supreme Lancer",
+        "power": 62,
+        "attack": 16,
+        "defense": 13,
+        "lethality": 16,
+        "health": 12,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc4": {
+        "name": "Supreme Lancer",
+        "power": 67,
+        "attack": 17,
+        "defense": 13,
+        "lethality": 17,
+        "health": 12,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc5": {
+        "name": "Supreme Lancer",
+        "power": 72,
+        "attack": 19,
+        "defense": 14,
+        "lethality": 18,
+        "health": 13,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc6": {
+        "name": "Supreme Lancer",
+        "power": 77,
+        "attack": 20,
+        "defense": 15,
+        "lethality": 19,
+        "health": 13,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc7": {
+        "name": "Supreme Lancer",
+        "power": 82,
+        "attack": 21,
+        "defense": 16,
+        "lethality": 20,
+        "health": 14,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc8": {
+        "name": "Supreme Lancer",
+        "power": 87,
+        "attack": 22,
+        "defense": 17,
+        "lethality": 21,
+        "health": 14,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc9": {
+        "name": "Supreme Lancer",
+        "power": 91,
+        "attack": 24,
+        "defense": 16,
+        "lethality": 22,
+        "health": 15,
+        "load": 330,
+        "speed": 11
+      },
       "9-fc10": {
-        "name": "Supreme",
+        "name": "Supreme Lancer",
         "power": 95,
         "attack": 25,
         "defense": 17,
@@ -2410,8 +2330,108 @@
         "load": 330,
         "speed": 11
       },
+      "10-fc0": {
+        "name": "Apex Lancer",
+        "power": 66,
+        "attack": 13,
+        "defense": 11,
+        "lethality": 14,
+        "health": 11,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc1": {
+        "name": "Apex Lancer",
+        "power": 71,
+        "attack": 14,
+        "defense": 12,
+        "lethality": 15,
+        "health": 11,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc2": {
+        "name": "Apex Lancer",
+        "power": 76,
+        "attack": 16,
+        "defense": 13,
+        "lethality": 16,
+        "health": 12,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc3": {
+        "name": "Apex Lancer",
+        "power": 83,
+        "attack": 17,
+        "defense": 14,
+        "lethality": 17,
+        "health": 13,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc4": {
+        "name": "Apex Lancer",
+        "power": 88,
+        "attack": 18,
+        "defense": 14,
+        "lethality": 18,
+        "health": 13,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc5": {
+        "name": "Apex Lancer",
+        "power": 94,
+        "attack": 20,
+        "defense": 15,
+        "lethality": 19,
+        "health": 14,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc6": {
+        "name": "Apex Lancer",
+        "power": 99,
+        "attack": 21,
+        "defense": 15,
+        "lethality": 20,
+        "health": 14,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc7": {
+        "name": "Apex Lancer",
+        "power": 104,
+        "attack": 22,
+        "defense": 16,
+        "lethality": 21,
+        "health": 15,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc8": {
+        "name": "Apex Lancer",
+        "power": 110,
+        "attack": 23,
+        "defense": 17,
+        "lethality": 22,
+        "health": 15,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc9": {
+        "name": "Apex Lancer",
+        "power": 115,
+        "attack": 25,
+        "defense": 17,
+        "lethality": 23,
+        "health": 16,
+        "load": 379,
+        "speed": 11
+      },
       "10-fc10": {
-        "name": "Apex",
+        "name": "Apex Lancer",
         "power": 121,
         "attack": 26,
         "defense": 19,
@@ -2420,8 +2440,108 @@
         "load": 379,
         "speed": 11
       },
+      "11-fc0": {
+        "name": "Helios Lancer",
+        "power": 80,
+        "attack": 15,
+        "defense": 13,
+        "lethality": 16,
+        "health": 13,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc1": {
+        "name": "Helios Lancer",
+        "power": 86,
+        "attack": 16,
+        "defense": 14,
+        "lethality": 17,
+        "health": 13,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc2": {
+        "name": "Helios Lancer",
+        "power": 92,
+        "attack": 18,
+        "defense": 15,
+        "lethality": 18,
+        "health": 14,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc3": {
+        "name": "Helios Lancer",
+        "power": 100,
+        "attack": 19,
+        "defense": 16,
+        "lethality": 19,
+        "health": 15,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc4": {
+        "name": "Helios Lancer",
+        "power": 106,
+        "attack": 20,
+        "defense": 16,
+        "lethality": 20,
+        "health": 15,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc5": {
+        "name": "Helios Lancer",
+        "power": 114,
+        "attack": 22,
+        "defense": 17,
+        "lethality": 21,
+        "health": 16,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc6": {
+        "name": "Helios Lancer",
+        "power": 120,
+        "attack": 23,
+        "defense": 17,
+        "lethality": 22,
+        "health": 16,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc7": {
+        "name": "Helios Lancer",
+        "power": 126,
+        "attack": 24,
+        "defense": 18,
+        "lethality": 23,
+        "health": 17,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc8": {
+        "name": "Helios Lancer",
+        "power": 135,
+        "attack": 25,
+        "defense": 19,
+        "lethality": 24,
+        "health": 17,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc9": {
+        "name": "Helios Lancer",
+        "power": 141,
+        "attack": 27,
+        "defense": 19,
+        "lethality": 25,
+        "health": 18,
+        "load": 400,
+        "speed": 11
+      },
       "11-fc10": {
-        "name": "Helios",
+        "name": "Helios Lancer",
         "power": 148,
         "attack": 28,
         "defense": 21,
@@ -2429,11 +2549,121 @@
         "health": 20,
         "load": 400,
         "speed": 11
+      },
+      "12-fc0": {
+        "name": "Exalted Lancer",
+        "power": 96,
+        "attack": 18,
+        "defense": 16,
+        "lethality": 19,
+        "health": 16,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc1": {
+        "name": "Exalted Lancer",
+        "power": 103,
+        "attack": 19,
+        "defense": 17,
+        "lethality": 20,
+        "health": 16,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc2": {
+        "name": "Exalted Lancer",
+        "power": 110,
+        "attack": 21,
+        "defense": 18,
+        "lethality": 21,
+        "health": 17,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc3": {
+        "name": "Exalted Lancer",
+        "power": 120,
+        "attack": 22,
+        "defense": 19,
+        "lethality": 22,
+        "health": 18,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc4": {
+        "name": "Exalted Lancer",
+        "power": 127,
+        "attack": 23,
+        "defense": 19,
+        "lethality": 23,
+        "health": 18,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc5": {
+        "name": "Exalted Lancer",
+        "power": 137,
+        "attack": 25,
+        "defense": 20,
+        "lethality": 24,
+        "health": 19,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc6": {
+        "name": "Exalted Lancer",
+        "power": 145,
+        "attack": 26,
+        "defense": 20,
+        "lethality": 25,
+        "health": 19,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc7": {
+        "name": "Exalted Lancer",
+        "power": 154,
+        "attack": 27,
+        "defense": 21,
+        "lethality": 26,
+        "health": 20,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc8": {
+        "name": "Exalted Lancer",
+        "power": 162,
+        "attack": 28,
+        "defense": 22,
+        "lethality": 27,
+        "health": 20,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc9": {
+        "name": "Exalted Lancer",
+        "power": 170,
+        "attack": 30,
+        "defense": 22,
+        "lethality": 28,
+        "health": 21,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc10": {
+        "name": "Exalted Lancer",
+        "power": 178,
+        "attack": 31,
+        "defense": 24,
+        "lethality": 29,
+        "health": 23,
+        "load": 420,
+        "speed": 11
       }
     },
     "marksman": {
       "1-fc0": {
-        "name": "Rookie",
+        "name": "Rookie Marksman",
         "power": 3,
         "attack": 5,
         "defense": 1,
@@ -2442,108 +2672,8 @@
         "load": 108,
         "speed": 11
       },
-      "2-fc0": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 6,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc0": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 7,
-        "defense": 3,
-        "lethality": 8,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc0": {
-        "name": "Vetern",
-        "power": 9,
-        "attack": 8,
-        "defense": 4,
-        "lethality": 9,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc0": {
-        "name": "Hardy",
-        "power": 13,
-        "attack": 9,
-        "defense": 5,
-        "lethality": 10,
-        "health": 5,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc0": {
-        "name": "Heroic",
-        "power": 20,
-        "attack": 10,
-        "defense": 6,
-        "lethality": 11,
-        "health": 6,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc0": {
-        "name": "Brave",
-        "power": 28,
-        "attack": 11,
-        "defense": 7,
-        "lethality": 12,
-        "health": 7,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc0": {
-        "name": "Elite",
-        "power": 38,
-        "attack": 12,
-        "defense": 8,
-        "lethality": 13,
-        "health": 8,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc0": {
-        "name": "Supreme",
-        "power": 50,
-        "attack": 13,
-        "defense": 9,
-        "lethality": 14,
-        "health": 9,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc0": {
-        "name": "Apex",
-        "power": 66,
-        "attack": 14,
-        "defense": 10,
-        "lethality": 15,
-        "health": 10,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc0": {
-        "name": "Helios",
-        "power": 80,
-        "attack": 16,
-        "defense": 12,
-        "lethality": 17,
-        "health": 12,
-        "load": 400,
-        "speed": 11
-      },
       "1-fc1": {
-        "name": "Rookie",
+        "name": "Rookie Marksman",
         "power": 3,
         "attack": 5,
         "defense": 1,
@@ -2552,328 +2682,28 @@
         "load": 108,
         "speed": 11
       },
-      "2-fc1": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 6,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc1": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 8,
-        "defense": 3,
-        "lethality": 9,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc1": {
-        "name": "Vetern",
-        "power": 10,
-        "attack": 9,
-        "defense": 4,
-        "lethality": 10,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc1": {
-        "name": "Hardy",
-        "power": 14,
-        "attack": 10,
-        "defense": 6,
-        "lethality": 11,
-        "health": 6,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc1": {
-        "name": "Heroic",
-        "power": 21,
-        "attack": 11,
-        "defense": 7,
-        "lethality": 12,
-        "health": 7,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc1": {
-        "name": "Brave",
-        "power": 30,
-        "attack": 12,
-        "defense": 8,
-        "lethality": 13,
-        "health": 8,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc1": {
-        "name": "Elite",
-        "power": 41,
-        "attack": 13,
-        "defense": 9,
-        "lethality": 14,
-        "health": 9,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc1": {
-        "name": "Supreme",
-        "power": 54,
-        "attack": 14,
-        "defense": 10,
-        "lethality": 15,
-        "health": 10,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc1": {
-        "name": "Apex",
-        "power": 71,
-        "attack": 15,
-        "defense": 11,
-        "lethality": 16,
-        "health": 11,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc1": {
-        "name": "Helios",
-        "power": 86,
-        "attack": 17,
-        "defense": 13,
-        "lethality": 18,
-        "health": 113,
-        "load": 400,
-        "speed": 11
-      },
       "1-fc2": {
-        "name": "Rookie",
+        "name": "Rookie Marksman",
         "power": 3,
         "attack": 6,
         "defense": 1,
         "lethality": 6,
         "health": 1,
         "load": 108,
-        "speed": 11
-      },
-      "2-fc2": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 7,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc2": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 9,
-        "defense": 3,
-        "lethality": 10,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc2": {
-        "name": "Vetern",
-        "power": 10,
-        "attack": 10,
-        "defense": 4,
-        "lethality": 11,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc2": {
-        "name": "Hardy",
-        "power": 15,
-        "attack": 11,
-        "defense": 7,
-        "lethality": 12,
-        "health": 7,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc2": {
-        "name": "Heroic",
-        "power": 22,
-        "attack": 12,
-        "defense": 8,
-        "lethality": 13,
-        "health": 8,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc2": {
-        "name": "Brave",
-        "power": 32,
-        "attack": 14,
-        "defense": 9,
-        "lethality": 14,
-        "health": 9,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc2": {
-        "name": "Elite",
-        "power": 44,
-        "attack": 15,
-        "defense": 10,
-        "lethality": 15,
-        "health": 10,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc2": {
-        "name": "Supreme",
-        "power": 58,
-        "attack": 16,
-        "defense": 11,
-        "lethality": 16,
-        "health": 11,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc2": {
-        "name": "Apex",
-        "power": 76,
-        "attack": 17,
-        "defense": 12,
-        "lethality": 17,
-        "health": 12,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc2": {
-        "name": "Helios",
-        "power": 92,
-        "attack": 19,
-        "defense": 14,
-        "lethality": 19,
-        "health": 14,
-        "load": 400,
         "speed": 11
       },
       "1-fc3": {
-        "name": "Rookie",
+        "name": "Rookie Marksman",
         "power": 3,
         "attack": 6,
         "defense": 1,
         "lethality": 6,
         "health": 1,
         "load": 108,
-        "speed": 11
-      },
-      "2-fc3": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 7,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc3": {
-        "name": "Senior",
-        "power": 6,
-        "attack": 10,
-        "defense": 3,
-        "lethality": 11,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc3": {
-        "name": "Vetern",
-        "power": 11,
-        "attack": 11,
-        "defense": 4,
-        "lethality": 12,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc3": {
-        "name": "Hardy",
-        "power": 16,
-        "attack": 12,
-        "defense": 8,
-        "lethality": 13,
-        "health": 8,
-        "load": 186,
-        "speed": 11
-      },
-      "6-fc3": {
-        "name": "Heroic",
-        "power": 24,
-        "attack": 13,
-        "defense": 9,
-        "lethality": 14,
-        "health": 9,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc3": {
-        "name": "Brave",
-        "power": 34,
-        "attack": 15,
-        "defense": 10,
-        "lethality": 15,
-        "health": 10,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc3": {
-        "name": "Elite",
-        "power": 47,
-        "attack": 16,
-        "defense": 11,
-        "lethality": 16,
-        "health": 11,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc3": {
-        "name": "Supreme",
-        "power": 62,
-        "attack": 17,
-        "defense": 12,
-        "lethality": 17,
-        "health": 12,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc3": {
-        "name": "Apex",
-        "power": 83,
-        "attack": 18,
-        "defense": 13,
-        "lethality": 18,
-        "health": 13,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc3": {
-        "name": "Helios",
-        "power": 100,
-        "attack": 20,
-        "defense": 15,
-        "lethality": 20,
-        "health": 15,
-        "load": 400,
         "speed": 11
       },
       "1-fc4": {
-        "name": "Rookie",
+        "name": "Rookie Marksman",
         "power": 3,
         "attack": 6,
         "defense": 1,
@@ -2882,108 +2712,8 @@
         "load": 108,
         "speed": 11
       },
-      "2-fc4": {
-        "name": "Trained",
-        "power": 4,
-        "attack": 7,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc4": {
-        "name": "Senior",
-        "power": 8,
-        "attack": 11,
-        "defense": 3,
-        "lethality": 12,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc4": {
-        "name": "Vetern",
-        "power": 12,
-        "attack": 12,
-        "defense": 4,
-        "lethality": 13,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
-      "5-fc4": {
-        "name": "Hardy",
-        "power": 17,
-        "attack": 13,
-        "defense": 9,
-        "lethality": 14,
-        "health": 8,
-        "load": 188,
-        "speed": 11
-      },
-      "6-fc4": {
-        "name": "Heroic",
-        "power": 26,
-        "attack": 14,
-        "defense": 10,
-        "lethality": 15,
-        "health": 9,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc4": {
-        "name": "Brave",
-        "power": 37,
-        "attack": 16,
-        "defense": 11,
-        "lethality": 16,
-        "health": 10,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc4": {
-        "name": "Elite",
-        "power": 51,
-        "attack": 17,
-        "defense": 12,
-        "lethality": 17,
-        "health": 11,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc4": {
-        "name": "Supreme",
-        "power": 67,
-        "attack": 18,
-        "defense": 13,
-        "lethality": 18,
-        "health": 12,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc4": {
-        "name": "Apex",
-        "power": 88,
-        "attack": 19,
-        "defense": 14,
-        "lethality": 19,
-        "health": 13,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc4": {
-        "name": "Helios",
-        "power": 106,
-        "attack": 21,
-        "defense": 16,
-        "lethality": 21,
-        "health": 15,
-        "load": 400,
-        "speed": 11
-      },
       "1-fc5": {
-        "name": "Rookie",
+        "name": "Rookie Marksman",
         "power": 4,
         "attack": 7,
         "defense": 1,
@@ -2992,8 +2722,108 @@
         "load": 108,
         "speed": 11
       },
+      "1-fc6": {
+        "name": "Rookie Marksman",
+        "power": 4,
+        "attack": 7,
+        "defense": 1,
+        "lethality": 6,
+        "health": 1,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc7": {
+        "name": "Rookie Marksman",
+        "power": 4,
+        "attack": 7,
+        "defense": 1,
+        "lethality": 6,
+        "health": 1,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc8": {
+        "name": "Rookie Marksman",
+        "power": 5,
+        "attack": 8,
+        "defense": 1,
+        "lethality": 6,
+        "health": 1,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc9": {
+        "name": "Rookie Marksman",
+        "power": 5,
+        "attack": 8,
+        "defense": 1,
+        "lethality": 6,
+        "health": 1,
+        "load": 108,
+        "speed": 11
+      },
+      "1-fc10": {
+        "name": "Rookie Marksman",
+        "power": 5,
+        "attack": 8,
+        "defense": 1,
+        "lethality": 6,
+        "health": 1,
+        "load": 108,
+        "speed": 11
+      },
+      "2-fc0": {
+        "name": "Trained Marksman",
+        "power": 4,
+        "attack": 6,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc1": {
+        "name": "Trained Marksman",
+        "power": 4,
+        "attack": 6,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc2": {
+        "name": "Trained Marksman",
+        "power": 4,
+        "attack": 7,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc3": {
+        "name": "Trained Marksman",
+        "power": 4,
+        "attack": 7,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc4": {
+        "name": "Trained Marksman",
+        "power": 4,
+        "attack": 7,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
       "2-fc5": {
-        "name": "Trained",
+        "name": "Trained Marksman",
         "power": 5,
         "attack": 8,
         "defense": 2,
@@ -3002,8 +2832,108 @@
         "load": 124,
         "speed": 11
       },
+      "2-fc6": {
+        "name": "Trained Marksman",
+        "power": 5,
+        "attack": 8,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc7": {
+        "name": "Trained Marksman",
+        "power": 5,
+        "attack": 8,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc8": {
+        "name": "Trained Marksman",
+        "power": 6,
+        "attack": 9,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc9": {
+        "name": "Trained Marksman",
+        "power": 6,
+        "attack": 9,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "2-fc10": {
+        "name": "Trained Marksman",
+        "power": 6,
+        "attack": 10,
+        "defense": 2,
+        "lethality": 7,
+        "health": 2,
+        "load": 124,
+        "speed": 11
+      },
+      "3-fc0": {
+        "name": "Senior Marksman",
+        "power": 6,
+        "attack": 7,
+        "defense": 3,
+        "lethality": 8,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc1": {
+        "name": "Senior Marksman",
+        "power": 6,
+        "attack": 8,
+        "defense": 3,
+        "lethality": 9,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc2": {
+        "name": "Senior Marksman",
+        "power": 6,
+        "attack": 9,
+        "defense": 3,
+        "lethality": 10,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc3": {
+        "name": "Senior Marksman",
+        "power": 6,
+        "attack": 10,
+        "defense": 3,
+        "lethality": 11,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc4": {
+        "name": "Senior Marksman",
+        "power": 8,
+        "attack": 11,
+        "defense": 3,
+        "lethality": 12,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
       "3-fc5": {
-        "name": "Senior",
+        "name": "Senior Marksman",
         "power": 9,
         "attack": 12,
         "defense": 3,
@@ -3012,8 +2942,108 @@
         "load": 142,
         "speed": 11
       },
+      "3-fc6": {
+        "name": "Senior Marksman",
+        "power": 9,
+        "attack": 13,
+        "defense": 3,
+        "lethality": 14,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc7": {
+        "name": "Senior Marksman",
+        "power": 10,
+        "attack": 14,
+        "defense": 3,
+        "lethality": 15,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc8": {
+        "name": "Senior Marksman",
+        "power": 11,
+        "attack": 15,
+        "defense": 3,
+        "lethality": 16,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc9": {
+        "name": "Senior Marksman",
+        "power": 11,
+        "attack": 15,
+        "defense": 3,
+        "lethality": 16,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "3-fc10": {
+        "name": "Senior Marksman",
+        "power": 12,
+        "attack": 16,
+        "defense": 3,
+        "lethality": 17,
+        "health": 3,
+        "load": 142,
+        "speed": 11
+      },
+      "4-fc0": {
+        "name": "Veteran Marksman",
+        "power": 9,
+        "attack": 8,
+        "defense": 4,
+        "lethality": 9,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc1": {
+        "name": "Veteran Marksman",
+        "power": 10,
+        "attack": 9,
+        "defense": 4,
+        "lethality": 10,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc2": {
+        "name": "Veteran Marksman",
+        "power": 10,
+        "attack": 10,
+        "defense": 4,
+        "lethality": 11,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc3": {
+        "name": "Veteran Marksman",
+        "power": 11,
+        "attack": 11,
+        "defense": 4,
+        "lethality": 12,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc4": {
+        "name": "Veteran Marksman",
+        "power": 12,
+        "attack": 12,
+        "defense": 4,
+        "lethality": 13,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
       "4-fc5": {
-        "name": "Vetern",
+        "name": "Veteran Marksman",
         "power": 13,
         "attack": 13,
         "defense": 4,
@@ -3022,8 +3052,108 @@
         "load": 164,
         "speed": 11
       },
+      "4-fc6": {
+        "name": "Veteran Marksman",
+        "power": 14,
+        "attack": 14,
+        "defense": 4,
+        "lethality": 15,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc7": {
+        "name": "Veteran Marksman",
+        "power": 15,
+        "attack": 15,
+        "defense": 4,
+        "lethality": 16,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc8": {
+        "name": "Veteran Marksman",
+        "power": 16,
+        "attack": 16,
+        "defense": 4,
+        "lethality": 17,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc9": {
+        "name": "Veteran Marksman",
+        "power": 16,
+        "attack": 16,
+        "defense": 4,
+        "lethality": 17,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "4-fc10": {
+        "name": "Veteran Marksman",
+        "power": 17,
+        "attack": 17,
+        "defense": 4,
+        "lethality": 19,
+        "health": 4,
+        "load": 164,
+        "speed": 11
+      },
+      "5-fc0": {
+        "name": "Hardy Marksman",
+        "power": 13,
+        "attack": 9,
+        "defense": 5,
+        "lethality": 10,
+        "health": 5,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc1": {
+        "name": "Hardy Marksman",
+        "power": 14,
+        "attack": 10,
+        "defense": 6,
+        "lethality": 11,
+        "health": 6,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc2": {
+        "name": "Hardy Marksman",
+        "power": 15,
+        "attack": 11,
+        "defense": 7,
+        "lethality": 12,
+        "health": 7,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc3": {
+        "name": "Hardy Marksman",
+        "power": 16,
+        "attack": 12,
+        "defense": 8,
+        "lethality": 13,
+        "health": 8,
+        "load": 188,
+        "speed": 11
+      },
+      "5-fc4": {
+        "name": "Hardy Marksman",
+        "power": 17,
+        "attack": 13,
+        "defense": 9,
+        "lethality": 14,
+        "health": 8,
+        "load": 188,
+        "speed": 11
+      },
       "5-fc5": {
-        "name": "Hardy",
+        "name": "Hardy Marksman",
         "power": 18,
         "attack": 14,
         "defense": 9,
@@ -3032,108 +3162,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc5": {
-        "name": "Heroic",
-        "power": 28,
-        "attack": 15,
-        "defense": 10,
-        "lethality": 16,
-        "health": 10,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc5": {
-        "name": "Brave",
-        "power": 40,
-        "attack": 18,
-        "defense": 11,
-        "lethality": 17,
-        "health": 11,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc5": {
-        "name": "Elite",
-        "power": 54,
-        "attack": 19,
-        "defense": 12,
-        "lethality": 18,
-        "health": 12,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc5": {
-        "name": "Supreme",
-        "power": 72,
-        "attack": 20,
-        "defense": 13,
-        "lethality": 19,
-        "health": 13,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc5": {
-        "name": "Apex",
-        "power": 94,
-        "attack": 21,
-        "defense": 14,
-        "lethality": 20,
-        "health": 14,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc5": {
-        "name": "Helios",
-        "power": 114,
-        "attack": 23,
-        "defense": 16,
-        "lethality": 22,
-        "health": 16,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc6": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 7,
-        "defense": 1,
-        "lethality": 7,
-        "health": 1,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc6": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 8,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc6": {
-        "name": "Senior",
-        "power": 9,
-        "attack": 13,
-        "defense": 3,
-        "lethality": 14,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc6": {
-        "name": "Vetern",
-        "power": 14,
-        "attack": 14,
-        "defense": 4,
-        "lethality": 15,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc6": {
-        "name": "Hardy",
+        "name": "Hardy Marksman",
         "power": 19,
         "attack": 15,
         "defense": 10,
@@ -3142,108 +3172,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc6": {
-        "name": "Heroic",
-        "power": 30,
-        "attack": 16,
-        "defense": 10,
-        "lethality": 17,
-        "health": 10,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc6": {
-        "name": "Brave",
-        "power": 43,
-        "attack": 19,
-        "defense": 12,
-        "lethality": 18,
-        "health": 11,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc6": {
-        "name": "Elite",
-        "power": 57,
-        "attack": 20,
-        "defense": 12,
-        "lethality": 19,
-        "health": 12,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc6": {
-        "name": "Supreme",
-        "power": 77,
-        "attack": 21,
-        "defense": 14,
-        "lethality": 20,
-        "health": 13,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc6": {
-        "name": "Apex",
-        "power": 99,
-        "attack": 22,
-        "defense": 15,
-        "lethality": 21,
-        "health": 14,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc6": {
-        "name": "Helios",
-        "power": 120,
-        "attack": 24,
-        "defense": 17,
-        "lethality": 23,
-        "health": 16,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc7": {
-        "name": "Rookie",
-        "power": 4,
-        "attack": 7,
-        "defense": 1,
-        "lethality": 6,
-        "health": 1,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc7": {
-        "name": "Trained",
-        "power": 5,
-        "attack": 8,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc7": {
-        "name": "Senior",
-        "power": 10,
-        "attack": 14,
-        "defense": 3,
-        "lethality": 15,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc7": {
-        "name": "Vetern",
-        "power": 15,
-        "attack": 15,
-        "defense": 4,
-        "lethality": 16,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc7": {
-        "name": "Hardy",
+        "name": "Hardy Marksman",
         "power": 20,
         "attack": 16,
         "defense": 10,
@@ -3252,108 +3182,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc7": {
-        "name": "Heroic",
-        "power": 32,
-        "attack": 17,
-        "defense": 11,
-        "lethality": 18,
-        "health": 10,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc7": {
-        "name": "Brave",
-        "power": 46,
-        "attack": 20,
-        "defense": 12,
-        "lethality": 19,
-        "health": 11,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc7": {
-        "name": "Elite",
-        "power": 60,
-        "attack": 21,
-        "defense": 13,
-        "lethality": 20,
-        "health": 12,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc7": {
-        "name": "Supreme",
-        "power": 82,
-        "attack": 22,
-        "defense": 14,
-        "lethality": 21,
-        "health": 14,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc7": {
-        "name": "Apex",
-        "power": 104,
-        "attack": 23,
-        "defense": 15,
-        "lethality": 22,
-        "health": 15,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc7": {
-        "name": "Helios",
-        "power": 126,
-        "attack": 25,
-        "defense": 18,
-        "lethality": 24,
-        "health": 17,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc8": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 8,
-        "defense": 1,
-        "lethality": 6,
-        "health": 1,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc8": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 9,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc8": {
-        "name": "Senior",
-        "power": 11,
-        "attack": 15,
-        "defense": 3,
-        "lethality": 16,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc8": {
-        "name": "Vetern",
-        "power": 16,
-        "attack": 16,
-        "defense": 4,
-        "lethality": 17,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc8": {
-        "name": "Hardy",
+        "name": "Hardy Marksman",
         "power": 21,
         "attack": 17,
         "defense": 11,
@@ -3362,108 +3192,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc8": {
-        "name": "Heroic",
-        "power": 34,
-        "attack": 18,
-        "defense": 11,
-        "lethality": 19,
-        "health": 11,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc8": {
-        "name": "Brave",
-        "power": 49,
-        "attack": 21,
-        "defense": 13,
-        "lethality": 20,
-        "health": 12,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc8": {
-        "name": "Elite",
-        "power": 63,
-        "attack": 22,
-        "defense": 14,
-        "lethality": 21,
-        "health": 13,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc8": {
-        "name": "Supreme",
-        "power": 87,
-        "attack": 23,
-        "defense": 15,
-        "lethality": 22,
-        "health": 14,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc8": {
-        "name": "Apex",
-        "power": 110,
-        "attack": 24,
-        "defense": 16,
-        "lethality": 23,
-        "health": 15,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc8": {
-        "name": "Helios",
-        "power": 135,
-        "attack": 26,
-        "defense": 19,
-        "lethality": 25,
-        "health": 18,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc9": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 8,
-        "defense": 1,
-        "lethality": 6,
-        "health": 1,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc9": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 9,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc9": {
-        "name": "Senior",
-        "power": 11,
-        "attack": 15,
-        "defense": 3,
-        "lethality": 16,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc9": {
-        "name": "Vetern",
-        "power": 16,
-        "attack": 16,
-        "defense": 4,
-        "lethality": 17,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc9": {
-        "name": "Hardy",
+        "name": "Hardy Marksman",
         "power": 22,
         "attack": 17,
         "defense": 12,
@@ -3472,108 +3202,8 @@
         "load": 188,
         "speed": 11
       },
-      "6-fc9": {
-        "name": "Heroic",
-        "power": 35,
-        "attack": 18,
-        "defense": 13,
-        "lethality": 19,
-        "health": 12,
-        "load": 217,
-        "speed": 11
-      },
-      "7-fc9": {
-        "name": "Brave",
-        "power": 51,
-        "attack": 23,
-        "defense": 14,
-        "lethality": 21,
-        "health": 13,
-        "load": 249,
-        "speed": 11
-      },
-      "8-fc9": {
-        "name": "Elite",
-        "power": 66,
-        "attack": 24,
-        "defense": 15,
-        "lethality": 22,
-        "health": 14,
-        "load": 287,
-        "speed": 11
-      },
-      "9-fc9": {
-        "name": "Supreme",
-        "power": 91,
-        "attack": 25,
-        "defense": 16,
-        "lethality": 23,
-        "health": 15,
-        "load": 330,
-        "speed": 11
-      },
-      "10-fc9": {
-        "name": "Apex",
-        "power": 115,
-        "attack": 26,
-        "defense": 17,
-        "lethality": 24,
-        "health": 16,
-        "load": 379,
-        "speed": 11
-      },
-      "11-fc9": {
-        "name": "Helios",
-        "power": 141,
-        "attack": 28,
-        "defense": 19,
-        "lethality": 26,
-        "health": 18,
-        "load": 400,
-        "speed": 11
-      },
-      "1-fc10": {
-        "name": "Rookie",
-        "power": 5,
-        "attack": 8,
-        "defense": 1,
-        "lethality": 6,
-        "health": 1,
-        "load": 108,
-        "speed": 11
-      },
-      "2-fc10": {
-        "name": "Trained",
-        "power": 6,
-        "attack": 10,
-        "defense": 2,
-        "lethality": 7,
-        "health": 2,
-        "load": 124,
-        "speed": 11
-      },
-      "3-fc10": {
-        "name": "Senior",
-        "power": 12,
-        "attack": 16,
-        "defense": 3,
-        "lethality": 17,
-        "health": 3,
-        "load": 142,
-        "speed": 11
-      },
-      "4-fc10": {
-        "name": "Vetern",
-        "power": 17,
-        "attack": 17,
-        "defense": 4,
-        "lethality": 19,
-        "health": 4,
-        "load": 164,
-        "speed": 11
-      },
       "5-fc10": {
-        "name": "Hardy",
+        "name": "Hardy Marksman",
         "power": 23,
         "attack": 19,
         "defense": 13,
@@ -3582,8 +3212,108 @@
         "load": 188,
         "speed": 11
       },
+      "6-fc0": {
+        "name": "Heroic Marksman",
+        "power": 20,
+        "attack": 10,
+        "defense": 6,
+        "lethality": 11,
+        "health": 6,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc1": {
+        "name": "Heroic Marksman",
+        "power": 21,
+        "attack": 11,
+        "defense": 7,
+        "lethality": 12,
+        "health": 7,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc2": {
+        "name": "Heroic Marksman",
+        "power": 22,
+        "attack": 12,
+        "defense": 8,
+        "lethality": 13,
+        "health": 8,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc3": {
+        "name": "Heroic Marksman",
+        "power": 24,
+        "attack": 13,
+        "defense": 9,
+        "lethality": 14,
+        "health": 9,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc4": {
+        "name": "Heroic Marksman",
+        "power": 26,
+        "attack": 14,
+        "defense": 10,
+        "lethality": 15,
+        "health": 9,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc5": {
+        "name": "Heroic Marksman",
+        "power": 28,
+        "attack": 15,
+        "defense": 10,
+        "lethality": 16,
+        "health": 10,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc6": {
+        "name": "Heroic Marksman",
+        "power": 30,
+        "attack": 16,
+        "defense": 10,
+        "lethality": 17,
+        "health": 10,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc7": {
+        "name": "Heroic Marksman",
+        "power": 32,
+        "attack": 17,
+        "defense": 11,
+        "lethality": 18,
+        "health": 10,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc8": {
+        "name": "Heroic Marksman",
+        "power": 34,
+        "attack": 18,
+        "defense": 11,
+        "lethality": 19,
+        "health": 11,
+        "load": 217,
+        "speed": 11
+      },
+      "6-fc9": {
+        "name": "Heroic Marksman",
+        "power": 35,
+        "attack": 18,
+        "defense": 13,
+        "lethality": 19,
+        "health": 12,
+        "load": 217,
+        "speed": 11
+      },
       "6-fc10": {
-        "name": "Heroic",
+        "name": "Heroic Marksman",
         "power": 37,
         "attack": 20,
         "defense": 14,
@@ -3592,8 +3322,108 @@
         "load": 217,
         "speed": 11
       },
+      "7-fc0": {
+        "name": "Brave Marksman",
+        "power": 28,
+        "attack": 11,
+        "defense": 7,
+        "lethality": 12,
+        "health": 7,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc1": {
+        "name": "Brave Marksman",
+        "power": 30,
+        "attack": 12,
+        "defense": 8,
+        "lethality": 13,
+        "health": 8,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc2": {
+        "name": "Brave Marksman",
+        "power": 32,
+        "attack": 14,
+        "defense": 9,
+        "lethality": 14,
+        "health": 9,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc3": {
+        "name": "Brave Marksman",
+        "power": 34,
+        "attack": 15,
+        "defense": 10,
+        "lethality": 15,
+        "health": 10,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc4": {
+        "name": "Brave Marksman",
+        "power": 37,
+        "attack": 16,
+        "defense": 11,
+        "lethality": 16,
+        "health": 10,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc5": {
+        "name": "Brave Marksman",
+        "power": 40,
+        "attack": 18,
+        "defense": 11,
+        "lethality": 17,
+        "health": 11,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc6": {
+        "name": "Brave Marksman",
+        "power": 43,
+        "attack": 19,
+        "defense": 12,
+        "lethality": 18,
+        "health": 11,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc7": {
+        "name": "Brave Marksman",
+        "power": 46,
+        "attack": 20,
+        "defense": 12,
+        "lethality": 19,
+        "health": 11,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc8": {
+        "name": "Brave Marksman",
+        "power": 49,
+        "attack": 21,
+        "defense": 13,
+        "lethality": 20,
+        "health": 12,
+        "load": 249,
+        "speed": 11
+      },
+      "7-fc9": {
+        "name": "Brave Marksman",
+        "power": 51,
+        "attack": 23,
+        "defense": 14,
+        "lethality": 21,
+        "health": 13,
+        "load": 249,
+        "speed": 11
+      },
       "7-fc10": {
-        "name": "Brave",
+        "name": "Brave Marksman",
         "power": 54,
         "attack": 24,
         "defense": 15,
@@ -3602,8 +3432,108 @@
         "load": 249,
         "speed": 11
       },
+      "8-fc0": {
+        "name": "Elite Marksman",
+        "power": 38,
+        "attack": 12,
+        "defense": 8,
+        "lethality": 13,
+        "health": 8,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc1": {
+        "name": "Elite Marksman",
+        "power": 41,
+        "attack": 13,
+        "defense": 9,
+        "lethality": 14,
+        "health": 9,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc2": {
+        "name": "Elite Marksman",
+        "power": 44,
+        "attack": 15,
+        "defense": 10,
+        "lethality": 15,
+        "health": 10,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc3": {
+        "name": "Elite Marksman",
+        "power": 47,
+        "attack": 16,
+        "defense": 11,
+        "lethality": 16,
+        "health": 11,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc4": {
+        "name": "Elite Marksman",
+        "power": 51,
+        "attack": 17,
+        "defense": 12,
+        "lethality": 17,
+        "health": 11,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc5": {
+        "name": "Elite Marksman",
+        "power": 54,
+        "attack": 19,
+        "defense": 12,
+        "lethality": 18,
+        "health": 12,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc6": {
+        "name": "Elite Marksman",
+        "power": 57,
+        "attack": 20,
+        "defense": 12,
+        "lethality": 19,
+        "health": 12,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc7": {
+        "name": "Elite Marksman",
+        "power": 60,
+        "attack": 21,
+        "defense": 13,
+        "lethality": 20,
+        "health": 12,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc8": {
+        "name": "Elite Marksman",
+        "power": 63,
+        "attack": 22,
+        "defense": 14,
+        "lethality": 21,
+        "health": 13,
+        "load": 287,
+        "speed": 11
+      },
+      "8-fc9": {
+        "name": "Elite Marksman",
+        "power": 66,
+        "attack": 24,
+        "defense": 15,
+        "lethality": 22,
+        "health": 14,
+        "load": 287,
+        "speed": 11
+      },
       "8-fc10": {
-        "name": "Elite",
+        "name": "Elite Marksman",
         "power": 69,
         "attack": 25,
         "defense": 16,
@@ -3612,8 +3542,108 @@
         "load": 287,
         "speed": 11
       },
+      "9-fc0": {
+        "name": "Supreme Marksman",
+        "power": 50,
+        "attack": 13,
+        "defense": 9,
+        "lethality": 14,
+        "health": 9,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc1": {
+        "name": "Supreme Marksman",
+        "power": 54,
+        "attack": 14,
+        "defense": 10,
+        "lethality": 15,
+        "health": 10,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc2": {
+        "name": "Supreme Marksman",
+        "power": 58,
+        "attack": 16,
+        "defense": 11,
+        "lethality": 16,
+        "health": 11,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc3": {
+        "name": "Supreme Marksman",
+        "power": 62,
+        "attack": 17,
+        "defense": 12,
+        "lethality": 17,
+        "health": 12,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc4": {
+        "name": "Supreme Marksman",
+        "power": 67,
+        "attack": 18,
+        "defense": 13,
+        "lethality": 18,
+        "health": 12,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc5": {
+        "name": "Supreme Marksman",
+        "power": 72,
+        "attack": 20,
+        "defense": 13,
+        "lethality": 19,
+        "health": 13,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc6": {
+        "name": "Supreme Marksman",
+        "power": 77,
+        "attack": 21,
+        "defense": 14,
+        "lethality": 20,
+        "health": 13,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc7": {
+        "name": "Supreme Marksman",
+        "power": 82,
+        "attack": 22,
+        "defense": 14,
+        "lethality": 21,
+        "health": 14,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc8": {
+        "name": "Supreme Marksman",
+        "power": 87,
+        "attack": 23,
+        "defense": 15,
+        "lethality": 22,
+        "health": 14,
+        "load": 330,
+        "speed": 11
+      },
+      "9-fc9": {
+        "name": "Supreme Marksman",
+        "power": 91,
+        "attack": 25,
+        "defense": 16,
+        "lethality": 23,
+        "health": 15,
+        "load": 330,
+        "speed": 11
+      },
       "9-fc10": {
-        "name": "Supreme",
+        "name": "Supreme Marksman",
         "power": 95,
         "attack": 26,
         "defense": 17,
@@ -3622,8 +3652,108 @@
         "load": 330,
         "speed": 11
       },
+      "10-fc0": {
+        "name": "Apex Marksman",
+        "power": 66,
+        "attack": 14,
+        "defense": 10,
+        "lethality": 15,
+        "health": 10,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc1": {
+        "name": "Apex Marksman",
+        "power": 71,
+        "attack": 15,
+        "defense": 11,
+        "lethality": 16,
+        "health": 11,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc2": {
+        "name": "Apex Marksman",
+        "power": 76,
+        "attack": 17,
+        "defense": 12,
+        "lethality": 17,
+        "health": 12,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc3": {
+        "name": "Apex Marksman",
+        "power": 83,
+        "attack": 18,
+        "defense": 13,
+        "lethality": 18,
+        "health": 13,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc4": {
+        "name": "Apex Marksman",
+        "power": 88,
+        "attack": 19,
+        "defense": 14,
+        "lethality": 19,
+        "health": 13,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc5": {
+        "name": "Apex Marksman",
+        "power": 94,
+        "attack": 21,
+        "defense": 14,
+        "lethality": 20,
+        "health": 14,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc6": {
+        "name": "Apex Marksman",
+        "power": 99,
+        "attack": 22,
+        "defense": 15,
+        "lethality": 21,
+        "health": 14,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc7": {
+        "name": "Apex Marksman",
+        "power": 104,
+        "attack": 23,
+        "defense": 15,
+        "lethality": 22,
+        "health": 15,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc8": {
+        "name": "Apex Marksman",
+        "power": 110,
+        "attack": 24,
+        "defense": 16,
+        "lethality": 23,
+        "health": 15,
+        "load": 379,
+        "speed": 11
+      },
+      "10-fc9": {
+        "name": "Apex Marksman",
+        "power": 115,
+        "attack": 26,
+        "defense": 17,
+        "lethality": 24,
+        "health": 16,
+        "load": 379,
+        "speed": 11
+      },
       "10-fc10": {
-        "name": "Apex",
+        "name": "Apex Marksman",
         "power": 121,
         "attack": 27,
         "defense": 19,
@@ -3632,14 +3762,224 @@
         "load": 379,
         "speed": 11
       },
+      "11-fc0": {
+        "name": "Helios Marksman",
+        "power": 80,
+        "attack": 16,
+        "defense": 12,
+        "lethality": 17,
+        "health": 12,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc1": {
+        "name": "Helios Marksman",
+        "power": 86,
+        "attack": 17,
+        "defense": 13,
+        "lethality": 18,
+        "health": 13,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc2": {
+        "name": "Helios Marksman",
+        "power": 92,
+        "attack": 19,
+        "defense": 14,
+        "lethality": 19,
+        "health": 14,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc3": {
+        "name": "Helios Marksman",
+        "power": 100,
+        "attack": 20,
+        "defense": 15,
+        "lethality": 20,
+        "health": 15,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc4": {
+        "name": "Helios Marksman",
+        "power": 106,
+        "attack": 21,
+        "defense": 16,
+        "lethality": 21,
+        "health": 15,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc5": {
+        "name": "Helios Marksman",
+        "power": 114,
+        "attack": 23,
+        "defense": 16,
+        "lethality": 22,
+        "health": 16,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc6": {
+        "name": "Helios Marksman",
+        "power": 120,
+        "attack": 24,
+        "defense": 17,
+        "lethality": 23,
+        "health": 16,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc7": {
+        "name": "Helios Marksman",
+        "power": 126,
+        "attack": 25,
+        "defense": 18,
+        "lethality": 24,
+        "health": 17,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc8": {
+        "name": "Helios Marksman",
+        "power": 135,
+        "attack": 26,
+        "defense": 19,
+        "lethality": 25,
+        "health": 18,
+        "load": 400,
+        "speed": 11
+      },
+      "11-fc9": {
+        "name": "Helios Marksman",
+        "power": 141,
+        "attack": 28,
+        "defense": 19,
+        "lethality": 26,
+        "health": 18,
+        "load": 400,
+        "speed": 11
+      },
       "11-fc10": {
-        "name": "Helios",
+        "name": "Helios Marksman",
         "power": 148,
         "attack": 30,
         "defense": 21,
         "lethality": 27,
         "health": 20,
         "load": 400,
+        "speed": 11
+      },
+      "12-fc0": {
+        "name": "Exalted Marksman",
+        "power": 96,
+        "attack": 19,
+        "defense": 15,
+        "lethality": 20,
+        "health": 15,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc1": {
+        "name": "Exalted Marksman",
+        "power": 103,
+        "attack": 20,
+        "defense": 16,
+        "lethality": 21,
+        "health": 16,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc2": {
+        "name": "Exalted Marksman",
+        "power": 110,
+        "attack": 22,
+        "defense": 17,
+        "lethality": 22,
+        "health": 17,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc3": {
+        "name": "Exalted Marksman",
+        "power": 120,
+        "attack": 23,
+        "defense": 18,
+        "lethality": 23,
+        "health": 18,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc4": {
+        "name": "Exalted Marksman",
+        "power": 127,
+        "attack": 24,
+        "defense": 19,
+        "lethality": 24,
+        "health": 18,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc5": {
+        "name": "Exalted Marksman",
+        "power": 137,
+        "attack": 26,
+        "defense": 19,
+        "lethality": 25,
+        "health": 19,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc6": {
+        "name": "Exalted Marksman",
+        "power": 145,
+        "attack": 27,
+        "defense": 20,
+        "lethality": 26,
+        "health": 19,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc7": {
+        "name": "Exalted Marksman",
+        "power": 154,
+        "attack": 28,
+        "defense": 21,
+        "lethality": 27,
+        "health": 20,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc8": {
+        "name": "Exalted Marksman",
+        "power": 162,
+        "attack": 29,
+        "defense": 22,
+        "lethality": 28,
+        "health": 21,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc9": {
+        "name": "Exalted Marksman",
+        "power": 170,
+        "attack": 31,
+        "defense": 22,
+        "lethality": 29,
+        "health": 21,
+        "load": 420,
+        "speed": 11
+      },
+      "12-fc10": {
+        "name": "Exalted Marksman",
+        "power": 178,
+        "attack": 33,
+        "defense": 24,
+        "lethality": 30,
+        "health": 23,
+        "load": 420,
         "speed": 11
       }
     }

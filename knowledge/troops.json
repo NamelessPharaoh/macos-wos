@@ -1,15 +1,23 @@
 {
   "_meta": {
-    "source_url": "https://raw.githubusercontent.com/wosnerdwarriors/website-index/main/calculator/data/troops.json",
-    "source_commit": "f1defd3d7d80",
-    "fetched_at": "2026-09-08T15:01:57Z",
-    "licence": "wosnerds.com: 'All data is free to copy and use'; no LICENSE file in the repo; treated as revocable, attribution kept in _meta",
-    "normaliser_version": 1
+    "source": "client-config",
+    "source_url": "decompiled Whiteout Survival client 1.33.9 config tables (1.33.9-304)",
+    "source_commit": "38a97c10bce3",
+    "fetched_at": "2026-09-24T10:03:58Z",
+    "licence": "game client config tables, read from the owner's own installed client; the same numbers wosnerds publishes",
+    "normaliser_version": 2,
+    "client_version": "1.33.9",
+    "client_patch": "1.33.9-304",
+    "sources": [
+      "luapackage64/game_config_default_soldiers.lua",
+      "luapackage64/game_languages_local_en.lua",
+      "luapackage64/game_languages_ext_local_en.lua",
+      "luapatch64/game_languages_ext_local_en.lua"
+    ]
   },
   "training": {
     "infantry": {
       "1": {
-        "points": 3,
         "seconds": 12,
         "meat": 36,
         "wood": 27,
@@ -17,7 +25,6 @@
         "iron": 2
       },
       "2": {
-        "points": 4,
         "seconds": 17,
         "meat": 58,
         "wood": 44,
@@ -25,7 +32,6 @@
         "iron": 3
       },
       "3": {
-        "points": 5,
         "seconds": 24,
         "meat": 92,
         "wood": 69,
@@ -33,7 +39,6 @@
         "iron": 4
       },
       "4": {
-        "points": 8,
         "seconds": 32,
         "meat": 120,
         "wood": 90,
@@ -41,7 +46,6 @@
         "iron": 5
       },
       "5": {
-        "points": 12,
         "seconds": 44,
         "meat": 156,
         "wood": 117,
@@ -49,7 +53,6 @@
         "iron": 6
       },
       "6": {
-        "points": 18,
         "seconds": 60,
         "meat": 186,
         "wood": 140,
@@ -57,7 +60,6 @@
         "iron": 7
       },
       "7": {
-        "points": 25,
         "seconds": 83,
         "meat": 279,
         "wood": 210,
@@ -65,7 +67,6 @@
         "iron": 11
       },
       "8": {
-        "points": 35,
         "seconds": 113,
         "meat": 558,
         "wood": 419,
@@ -73,7 +74,6 @@
         "iron": 21
       },
       "9": {
-        "points": 45,
         "seconds": 131,
         "meat": 1394,
         "wood": 1046,
@@ -81,7 +81,6 @@
         "iron": 51
       },
       "10": {
-        "points": 60,
         "seconds": 152,
         "meat": 2788,
         "wood": 2091,
@@ -89,7 +88,6 @@
         "iron": 102
       },
       "11": {
-        "points": 75,
         "seconds": 180,
         "meat": 6970,
         "wood": 5228,
@@ -97,17 +95,15 @@
         "iron": 253
       },
       "12": {
-        "points": 90,
         "seconds": 215,
-        "meat": 6970,
-        "wood": 5228,
-        "coal": 1220,
-        "iron": 254
+        "meat": 10455,
+        "wood": 7842,
+        "coal": 1830,
+        "iron": 380
       }
     },
     "lancer": {
       "1": {
-        "points": 3,
         "seconds": 12,
         "meat": 32,
         "wood": 30,
@@ -115,7 +111,6 @@
         "iron": 2
       },
       "2": {
-        "points": 4,
         "seconds": 17,
         "meat": 51,
         "wood": 48,
@@ -123,7 +118,6 @@
         "iron": 3
       },
       "3": {
-        "points": 5,
         "seconds": 24,
         "meat": 81,
         "wood": 76,
@@ -131,7 +125,6 @@
         "iron": 4
       },
       "4": {
-        "points": 8,
         "seconds": 32,
         "meat": 105,
         "wood": 99,
@@ -139,7 +132,6 @@
         "iron": 5
       },
       "5": {
-        "points": 12,
         "seconds": 44,
         "meat": 136,
         "wood": 129,
@@ -147,7 +139,6 @@
         "iron": 7
       },
       "6": {
-        "points": 18,
         "seconds": 60,
         "meat": 163,
         "wood": 154,
@@ -155,7 +146,6 @@
         "iron": 8
       },
       "7": {
-        "points": 25,
         "seconds": 83,
         "meat": 244,
         "wood": 231,
@@ -163,7 +153,6 @@
         "iron": 11
       },
       "8": {
-        "points": 35,
         "seconds": 113,
         "meat": 488,
         "wood": 461,
@@ -171,7 +160,6 @@
         "iron": 22
       },
       "9": {
-        "points": 45,
         "seconds": 131,
         "meat": 1220,
         "wood": 1151,
@@ -179,7 +167,6 @@
         "iron": 55
       },
       "10": {
-        "points": 60,
         "seconds": 152,
         "meat": 2440,
         "wood": 2301,
@@ -187,7 +174,6 @@
         "iron": 109
       },
       "11": {
-        "points": 75,
         "seconds": 180,
         "meat": 6099,
         "wood": 5751,
@@ -195,17 +181,15 @@
         "iron": 271
       },
       "12": {
-        "points": 90,
         "seconds": 215,
-        "meat": 6099,
-        "wood": 5751,
-        "coal": 1186,
-        "iron": 271
+        "meat": 9148,
+        "wood": 8626,
+        "coal": 1778,
+        "iron": 406
       }
     },
     "marksman": {
       "1": {
-        "points": 3,
         "seconds": 12,
         "meat": 23,
         "wood": 34,
@@ -213,7 +197,6 @@
         "iron": 2
       },
       "2": {
-        "points": 4,
         "seconds": 17,
         "meat": 36,
         "wood": 54,
@@ -221,7 +204,6 @@
         "iron": 4
       },
       "3": {
-        "points": 5,
         "seconds": 24,
         "meat": 58,
         "wood": 86,
@@ -229,7 +211,6 @@
         "iron": 5
       },
       "4": {
-        "points": 8,
         "seconds": 32,
         "meat": 75,
         "wood": 111,
@@ -237,7 +218,6 @@
         "iron": 6
       },
       "5": {
-        "points": 12,
         "seconds": 44,
         "meat": 97,
         "wood": 144,
@@ -245,7 +225,6 @@
         "iron": 8
       },
       "6": {
-        "points": 18,
         "seconds": 60,
         "meat": 117,
         "wood": 173,
@@ -253,7 +232,6 @@
         "iron": 10
       },
       "7": {
-        "points": 25,
         "seconds": 83,
         "meat": 175,
         "wood": 258,
@@ -261,7 +239,6 @@
         "iron": 14
       },
       "8": {
-        "points": 35,
         "seconds": 113,
         "meat": 349,
         "wood": 516,
@@ -269,7 +246,6 @@
         "iron": 28
       },
       "9": {
-        "points": 45,
         "seconds": 131,
         "meat": 872,
         "wood": 1290,
@@ -277,7 +253,6 @@
         "iron": 70
       },
       "10": {
-        "points": 60,
         "seconds": 152,
         "meat": 1743,
         "wood": 2579,
@@ -285,7 +260,6 @@
         "iron": 140
       },
       "11": {
-        "points": 75,
         "seconds": 180,
         "meat": 4357,
         "wood": 6448,
@@ -293,12 +267,11 @@
         "iron": 349
       },
       "12": {
-        "points": 90,
         "seconds": 215,
-        "meat": 4357,
-        "wood": 6447,
-        "coal": 1081,
-        "iron": 349
+        "meat": 6535,
+        "wood": 9671,
+        "coal": 1621,
+        "iron": 523
       }
     }
   }

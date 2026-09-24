@@ -24,7 +24,7 @@ rows against the screen (`verified_in_game`), whatever a table's source.
 produced by the private wos-mcp repo, not fetched from wosnerds:
 
 ```sh
-python -m research.decompiled.extract_knowledge --out /Users/melsawah1/Developer/wos-bot/knowledge --write
+python -m research.decompiled.extract_knowledge --out <wos-bot>/knowledge --write
 ```
 
 It reads the decompiled client's own config tables (patch 1.33.9-304) --

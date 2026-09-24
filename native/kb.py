@@ -96,7 +96,11 @@ def _apply_overlay(kb, path):
     (A5/spec D8): committed tables are wosnerds-only, and FC rows / building
     power values live only here. Without a file at `path` this is a no-op
     and `kb["_overlay"]` stays None, which is what tells power_gain to
-    return None for buildings rather than a silently wrong 0."""
+    return None for buildings rather than a silently wrong 0.
+
+    Task 4: a level already in the committed table is left untouched --
+    only an absent level is added, so the overlay can't shadow the
+    client's own committed FC furnace rows."""
     if not os.path.exists(path):
         kb["_overlay"] = None
         return
@@ -105,9 +109,7 @@ def _apply_overlay(kb, path):
     for name, levels in (ov.get("buildings") or {}).items():
         table = kb["buildings"].setdefault(name, {})
         for level, patch in levels.items():
-            if level in table:
-                table[level].update(patch)
-            else:
+            if level not in table:
                 table[level] = {"verified_in_game": None, **patch}
     kb["_overlay"] = ov.get("_meta")
 

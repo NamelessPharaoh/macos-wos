@@ -342,6 +342,40 @@ def test_load_with_real_overlay_file_reaches_the_prerequisites_guard(tmp_path):
     kb._CACHE.pop(str(d), None)
 
 
+def test_apply_overlay_never_shadows_a_committed_building_row(tmp_path):
+    """Task 4: buildings.json is about to carry the client's own furnace
+    rows 31..80 (Task 6) -- once that happens, a committed level and an
+    overlay level can share a key, and _apply_overlay's old
+    `table[level].update(patch)` would let the gitignored, terms-restricted
+    local overlay (whiteoutdata rows) shadow committed data. Row 31 exists
+    in the committed table with meat=5; the overlay's patch for 31
+    (meat=999, source=whiteoutdata) must be dropped entirely -- the row
+    stays exactly as committed. Row 32 is absent from the committed table,
+    so it is still added as before, and `_meta` is still recorded either
+    way."""
+    d = tmp_path / "kbdir"
+    d.mkdir()
+    (d / "buildings.json").write_text(json.dumps({"_meta": {}, "buildings": {"furnace": {"31": {"meat": 5}}}}))
+    (d / "troops.json").write_text(json.dumps({"_meta": {}, "training": {}}))
+    (d / "troop_stats.json").write_text(json.dumps({"_meta": {}, "stats": {}}))
+    (d / "research.json").write_text(json.dumps({"_meta": {}, "research": {}}))
+    (d / "local").mkdir()
+    overlay = {
+        "_meta": {"sources": ["whiteoutdata"]},
+        "buildings": {"furnace": {
+            "31": {"meat": 999, "source": "whiteoutdata"},
+            "32": {"meat": 999, "source": "whiteoutdata"},
+        }},
+    }
+    (d / "local" / "overlay.json").write_text(json.dumps(overlay))
+    merged = kb.load(str(d))
+    assert merged["buildings"]["furnace"]["31"] == {"meat": 5}
+    assert "source" not in merged["buildings"]["furnace"]["31"]
+    assert merged["buildings"]["furnace"]["32"] == {"meat": 999, "source": "whiteoutdata", "verified_in_game": None}
+    assert merged["_overlay"] == overlay["_meta"]
+    kb._CACHE.pop(str(d), None)
+
+
 def _iso(dt):
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 

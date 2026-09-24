@@ -93,14 +93,12 @@ _CACHE = {}
 # ----------------------------------------------------------------------------- load
 def _apply_overlay(kb, path):
     """Merge the local, terms-restricted cross-check overlay when present
-    (A5/spec D8): committed tables are wosnerds-only, and FC rows / building
-    power values live only here. Without a file at `path` this is a no-op
-    and `kb["_overlay"]` stays None, which is what tells power_gain to
-    return None for buildings rather than a silently wrong 0.
-
-    Task 4: a level already in the committed table is left untouched --
-    only an absent level is added, so the overlay can't shadow the
-    client's own committed FC furnace rows."""
+    (A5/spec D8). Committed tables are client-config sourced now, not
+    wosnerds, and carry furnace 0..80 with `power` on every row; the
+    overlay only adds levels the committed table lacks and never shadows
+    a committed row (Task 4). Without a file at `path` this is a no-op and
+    `kb["_overlay"]` stays None, so power_gain returns None, not 0, for a
+    level neither source has."""
     if not os.path.exists(path):
         kb["_overlay"] = None
         return
@@ -329,8 +327,9 @@ def troop_power(troop_type, tier, fc=0, kb=None):
 def power_gain(kind, kb=None, **kw):
     """kind="building" (name, from_level, to_level): the sum of `power`
     across the range, or None (never 0) the moment one level in the range
-    has no power value -- true for every furnace level today because no
-    open source carries building power outside the M2 overlay (A5/B12).
+    has no power value -- the committed tables carry `power` for every
+    building row now (client-config sourced); this only bites for a level
+    the overlay doesn't fill in either.
     kind="research" (node, level); kind="training" (troop_type, tier, count, fc=0).
     """
     kb = _kb(kb)

@@ -179,10 +179,16 @@ def carry_marks(old, new):
     return new
 
 
-def refresh(table, write, opener=None):
+def refresh(table, write, opener=None, replace_client=False):
     """Fetch, normalise, carry marks, diff and (optionally) write one table.
     Returns the diff lines, or None when the table failed -- printed, named,
-    and the caller moves on to the next table (A2)."""
+    and the caller moves on to the next table (A2).
+
+    A committed table produced by wos-mcp's extract_knowledge
+    (`_meta.source == "client-config"`) is still fetched and diffed against
+    the wosnerds cross-check source -- the diff is useful -- but `--write`
+    refuses to overwrite it unless `replace_client` (`--replace-client-tables`)
+    is passed; the exit code is unaffected either way."""
     source = SOURCES[table] if table in SOURCES else OPTIONAL_SOURCES[table]
     try:
         raw = fetch_json(source.url, opener=opener)
@@ -204,7 +210,11 @@ def refresh(table, write, opener=None):
         print("  " + line)
     if len(lines) > 200:
         print(f"  ... {len(lines) - 200} more")
-    if write:
+    client_sourced = old.get("_meta", {}).get("source") == "client-config"
+    if write and client_sourced and not replace_client:
+        print(f"== {table}: committed table is client-sourced; pass --replace-client-tables "
+              "to overwrite it with the wosnerds fetch")
+    elif write:
         write_table(path, doc)
         print(f"  wrote {path}")
     return lines
@@ -237,6 +247,10 @@ def main(argv=None):
     ap.add_argument("--table", action="append",
                      help="one of " + ", ".join(list(SOURCES) + list(OPTIONAL_SOURCES)) + " (default: the required sources)")
     ap.add_argument("--write", action="store_true", help="save the refreshed tables")
+    ap.add_argument("--replace-client-tables", action="store_true",
+                     help="allow --write to overwrite a committed table whose _meta.source is "
+                          "'client-config' (produced by wos-mcp's extract_knowledge) with the "
+                          "wosnerds cross-check fetch; refused by default")
     ap.add_argument("--local", action="store_true", help="also run the gitignored cross-check fetchers")
     ap.add_argument("--crosscheck", action="store_true",
                      help="report disagreements (>= furnace level 26) into knowledge/local/crosscheck.json and "
@@ -257,7 +271,7 @@ def main(argv=None):
         sys.exit(f"unknown table(s): {', '.join(unknown)}")
     failed_required = 0
     for t in tables:
-        lines = refresh(t, a.write)
+        lines = refresh(t, a.write, replace_client=a.replace_client_tables)
         if lines is None and t in SOURCES:
             failed_required += 1
     if a.local:

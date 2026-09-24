@@ -288,6 +288,66 @@ def test_unknown_table_name_exits_before_fetching(tmp_path, monkeypatch):
         rk.main(["--table", "not_a_real_table"])
 
 
+# ----------------------------------------------------------------------------- client-sourced guard (Task 5)
+def test_write_refuses_a_client_sourced_table_without_the_replace_flag(tmp_path, monkeypatch, capsys):
+    """A committed table produced by wos-mcp's extract_knowledge
+    (`_meta.source == "client-config"`) must not be silently clobbered by
+    the wosnerds cross-check fetch; --write alone prints the refusal and
+    leaves the file untouched."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "NORMALISERS", {"buildings": lambda raw: {"buildings": {"furnace": {"31": {"meat": 9}}}}})
+    monkeypatch.setattr(rk, "fetch_json", lambda url, opener=None: {})
+    monkeypatch.setattr(rk, "source_commit", lambda repo, opener=None: "abc123")
+    existing = {"_meta": {"source": "client-config"}, "buildings": {"furnace": {"31": {"meat": 1}}}}
+    (tmp_path / "buildings.json").write_text(json.dumps(existing))
+    rk.main(["--table", "buildings", "--write"])
+    out = capsys.readouterr().out
+    assert ("== buildings: committed table is client-sourced; pass --replace-client-tables "
+            "to overwrite it with the wosnerds fetch") in out
+    assert json.loads((tmp_path / "buildings.json").read_text()) == existing
+
+
+def test_write_overwrites_a_client_sourced_table_with_the_replace_flag(tmp_path, monkeypatch):
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "NORMALISERS", {"buildings": lambda raw: {"buildings": {"furnace": {"31": {"meat": 9}}}}})
+    monkeypatch.setattr(rk, "fetch_json", lambda url, opener=None: {})
+    monkeypatch.setattr(rk, "source_commit", lambda repo, opener=None: "abc123")
+    existing = {"_meta": {"source": "client-config"}, "buildings": {"furnace": {"31": {"meat": 1}}}}
+    (tmp_path / "buildings.json").write_text(json.dumps(existing))
+    rk.main(["--table", "buildings", "--write", "--replace-client-tables"])
+    doc = json.loads((tmp_path / "buildings.json").read_text())
+    assert doc["buildings"]["furnace"]["31"]["meat"] == 9
+
+
+def test_write_overwrites_a_wosnerds_sourced_table_as_before(tmp_path, monkeypatch):
+    """No regression: a table with no `_meta.source == "client-config"`
+    (the ordinary wosnerds provenance) is written on --write exactly like
+    every other test above, with or without the new flag."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "NORMALISERS", {"buildings": lambda raw: {"buildings": {"furnace": {"31": {"meat": 9}}}}})
+    monkeypatch.setattr(rk, "fetch_json", lambda url, opener=None: {})
+    monkeypatch.setattr(rk, "source_commit", lambda repo, opener=None: "abc123")
+    existing = {"_meta": {"source_commit": "old"}, "buildings": {"furnace": {"31": {"meat": 1}}}}
+    (tmp_path / "buildings.json").write_text(json.dumps(existing))
+    rk.main(["--table", "buildings", "--write"])
+    doc = json.loads((tmp_path / "buildings.json").read_text())
+    assert doc["buildings"]["furnace"]["31"]["meat"] == 9
+
+
+def test_client_sourced_guard_does_not_change_the_diff_output(tmp_path, monkeypatch, capsys):
+    """The diff is still useful even when the write is refused (brief:
+    'the table is still fetched and diffed')."""
+    monkeypatch.setattr(rk, "KNOWLEDGE_DIR", str(tmp_path))
+    monkeypatch.setattr(rk, "NORMALISERS", {"buildings": lambda raw: {"buildings": {"furnace": {"31": {"meat": 9}}}}})
+    monkeypatch.setattr(rk, "fetch_json", lambda url, opener=None: {})
+    monkeypatch.setattr(rk, "source_commit", lambda repo, opener=None: "abc123")
+    existing = {"_meta": {"source": "client-config"}, "buildings": {"furnace": {"31": {"meat": 1}}}}
+    (tmp_path / "buildings.json").write_text(json.dumps(existing))
+    rk.main(["--table", "buildings", "--write"])
+    out = capsys.readouterr().out
+    assert "buildings.furnace.31: meat 1 -> 9" in out
+
+
 def test_crosscheck_without_local_dir(tmp_path, monkeypatch, capsys):
     """B10: --crosscheck with no knowledge/local/ prints 0 finding(s) and
     writes nothing -- this is what a fresh clone (or a run before --local)
